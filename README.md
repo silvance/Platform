@@ -130,6 +130,20 @@ regenerates passwords for the same emails (`instructor@example.local`,
   `.env.example`. Enable only behind a proxy that sanitizes
   `X-Forwarded-*`; otherwise login throttling can be bypassed by spoofed
   headers.
+- **CORS is intentionally disabled in M1.** The Next.js web app is the
+  only HTTP client of the API in this milestone — it acts as a BFF:
+  - The browser only ever talks to the **web** origin.
+  - Next.js (server-side) holds the bearer token (read from the web's
+    own HttpOnly cookie) and forwards it to the API via
+    `Authorization: Bearer …`.
+  - No `Access-Control-Allow-Origin` header is set; no preflight is
+    answered. A direct cross-origin call from a browser to
+    `:4000` will be blocked by the browser, by design.
+
+  If a future milestone needs direct browser-to-API calls (e.g. a
+  separate admin app, a Tauri/desktop client, or third-party
+  integrations), introduce CORS with a **strict origin allowlist** —
+  never `Access-Control-Allow-Origin: *` with credentials.
 - **Guards:** a global `AuthGuard` requires a bearer token on every route
   except those marked `@Public()` (currently `/healthz`, `/readyz`,
   `/hello`, and `/auth/login`). `@Roles('instructor')` adds role gating;
@@ -193,6 +207,18 @@ deferred until the platform has real functionality worth deploying.
 
 These land in later milestones (M2 onward). See the architecture plan in
 the project discussion for the full build order.
+
+### Carry-over backlog from M1
+
+- **Expired/revoked session cleanup** *(target: M2 / M2.1)*. The
+  `sessions` table currently grows monotonically — expired rows are
+  ignored by `resolveSession()` but never deleted, and `revokedAt`
+  rows are kept indefinitely. Add a retention-aware sweep:
+  - delete rows with `expires_at < now() - retention`;
+  - delete rows where `revoked_at < now() - retention`.
+  Run as either a Nest scheduled job (`@nestjs/schedule`) or a
+  one-shot `pnpm --filter @ci-train/api sessions:prune` invocation
+  triggered by cron. Retention default ~30 days, env-configurable.
 
 ## Scope note (RF / TSCM)
 
