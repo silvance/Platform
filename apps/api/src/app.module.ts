@@ -10,6 +10,7 @@ import { AuthGuard } from "./modules/auth/guards/auth.guard";
 import { RolesGuard } from "./modules/auth/guards/roles.guard";
 import { ScenariosModule } from "./modules/scenarios/scenarios.module";
 import { ArtifactsModule } from "./modules/artifacts/artifacts.module";
+import { AttemptsModule } from "./modules/attempts/attempts.module";
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { ArtifactsModule } from "./modules/artifacts/artifacts.module";
     AuthModule,
     ScenariosModule,
     ArtifactsModule,
+    AttemptsModule,
     HealthModule,
     HelloModule,
   ],
