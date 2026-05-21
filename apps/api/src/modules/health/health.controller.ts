@@ -1,19 +1,20 @@
-import { Controller, Get, HttpStatus, Inject, Res } from "@nestjs/common";
+import { Controller, Get, HttpStatus, Res } from "@nestjs/common";
 import type { Response } from "express";
-import type { Pool } from "pg";
 import {
   HealthResponse,
   ReadinessResponse,
   ReadinessCheck,
 } from "@ci-train/contracts";
-import { PG_POOL } from "../database/database.module";
+import { PrismaService } from "../database/prisma.service";
+import { Public } from "../auth/decorators/public.decorator";
 
 const SERVICE_NAME = "ci-train-api";
-const API_VERSION = "0.0.0";
+const API_VERSION = "0.1.0";
 
+@Public()
 @Controller()
 export class HealthController {
-  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   @Get("healthz")
   healthz(): HealthResponse {
@@ -34,8 +35,8 @@ export class HealthController {
 
     const dbCheck: ReadinessCheck = { name: "postgres", ok: false };
     try {
-      const result = await this.pool.query("SELECT 1 AS ok");
-      dbCheck.ok = result.rows[0]?.ok === 1;
+      const rows = await this.prisma.$queryRaw<Array<{ ok: number }>>`SELECT 1 AS ok`;
+      dbCheck.ok = rows[0]?.ok === 1;
     } catch (err) {
       dbCheck.ok = false;
       dbCheck.detail = err instanceof Error ? err.message : String(err);
