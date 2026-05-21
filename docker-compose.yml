@@ -42,12 +42,14 @@ services:
       DATABASE_URL: postgres://${POSTGRES_USER:-citrain}:${POSTGRES_PASSWORD:-citrain_dev_password_change_me}@db:5432/${POSTGRES_DB:-citrain}
     ports:
       - "${API_PORT:-4000}:4000"
+    # readyz returns 503 (and wget exits non-zero) until the api can reach
+    # the db, so dependents wait for real readiness, not just liveness.
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:4000/v1/healthz"]
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:4000/v1/readyz"]
       interval: 10s
       timeout: 3s
       retries: 5
-      start_period: 10s
+      start_period: 15s
 
   web:
     build:

@@ -1,4 +1,5 @@
-import { Controller, Get, Inject } from "@nestjs/common";
+import { Controller, Get, HttpStatus, Inject, Res } from "@nestjs/common";
+import type { Response } from "express";
 import type { Pool } from "pg";
 import {
   HealthResponse,
@@ -26,21 +27,26 @@ export class HealthController {
   }
 
   @Get("readyz")
-  async readyz(): Promise<ReadinessResponse> {
+  async readyz(
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<ReadinessResponse> {
     const checks: ReadinessCheck[] = [];
 
     const dbCheck: ReadinessCheck = { name: "postgres", ok: false };
     try {
-      const res = await this.pool.query("SELECT 1 AS ok");
-      dbCheck.ok = res.rows[0]?.ok === 1;
+      const result = await this.pool.query("SELECT 1 AS ok");
+      dbCheck.ok = result.rows[0]?.ok === 1;
     } catch (err) {
       dbCheck.ok = false;
       dbCheck.detail = err instanceof Error ? err.message : String(err);
     }
     checks.push(dbCheck);
 
+    const ready = checks.every((c) => c.ok);
+    res.status(ready ? HttpStatus.OK : HttpStatus.SERVICE_UNAVAILABLE);
+
     return {
-      ready: checks.every((c) => c.ok),
+      ready,
       checks,
       timestamp: new Date().toISOString(),
     };

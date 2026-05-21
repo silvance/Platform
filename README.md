@@ -76,6 +76,18 @@ The contracts package emits to `packages/contracts/dist`; run
 `pnpm --filter @ci-train/contracts dev` in a third terminal if you are
 editing shared schemas.
 
+## Scripts
+
+| Command | Effect |
+| --- | --- |
+| `pnpm install` | Install all workspace deps (use the committed lockfile) |
+| `pnpm build` | Build `contracts`, then `api` and `web` |
+| `pnpm typecheck` | Run `tsc --noEmit` across every workspace |
+| `pnpm test` | M0 placeholder — runs `typecheck`. A real test suite (Jest for the api, Playwright for the web) lands in a later milestone. |
+| `pnpm dev:api` / `pnpm dev:web` | Run a single app outside Docker |
+| `pnpm compose:up` | `docker compose up --build` |
+| `pnpm compose:down` | `docker compose down -v` (wipes the db volume) |
+
 ## Verifying M0
 
 After `docker compose up --build`, you should see:
