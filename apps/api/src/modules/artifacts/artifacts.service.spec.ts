@@ -204,3 +204,60 @@ describe("ArtifactsService (unit)", () => {
     expect(r).toBeNull();
   });
 });
+
+describe("ArtifactsService.parseEml — size cap (audit #1)", () => {
+  const EML_ROW = {
+    ...BASE_ARTIFACT,
+    kind: "eml",
+    mimeType: "message/rfc822",
+    scenario: { slug: "my-scenario", status: "published" },
+  };
+
+  it("throws PayloadTooLargeException when the EML exceeds MAX_PARSED_EML_BYTES", async () => {
+    const oversized = { ...EML_ROW, sizeBytes: 10 * 1024 * 1024 };
+    const svc = new ArtifactsService(
+      makeFakePrisma([oversized]),
+      makeFakeStorage(),
+      makeFakeEmlParse(),
+    );
+    await expect(
+      svc.parseEml("trainee", "my-scenario", BASE_ARTIFACT.id),
+    ).rejects.toMatchObject({ status: 413 });
+  });
+
+  it("permits an EML at the cap boundary", async () => {
+    const onLimit = { ...EML_ROW, sizeBytes: 5 * 1024 * 1024 };
+    const storage = makeFakeStorage();
+    const emlStub = {
+      parse: jest.fn(async () => ({
+        subject: "ok", from: null, to: [], toTruncated: false,
+        cc: [], ccTruncated: false, replyTo: null, returnPath: null,
+        date: null, messageId: null,
+        authResults: {
+          spf: { result: "missing", detail: null },
+          dkim: { result: "missing", detail: null },
+          dmarc: { result: "missing", detail: null },
+        },
+        headers: [], headersTruncated: false,
+        textBody: null, textBodyTruncated: false,
+        htmlBodyBytes: null,
+        attachments: [], attachmentsTruncated: false,
+      })),
+    } as unknown as import("./eml-parse.service").EmlParseService;
+    const svc = new ArtifactsService(makeFakePrisma([onLimit]), storage, emlStub);
+    const r = await svc.parseEml("trainee", "my-scenario", BASE_ARTIFACT.id);
+    expect(r).not.toBeNull();
+    expect(emlStub.parse).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns null (→ 404) when the artifact doesn't belong to the requested slug — does NOT 413 first", async () => {
+    const oversized = { ...EML_ROW, sizeBytes: 10 * 1024 * 1024 };
+    const svc = new ArtifactsService(
+      makeFakePrisma([oversized]),
+      makeFakeStorage(),
+      makeFakeEmlParse(),
+    );
+    const r = await svc.parseEml("trainee", "wrong-scenario", BASE_ARTIFACT.id);
+    expect(r).toBeNull();
+  });
+});

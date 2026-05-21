@@ -1,7 +1,17 @@
-import { Inject, Injectable, NotFoundException, BadRequestException } from "@nestjs/common";
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  NotFoundException,
+  PayloadTooLargeException,
+} from "@nestjs/common";
 import type { Role } from "@prisma/client";
 import type { Readable } from "node:stream";
-import { ParsedEmlPayload, safeServeMimeFor } from "@ci-train/contracts";
+import {
+  MAX_PARSED_EML_BYTES,
+  ParsedEmlPayload,
+  safeServeMimeFor,
+} from "@ci-train/contracts";
 import { PrismaService } from "../database/prisma.service";
 import {
   ARTIFACT_STORAGE,
@@ -69,6 +79,16 @@ export class ArtifactsService {
     if (artifact.kind !== "eml") {
       throw new BadRequestException(
         "Parsed view is only available for EML artifacts.",
+      );
+    }
+    // simpleParser() buffers the whole message in memory. Refuse to
+    // parse anything larger than MAX_PARSED_EML_BYTES — the raw .eml
+    // download via /content is unaffected. The recorded size in the
+    // DB is the source of truth here; we trust it because both seed
+    // and import paths set it from the actual on-disk byte count.
+    if (artifact.sizeBytes > MAX_PARSED_EML_BYTES) {
+      throw new PayloadTooLargeException(
+        `EML is ${artifact.sizeBytes} bytes; parsed view is limited to ${MAX_PARSED_EML_BYTES} bytes. Download the raw .eml via /content instead.`,
       );
     }
     if (!(await this.storage.exists(artifact.relativePath))) {

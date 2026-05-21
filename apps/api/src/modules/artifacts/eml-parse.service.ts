@@ -7,8 +7,10 @@ import {
   EmailParty,
   EmlAttachmentMeta,
   EmlHeader,
+  MAX_EML_ATTACHMENT_COUNT,
   MAX_EML_HEADER_COUNT,
-  MAX_EML_TEXT_BODY_BYTES,
+  MAX_EML_RECIPIENTS,
+  MAX_EML_TEXT_BODY_CHARS,
   ParsedEmlPayload,
 } from "@ci-train/contracts";
 
@@ -22,46 +24,64 @@ export class EmlParseService {
       skipImageLinks: true,
     });
 
-    const headers = collectHeaders(parsed.headerLines);
+    const { headers, truncated: headersTruncated } = collectHeaders(parsed.headerLines);
     const authResults = extractAuthResults(headers);
 
     const textBodyRaw = parsed.text ?? null;
     const textTruncated =
-      textBodyRaw !== null && textBodyRaw.length > MAX_EML_TEXT_BODY_BYTES;
+      textBodyRaw !== null && textBodyRaw.length > MAX_EML_TEXT_BODY_CHARS;
     const textBody = textTruncated
-      ? textBodyRaw!.slice(0, MAX_EML_TEXT_BODY_BYTES)
+      ? textBodyRaw!.slice(0, MAX_EML_TEXT_BODY_CHARS)
       : textBodyRaw;
 
-    const attachments: EmlAttachmentMeta[] = (parsed.attachments ?? []).map(
-      (a) => ({
+    const toAll = allParties(parsed.to);
+    const ccAll = allParties(parsed.cc);
+    const toTruncated = toAll.length > MAX_EML_RECIPIENTS;
+    const ccTruncated = ccAll.length > MAX_EML_RECIPIENTS;
+
+    const attachmentsAll = parsed.attachments ?? [];
+    const attachmentsTruncated = attachmentsAll.length > MAX_EML_ATTACHMENT_COUNT;
+    const attachments: EmlAttachmentMeta[] = attachmentsAll
+      .slice(0, MAX_EML_ATTACHMENT_COUNT)
+      .map((a) => ({
         filename: a.filename ?? null,
-        contentType: a.contentType ?? "application/octet-stream",
+        // Normalize attachment Content-Type: strip parameters after `;`,
+        // trim, lowercase. Fall back to application/octet-stream when
+        // the parsed value isn't a meaningful media type. We never trust
+        // the raw EML value for routing — display only.
+        contentType: normalizeMediaType(a.contentType),
         sizeBytes: a.size ?? 0,
         contentDisposition: a.contentDisposition ?? null,
-      }),
-    );
+      }));
 
     return ParsedEmlPayload.parse({
       subject: parsed.subject ?? null,
       from: firstParty(parsed.from),
-      to: allParties(parsed.to),
-      cc: allParties(parsed.cc),
+      to: toAll.slice(0, MAX_EML_RECIPIENTS),
+      toTruncated,
+      cc: ccAll.slice(0, MAX_EML_RECIPIENTS),
+      ccTruncated,
       replyTo: firstParty(parsed.replyTo),
       returnPath: stringHeader(headers, "return-path"),
       date: parsed.date ? parsed.date.toISOString() : null,
       messageId: parsed.messageId ?? null,
       authResults,
       headers,
+      headersTruncated,
       textBody,
       textBodyTruncated: textTruncated,
       htmlBodyBytes: typeof parsed.html === "string" ? Buffer.byteLength(parsed.html, "utf8") : null,
       attachments,
+      attachmentsTruncated,
     });
   }
 }
 
-function collectHeaders(headerLines: ReadonlyArray<{ key: string; line: string }>): EmlHeader[] {
+function collectHeaders(
+  headerLines: ReadonlyArray<{ key: string; line: string }>,
+): { headers: EmlHeader[]; truncated: boolean } {
   const out: EmlHeader[] = [];
+  const sourceLen = headerLines.length;
   for (const h of headerLines.slice(0, MAX_EML_HEADER_COUNT)) {
     // `line` is "Name: value possibly\r\n folded". Split on the first colon
     // so the cased original name is preserved, and trim folding whitespace.
@@ -72,7 +92,7 @@ function collectHeaders(headerLines: ReadonlyArray<{ key: string; line: string }
     if (!name) continue;
     out.push({ name, value });
   }
-  return out;
+  return { headers: out, truncated: sourceLen > MAX_EML_HEADER_COUNT };
 }
 
 function stringHeader(headers: EmlHeader[], lowerName: string): string | null {
@@ -148,4 +168,17 @@ function normalizeAuthResult(raw: string): AuthResult {
     return v;
   }
   return "unknown";
+}
+
+// `type/subtype` after stripping parameters, trimming, and lower-casing.
+// Falls back to application/octet-stream when the input doesn't look
+// like a media type. Caps at 120 chars so a pathological header can't
+// blow the contract's max-length validator.
+export function normalizeMediaType(raw: string | undefined | null): string {
+  if (typeof raw !== "string") return "application/octet-stream";
+  const base = raw.split(";")[0]?.trim().toLowerCase() ?? "";
+  if (!/^[a-z][a-z0-9!#$&^_.+-]*\/[a-z0-9!#$&^_.+-]+$/.test(base)) {
+    return "application/octet-stream";
+  }
+  return base.length > 120 ? "application/octet-stream" : base;
 }

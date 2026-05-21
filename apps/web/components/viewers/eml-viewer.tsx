@@ -52,12 +52,22 @@ function HeaderStrip({ parsed }: { parsed: ParsedEmlPayload }) {
         <dd>{formatParty(parsed.from)}</dd>
 
         <dt>To</dt>
-        <dd>{parsed.to.map(formatPartyShort).join(", ") || <em>(none)</em>}</dd>
+        <dd>
+          {parsed.to.map(formatPartyShort).join(", ") || <em>(none)</em>}
+          {parsed.toTruncated ? (
+            <Anomaly>To list truncated — additional recipients exist beyond what's shown.</Anomaly>
+          ) : null}
+        </dd>
 
         {parsed.cc.length > 0 ? (
           <>
             <dt>Cc</dt>
-            <dd>{parsed.cc.map(formatPartyShort).join(", ")}</dd>
+            <dd>
+              {parsed.cc.map(formatPartyShort).join(", ")}
+              {parsed.ccTruncated ? (
+                <Anomaly>Cc list truncated — additional recipients exist beyond what's shown.</Anomaly>
+              ) : null}
+            </dd>
           </>
         ) : null}
 
@@ -158,7 +168,7 @@ function BodyPanel({ parsed }: { parsed: ParsedEmlPayload }) {
 }
 
 function AttachmentsPanel({ parsed }: { parsed: ParsedEmlPayload }) {
-  if (parsed.attachments.length === 0) return null;
+  if (parsed.attachments.length === 0 && !parsed.attachmentsTruncated) return null;
   return (
     <div className="card">
       <h3 style={{ margin: "0 0 .5rem", fontSize: "1rem" }}>Attachments</h3>
@@ -174,6 +184,13 @@ function AttachmentsPanel({ parsed }: { parsed: ParsedEmlPayload }) {
           </li>
         ))}
       </ul>
+      {parsed.attachmentsTruncated ? (
+        <p style={{ color: "#f0d68a", fontSize: ".85rem", marginTop: ".5rem" }}>
+          ⚠ Attachment list truncated — the EML contains more attachments
+          than this view will surface. Download the raw .eml to enumerate
+          all of them.
+        </p>
+      ) : null}
       <p style={{ color: "var(--muted)", fontSize: ".85rem", marginTop: ".5rem" }}>
         Individual attachment download lands in a future milestone — currently
         only metadata is surfaced.
@@ -186,8 +203,16 @@ function RawHeadersPanel({ parsed }: { parsed: ParsedEmlPayload }) {
   return (
     <details className="card eml-raw-headers">
       <summary style={{ cursor: "pointer", color: "var(--muted)" }}>
-        Show all headers ({parsed.headers.length})
+        Show all headers ({parsed.headers.length}
+        {parsed.headersTruncated ? "+, truncated" : ""})
       </summary>
+      {parsed.headersTruncated ? (
+        <p style={{ color: "#f0d68a", fontSize: ".85rem", marginTop: ".5rem", marginBottom: 0 }}>
+          ⚠ Header list truncated. Chain-of-custody reasoning over Received
+          hops needs the complete header set — download the raw .eml if
+          you need the full chain.
+        </p>
+      ) : null}
       <pre className="artifact-text" style={{ marginTop: ".5rem" }}>
         {parsed.headers.map((h) => `${h.name}: ${h.value}`).join("\n")}
       </pre>

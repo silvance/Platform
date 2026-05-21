@@ -43,6 +43,9 @@ export type EmlHeader = z.infer<typeof EmlHeader>;
 
 export const EmlAttachmentMeta = z.object({
   filename: z.string().max(255).nullable(),
+  // contentType is normalized server-side: parameters after `;` stripped,
+  // trimmed, lowercased, with `application/octet-stream` as the fallback
+  // when the EML reports nothing meaningful.
   contentType: z.string().max(120),
   sizeBytes: z.number().int().nonnegative(),
   contentDisposition: z.string().max(60).nullable(),
@@ -51,16 +54,30 @@ export type EmlAttachmentMeta = z.infer<typeof EmlAttachmentMeta>;
 
 // Hard caps shared by API + web so any parsing-layer surprise (e.g. a
 // 50 MB text body smuggled through a multipart) cannot lock up the
-// renderer.
-export const MAX_EML_TEXT_BODY_BYTES = 200_000;
+// renderer. The unit on the *_CHARS constants is JS string length
+// (UTF-16 code units), matching Zod's .max() semantics — for ASCII
+// that equals bytes; for multi-byte characters it is a closer
+// approximation to "render cost" than raw byte count.
+export const MAX_EML_TEXT_BODY_CHARS = 200_000;
 export const MAX_EML_HEADER_COUNT = 200;
+export const MAX_EML_RECIPIENTS = 50;
+export const MAX_EML_ATTACHMENT_COUNT = 50;
+
+// Hard byte cap on .eml files that may be parsed into the structured
+// view. Above this, /parsed returns 413 — the raw .eml download via
+// /content is unaffected. simpleParser() buffers the whole message in
+// memory; without a cap a multi-hundred-megabyte EML could exhaust
+// the API process.
+export const MAX_PARSED_EML_BYTES = 5 * 1024 * 1024;
 
 export const ParsedEmlPayload = z.object({
   // Subject line and well-known parties pulled out for the header strip.
   subject: z.string().max(998).nullable(),
   from: EmailParty.nullable(),
-  to: z.array(EmailParty).max(50),
-  cc: z.array(EmailParty).max(50),
+  to: z.array(EmailParty).max(MAX_EML_RECIPIENTS),
+  toTruncated: z.boolean(),
+  cc: z.array(EmailParty).max(MAX_EML_RECIPIENTS),
+  ccTruncated: z.boolean(),
   replyTo: EmailParty.nullable(),
   returnPath: z.string().max(254).nullable(),
   // ISO timestamp pulled from the Date: header when parseable.
@@ -76,7 +93,10 @@ export const ParsedEmlPayload = z.object({
   }),
 
   // Flat header list, in arrival order, capped at MAX_EML_HEADER_COUNT.
+  // `headersTruncated` lets the UI tell trainees they aren't seeing
+  // every Received hop — relevant for chain-of-custody reasoning.
   headers: z.array(EmlHeader),
+  headersTruncated: z.boolean(),
 
   // text/plain body. Capped; `textBodyTruncated` indicates we cut it
   // short. May be null when the message is HTML-only.
@@ -88,6 +108,7 @@ export const ParsedEmlPayload = z.object({
   // something they could download.
   htmlBodyBytes: z.number().int().nonnegative().nullable(),
 
-  attachments: z.array(EmlAttachmentMeta),
+  attachments: z.array(EmlAttachmentMeta).max(MAX_EML_ATTACHMENT_COUNT),
+  attachmentsTruncated: z.boolean(),
 });
 export type ParsedEmlPayload = z.infer<typeof ParsedEmlPayload>;

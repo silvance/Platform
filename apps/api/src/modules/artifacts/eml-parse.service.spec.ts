@@ -91,7 +91,7 @@ describe("EmlParseService", () => {
     expect(names.indexOf("from")).toBeLessThan(names.indexOf("subject"));
   });
 
-  it("truncates text bodies that exceed MAX_EML_TEXT_BODY_BYTES", async () => {
+  it("truncates text bodies that exceed MAX_EML_TEXT_BODY_CHARS", async () => {
     const big = [
       "From: a@b.com",
       "To: c@d.com",
@@ -145,5 +145,123 @@ describe("EmlParseService", () => {
     expect(parsed.attachments[0]!.contentType).toBe("application/pdf");
     expect(parsed.attachments[0]!.contentDisposition).toBe("attachment");
     expect(parsed.attachments[0]!.sizeBytes).toBeGreaterThan(0);
+  });
+
+  describe("audit hardening", () => {
+    function buildBigRecipients(count: number): string {
+      const recipients = Array.from({ length: count }, (_, i) => `user${i}@example.com`).join(", ");
+      return [
+        "From: a@b.com",
+        `To: ${recipients}`,
+        "Subject: many",
+        "",
+        "body",
+      ].join("\r\n");
+    }
+
+    it("slices To and Cc to MAX_EML_RECIPIENTS without throwing the contract", async () => {
+      const parsed = await svc.parse(fromString(buildBigRecipients(75)));
+      expect(parsed.to.length).toBe(50);
+      expect(parsed.toTruncated).toBe(true);
+      expect(parsed.ccTruncated).toBe(false);
+    });
+
+    it("does not mark recipients as truncated when under the cap", async () => {
+      const parsed = await svc.parse(fromString(buildBigRecipients(3)));
+      expect(parsed.to.length).toBe(3);
+      expect(parsed.toTruncated).toBe(false);
+    });
+
+    it("normalizes attachment contentType — strips parameters, lower-cases, trims", async () => {
+      const eml = [
+        "From: a@b.com",
+        "To: c@d.com",
+        "Subject: weird-mime",
+        'Content-Type: multipart/mixed; boundary="X"',
+        "",
+        "--X",
+        "Content-Type: text/plain",
+        "",
+        "body",
+        "--X",
+        'Content-Type: Application/PDF; name="weird.exe"',
+        'Content-Disposition: attachment; filename="weird.exe"',
+        "Content-Transfer-Encoding: base64",
+        "",
+        Buffer.from("%PDF-1.4 ok").toString("base64"),
+        "--X--",
+        "",
+      ].join("\r\n");
+      const parsed = await svc.parse(fromString(eml));
+      expect(parsed.attachments[0]!.contentType).toBe("application/pdf");
+    });
+
+    it("falls back to application/octet-stream for malformed Content-Type", async () => {
+      const eml = [
+        "From: a@b.com",
+        "To: c@d.com",
+        "Subject: malformed-mime",
+        'Content-Type: multipart/mixed; boundary="X"',
+        "",
+        "--X",
+        "Content-Type: text/plain",
+        "",
+        "body",
+        "--X",
+        'Content-Type: this is not a media type',
+        'Content-Disposition: attachment; filename="payload.bin"',
+        "Content-Transfer-Encoding: base64",
+        "",
+        Buffer.from("payload").toString("base64"),
+        "--X--",
+        "",
+      ].join("\r\n");
+      const parsed = await svc.parse(fromString(eml));
+      expect(parsed.attachments[0]!.contentType).toBe("application/octet-stream");
+    });
+
+    it("flags headersTruncated when the EML has more headers than the cap", async () => {
+      const headers = Array.from({ length: 250 }, (_, i) => `X-Custom-${i}: value-${i}`).join("\r\n");
+      const eml = [
+        "From: a@b.com",
+        "To: c@d.com",
+        "Subject: lots-of-headers",
+        headers,
+        "",
+        "body",
+      ].join("\r\n");
+      const parsed = await svc.parse(fromString(eml));
+      expect(parsed.headersTruncated).toBe(true);
+      expect(parsed.headers.length).toBeLessThanOrEqual(200);
+    });
+
+    it("flags attachmentsTruncated when the EML has more attachments than the cap", async () => {
+      // 55 attachments, cap is 50 → expect attachments.length=50 + attachmentsTruncated=true.
+      const parts = Array.from({ length: 55 }, (_, i) => [
+        "--X",
+        "Content-Type: application/pdf",
+        `Content-Disposition: attachment; filename="att-${i}.pdf"`,
+        "Content-Transfer-Encoding: base64",
+        "",
+        Buffer.from(`%PDF a${i}`).toString("base64"),
+      ].join("\r\n")).join("\r\n");
+      const eml = [
+        "From: a@b.com",
+        "To: c@d.com",
+        "Subject: many-attachments",
+        'Content-Type: multipart/mixed; boundary="X"',
+        "",
+        "--X",
+        "Content-Type: text/plain",
+        "",
+        "body",
+        parts,
+        "--X--",
+        "",
+      ].join("\r\n");
+      const parsed = await svc.parse(fromString(eml));
+      expect(parsed.attachments.length).toBe(50);
+      expect(parsed.attachmentsTruncated).toBe(true);
+    });
   });
 });
