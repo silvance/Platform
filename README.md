@@ -4,9 +4,9 @@ Scenario-based training platform for CI cyber, digital forensics, and
 related investigative-reasoning skill areas. Designed to run locally on a
 laptop or internal server, with a path to broader online deployment.
 
-This branch contains **Milestone 0** only: the repo skeleton, end-to-end
-wiring between web → api → Postgres, and a Docker Compose stack. There is
-no auth, no scenario engine, and no artifact handling yet.
+This repo has shipped milestones **M0** (repo skeleton + end-to-end wiring)
+and **M1** (local accounts, sessions, role guards, seed). Scenarios,
+artifacts, and the workspace UI start landing in M2.
 
 ## Stack
 
@@ -25,7 +25,9 @@ api never serves a UI; the web never talks to the db directly.
 ```
 apps/
   web/          Next.js 15 app (server-renders the home page, fetches API)
-  api/          NestJS API (/v1/healthz, /v1/readyz, /v1/hello)
+  api/          NestJS API (auth, health, hello + Prisma migrations)
+                /v1/healthz, /v1/readyz, /v1/hello,
+                /v1/auth/login, /v1/auth/logout, /v1/auth/me
 packages/
   contracts/    Shared Zod schemas + inferred TS types
 docker-compose.yml
@@ -43,9 +45,9 @@ docker compose up --build
 
 Then:
 
-- Web UI: <http://localhost:3000> — shows the API hello payload rendered server-side.
-- API liveness: <http://localhost:4000/v1/healthz>
-- API readiness (DB ping): <http://localhost:4000/v1/readyz>
+- Web UI: <http://localhost:3000> — root redirects unauthenticated visitors to `/login`; after sign-in, instructors go to `/admin` and trainees to `/scenarios`.
+- API liveness: <http://localhost:4000/v1/healthz> — always 200 if Node is responsive.
+- API readiness (DB ping): <http://localhost:4000/v1/readyz> — returns 200 only when Postgres is reachable, 503 otherwise. The Compose API healthcheck targets `/v1/readyz`, so `depends_on: service_healthy` gates dependents on real DB readiness.
 
 To shut down and wipe the DB volume:
 
@@ -83,12 +85,59 @@ editing shared schemas.
 | `pnpm install` | Install all workspace deps (use the committed lockfile) |
 | `pnpm build` | Build `contracts`, then `api` and `web` |
 | `pnpm typecheck` | Run `tsc --noEmit` across every workspace |
-| `pnpm test` | M0 placeholder — runs `typecheck`. A real test suite (Jest for the api, Playwright for the web) lands in a later milestone. |
+| `pnpm test` | Runs the workspace test suites. Currently the API Jest unit tests (auth service — 12 cases). Web Playwright/integration tests land in a later milestone. |
+| `pnpm seed` | Create or refresh the seed instructor + trainee accounts and print their generated passwords once. |
 | `pnpm dev:api` / `pnpm dev:web` | Run a single app outside Docker |
 | `pnpm compose:up` | `docker compose up --build` |
 | `pnpm compose:down` | `docker compose down -v` (wipes the db volume) |
 
-## Verifying M0
+## Seeding test accounts
+
+After the API and db are running, create an instructor and a trainee:
+
+```bash
+# In docker compose:
+docker compose run --rm api node dist/scripts/seed.js
+
+# Outside docker:
+pnpm --filter @ci-train/api seed
+```
+
+The seed script prints generated passwords to stdout exactly once. Re-running
+regenerates passwords for the same emails (`instructor@example.local`,
+`trainee@example.local`); override via `SEED_INSTRUCTOR_EMAIL` /
+`SEED_TRAINEE_EMAIL`.
+
+## Auth model (M1)
+
+- **Password hashing:** Argon2id via `@node-rs/argon2` (m=19MiB, t=2, p=1).
+- **Sessions:** opaque 256-bit random tokens, base64url-encoded. The DB
+  only stores the SHA-256 hash of the token (`sessions.token_hash`) — a DB
+  leak does not expose live session credentials.
+- **Transport:** the API accepts `Authorization: Bearer <token>`. The web
+  app sets the cookie with `HttpOnly`, `SameSite=Strict`, `Path=/`, and
+  `Secure` **when `NODE_ENV=production`** (`Secure` is off in development
+  so the cookie works over `http://localhost`). The browser never sees the
+  raw API token; Next.js reads the cookie server-side and forwards the
+  token via `Authorization` on internal fetches.
+- **User-enumeration mitigation:** on a missed email, the login path
+  performs a real Argon2id verify against a precomputed, throwaway hash
+  initialized at startup. This evens out the ~30 ms timing gap between
+  "no user" and "wrong password". It is not a perfect constant-time
+  guarantee — a successful row fetch still costs a few extra ms — but it
+  closes the dominant signal.
+- **Reverse-proxy trust:** off by default. See `TRUST_PROXY` in
+  `.env.example`. Enable only behind a proxy that sanitizes
+  `X-Forwarded-*`; otherwise login throttling can be bypassed by spoofed
+  headers.
+- **Guards:** a global `AuthGuard` requires a bearer token on every route
+  except those marked `@Public()` (currently `/healthz`, `/readyz`,
+  `/hello`, and `/auth/login`). `@Roles('instructor')` adds role gating;
+  `RolesGuard` enforces it.
+- **Throttling:** `/auth/login` is rate-limited to 10 requests / minute
+  via `@nestjs/throttler`. Other routes have a 60 rpm default budget.
+
+## Verifying M0/M1
 
 After `docker compose up --build`, you should see:
 
@@ -101,6 +150,11 @@ After `docker compose up --build`, you should see:
    `HelloResponse` Zod schema from `@ci-train/contracts`.
 5. <http://localhost:4000/v1/readyz> reports `ready: true` with the
    `postgres` check passing.
+6. After seeding, signing in at <http://localhost:3000/login> redirects an
+   instructor to `/admin` and a trainee to `/scenarios`. A trainee browsing
+   to `/admin` is bounced back to `/scenarios` (role guard). Logging out
+   clears the cookie, revokes the server-side session, and any further
+   request to `/auth/me` with that token returns 401.
 
 If `/v1/readyz` reports the postgres check as failing, the api is up but
 cannot reach the db — check `DATABASE_URL` and that the `db` service is
@@ -129,15 +183,15 @@ deferred until the platform has real functionality worth deploying.
 
 ## What's intentionally not here yet
 
-- Authentication, user roles, sessions
 - Scenario data model, persistence, importer
 - Artifact storage, viewers, EML parser
 - Question types, attempts, debriefs
 - Instructor review UI
+- Self-service user registration / password reset / MFA
 - Python parser sidecar
 - Optional Ollama feedback service
 
-These land in later milestones (M1 onward). See the architecture plan in
+These land in later milestones (M2 onward). See the architecture plan in
 the project discussion for the full build order.
 
 ## Scope note (RF / TSCM)

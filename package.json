@@ -14,7 +14,8 @@
     "dev:api": "pnpm --filter @ci-train/api dev",
     "build:contracts": "pnpm --filter @ci-train/contracts build",
     "typecheck": "pnpm -r typecheck",
-    "test": "echo \"M0 has no runtime test suite yet; running typecheck as a placeholder.\" && pnpm -r typecheck",
+    "test": "pnpm -r --if-present --workspace-concurrency=1 test",
+    "seed": "pnpm --filter @ci-train/api seed",
     "compose:up": "docker compose up --build",
     "compose:down": "docker compose down -v"
   }

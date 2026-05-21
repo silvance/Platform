@@ -1,6 +1,8 @@
 import { Controller, Get } from "@nestjs/common";
 import { HelloResponse } from "@ci-train/contracts";
+import { Public } from "../auth/decorators/public.decorator";
 
+@Public()
 @Controller("hello")
 export class HelloController {
   @Get()
@@ -8,7 +10,7 @@ export class HelloController {
     return {
       message: "Hello from the ci-train API.",
       from: "api",
-      apiVersion: "0.0.0",
+      apiVersion: "0.1.0",
       timestamp: new Date().toISOString(),
     };
   }
