@@ -49,6 +49,7 @@ enum ArtifactKind {
   json
   pdf
   image
+  eml
 }
 
 model User {

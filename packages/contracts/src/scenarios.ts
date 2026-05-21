@@ -32,9 +32,16 @@ export const ScenarioStatus = z.enum(["draft", "published", "archived"]);
 export type ScenarioStatus = z.infer<typeof ScenarioStatus>;
 
 // Keep in sync with `enum ArtifactKind` in apps/api/prisma/schema.prisma.
-// M3 supports text, csv, json, pdf, image. EML lands in M4; pcap/disk
+// M3 added text, csv, json, pdf, image. M4 adds eml. pcap/disk
 // images / Windows registry slabs come later.
-export const ArtifactKind = z.enum(["text", "csv", "json", "pdf", "image"]);
+export const ArtifactKind = z.enum([
+  "text",
+  "csv",
+  "json",
+  "pdf",
+  "image",
+  "eml",
+]);
 export type ArtifactKind = z.infer<typeof ArtifactKind>;
 
 // Per-kind rendering hints. UI viewer dispatch is driven by `kind`; the
@@ -47,6 +54,7 @@ export function defaultMimeFor(kind: ArtifactKind): string {
     case "json": return "application/json; charset=utf-8";
     case "pdf":  return "application/pdf";
     case "image": return "application/octet-stream"; // overridden by stored mime
+    case "eml":  return "message/rfc822";
   }
 }
 
@@ -86,6 +94,11 @@ export function safeServeMimeFor(
       // so the browser doesn't try to interpret it.
       return { mime: "application/octet-stream", inline: false };
     }
+    case "eml":
+      // .eml files are downloaded as attachments. The renderable view
+      // comes from the parsed JSON endpoint, not from streaming the
+      // raw bytes through a viewer.
+      return { mime: "message/rfc822", inline: false };
   }
 }
 

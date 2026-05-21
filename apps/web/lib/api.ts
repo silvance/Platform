@@ -5,6 +5,7 @@ import {
   LoginRequest,
   LoginResponse,
   MeResponse,
+  ParsedEmlPayload,
   ScenarioDetail,
   ScenarioListQuery,
   ScenarioListResponse,
@@ -107,6 +108,18 @@ export const api = {
       ),
     getBySlug: async (token: string, slug: string): Promise<ScenarioDetail> =>
       parse(ScenarioDetail, await request(`/scenarios/${encodeURIComponent(slug)}`, { token })),
+    getParsedEml: async (
+      token: string,
+      slug: string,
+      artifactId: string,
+    ): Promise<ParsedEmlPayload> =>
+      parse(
+        ParsedEmlPayload,
+        await request(
+          `/scenarios/${encodeURIComponent(slug)}/artifacts/${encodeURIComponent(artifactId)}/parsed`,
+          { token },
+        ),
+      ),
   },
 };
 

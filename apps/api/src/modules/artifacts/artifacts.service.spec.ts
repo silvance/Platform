@@ -2,6 +2,7 @@ import { Readable } from "node:stream";
 import { ArtifactsService } from "./artifacts.service";
 import type { PrismaService } from "../database/prisma.service";
 import type { ArtifactStorage } from "./storage/artifact-storage";
+import type { EmlParseService } from "./eml-parse.service";
 
 function makeFakeStorage(): ArtifactStorage {
   return {
@@ -10,6 +11,16 @@ function makeFakeStorage(): ArtifactStorage {
     size: jest.fn(async () => 1),
     write: jest.fn(async () => undefined),
   };
+}
+
+// EML parsing isn't exercised by the streaming-side tests; pass an
+// inert stub so the new constructor signature still satisfies DI.
+function makeFakeEmlParse(): EmlParseService {
+  return {
+    parse: jest.fn(async () => {
+      throw new Error("EML parsing not stubbed in this test");
+    }),
+  } as unknown as EmlParseService;
 }
 
 function makeFakePrisma(rows: Array<Record<string, unknown>>): PrismaService {
@@ -42,6 +53,7 @@ describe("ArtifactsService — canonical MIME (audit #1)", () => {
     const svc = new ArtifactsService(
       makeFakePrisma([{ ...BASE_ARTIFACT, kind: "text", mimeType: "text/html" }]),
       makeFakeStorage(),
+  makeFakeEmlParse(),
     );
     const r = await svc.streamArtifact("trainee", "my-scenario", BASE_ARTIFACT.id);
     expect(r!.mimeType).toBe("text/plain; charset=utf-8");
@@ -56,6 +68,7 @@ describe("ArtifactsService — canonical MIME (audit #1)", () => {
         { ...BASE_ARTIFACT, kind: "json", mimeType: "application/javascript" },
       ]),
       makeFakeStorage(),
+  makeFakeEmlParse(),
     );
     const r = await svc.streamArtifact("trainee", "my-scenario", BASE_ARTIFACT.id);
     expect(r!.mimeType).toBe("application/json; charset=utf-8");
@@ -68,6 +81,7 @@ describe("ArtifactsService — canonical MIME (audit #1)", () => {
         { ...BASE_ARTIFACT, kind: "pdf", mimeType: "text/html" },
       ]),
       makeFakeStorage(),
+  makeFakeEmlParse(),
     );
     const r = await svc.streamArtifact("trainee", "my-scenario", BASE_ARTIFACT.id);
     expect(r!.mimeType).toBe("application/pdf");
@@ -80,6 +94,7 @@ describe("ArtifactsService — canonical MIME (audit #1)", () => {
         { ...BASE_ARTIFACT, kind: "image", mimeType: "image/png" },
       ]),
       makeFakeStorage(),
+  makeFakeEmlParse(),
     );
     const r = await svc.streamArtifact("trainee", "my-scenario", BASE_ARTIFACT.id);
     expect(r!.mimeType).toBe("image/png");
@@ -92,6 +107,7 @@ describe("ArtifactsService — canonical MIME (audit #1)", () => {
         { ...BASE_ARTIFACT, kind: "image", mimeType: "image/svg+xml" },
       ]),
       makeFakeStorage(),
+  makeFakeEmlParse(),
     );
     const r = await svc.streamArtifact("trainee", "my-scenario", BASE_ARTIFACT.id);
     expect(r!.mimeType).toBe("application/octet-stream");
@@ -104,6 +120,7 @@ describe("ArtifactsService — canonical MIME (audit #1)", () => {
         { ...BASE_ARTIFACT, kind: "image", mimeType: "Image/JPEG; charset=binary" },
       ]),
       makeFakeStorage(),
+  makeFakeEmlParse(),
     );
     const r = await svc.streamArtifact("trainee", "my-scenario", BASE_ARTIFACT.id);
     expect(r!.mimeType).toBe("image/jpeg");
@@ -116,6 +133,7 @@ describe("ArtifactsService (unit)", () => {
     const svc = new ArtifactsService(
       makeFakePrisma([{ ...BASE_ARTIFACT }]),
       makeFakeStorage(),
+  makeFakeEmlParse(),
     );
     const r = await svc.streamArtifact("trainee", "my-scenario", BASE_ARTIFACT.id);
     expect(r).not.toBeNull();
@@ -128,6 +146,7 @@ describe("ArtifactsService (unit)", () => {
     const svcPdf = new ArtifactsService(
       makeFakePrisma([{ ...BASE_ARTIFACT, kind: "pdf", mimeType: "application/pdf" }]),
       makeFakeStorage(),
+  makeFakeEmlParse(),
     );
     const r1 = await svcPdf.streamArtifact("trainee", "my-scenario", BASE_ARTIFACT.id);
     expect(r1!.contentDisposition).toBe("inline");
@@ -135,6 +154,7 @@ describe("ArtifactsService (unit)", () => {
     const svcImg = new ArtifactsService(
       makeFakePrisma([{ ...BASE_ARTIFACT, kind: "image", mimeType: "image/png" }]),
       makeFakeStorage(),
+  makeFakeEmlParse(),
     );
     const r2 = await svcImg.streamArtifact("trainee", "my-scenario", BASE_ARTIFACT.id);
     expect(r2!.contentDisposition).toBe("inline");
@@ -144,6 +164,7 @@ describe("ArtifactsService (unit)", () => {
     const svc = new ArtifactsService(
       makeFakePrisma([{ ...BASE_ARTIFACT }]),
       makeFakeStorage(),
+  makeFakeEmlParse(),
     );
     const r = await svc.streamArtifact("trainee", "wrong-scenario", BASE_ARTIFACT.id);
     expect(r).toBeNull();
@@ -155,6 +176,7 @@ describe("ArtifactsService (unit)", () => {
         { ...BASE_ARTIFACT, scenario: { slug: "my-scenario", status: "draft" } },
       ]),
       makeFakeStorage(),
+  makeFakeEmlParse(),
     );
     const r = await svc.streamArtifact("trainee", "my-scenario", BASE_ARTIFACT.id);
     expect(r).toBeNull();
@@ -166,13 +188,14 @@ describe("ArtifactsService (unit)", () => {
         { ...BASE_ARTIFACT, scenario: { slug: "my-scenario", status: "draft" } },
       ]),
       makeFakeStorage(),
+  makeFakeEmlParse(),
     );
     const r = await svc.streamArtifact("instructor", "my-scenario", BASE_ARTIFACT.id);
     expect(r).not.toBeNull();
   });
 
   it("returns null for an unknown artifact id", async () => {
-    const svc = new ArtifactsService(makeFakePrisma([]), makeFakeStorage());
+    const svc = new ArtifactsService(makeFakePrisma([]), makeFakeStorage(), makeFakeEmlParse());
     const r = await svc.streamArtifact(
       "instructor",
       "my-scenario",
