@@ -70,11 +70,6 @@ export class AuthService implements OnModuleInit {
     }
   }
 
-  // Test/diagnostic accessor — never call in production code paths.
-  getDummyHashForTest(): string | null {
-    return this.dummyHash;
-  }
-
   // Awaits a real Argon2id verify against a random hash. Always returns
   // false; the point is the work, not the answer.
   async verifyAgainstDummy(plain: string): Promise<boolean> {

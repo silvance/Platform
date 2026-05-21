@@ -4,6 +4,12 @@ import type { PrismaService } from "../database/prisma.service";
 // We test the pure helpers that don't touch the DB. Login/session flows
 // will get integration tests once a test Postgres is wired up — out of
 // scope for M1, which uses Jest unit tests only.
+// Read the private `dummyHash` field for invariant checks without
+// adding a test-only public method to the production service.
+function peekDummyHash(svc: AuthService): string | null {
+  return (svc as unknown as { dummyHash: string | null }).dummyHash;
+}
+
 describe("AuthService (unit)", () => {
   const fakePrisma = {} as unknown as PrismaService;
   const svc = new AuthService(fakePrisma);
@@ -46,7 +52,7 @@ describe("AuthService (unit)", () => {
   describe("user-enumeration mitigation (dummy hash)", () => {
     it("onModuleInit populates a real argon2id hash", async () => {
       await svc.onModuleInit();
-      const dummy = svc.getDummyHashForTest();
+      const dummy = peekDummyHash(svc);
       expect(dummy).not.toBeNull();
       expect(dummy).toMatch(/^\$argon2id\$v=19\$m=\d+,t=\d+,p=\d+\$[^$]+\$[^$]+$/);
     });
@@ -60,9 +66,9 @@ describe("AuthService (unit)", () => {
     it("falls back to lazy init if onModuleInit was skipped", async () => {
       // Construct a fresh instance, deliberately skipping onModuleInit.
       const fresh = new AuthService(fakePrisma);
-      expect(fresh.getDummyHashForTest()).toBeNull();
+      expect(peekDummyHash(fresh)).toBeNull();
       await expect(fresh.verifyAgainstDummy("anything")).resolves.toBe(false);
-      expect(fresh.getDummyHashForTest()).toMatch(/^\$argon2id\$/);
+      expect(peekDummyHash(fresh)).toMatch(/^\$argon2id\$/);
     });
   });
 
