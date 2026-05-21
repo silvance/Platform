@@ -5,6 +5,9 @@ import {
   LoginRequest,
   LoginResponse,
   MeResponse,
+  ScenarioDetail,
+  ScenarioListQuery,
+  ScenarioListResponse,
 } from "@ci-train/contracts";
 
 const API_INTERNAL_URL =
@@ -74,6 +77,16 @@ function parse<T>(schema: z.ZodType<T>, value: unknown): T {
   }
 }
 
+function buildQuery(params: Record<string, string | number | undefined>): string {
+  const qs = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    if (v === undefined || v === null) continue;
+    qs.set(k, String(v));
+  }
+  const s = qs.toString();
+  return s ? `?${s}` : "";
+}
+
 export const api = {
   hello: async (): Promise<HelloResponse> =>
     parse(HelloResponse, await request("/hello")),
@@ -86,6 +99,15 @@ export const api = {
   },
   me: async (token: string): Promise<MeResponse> =>
     parse(MeResponse, await request("/auth/me", { token })),
+  scenarios: {
+    list: async (token: string, query: ScenarioListQuery = {}): Promise<ScenarioListResponse> =>
+      parse(
+        ScenarioListResponse,
+        await request(`/scenarios${buildQuery(query)}`, { token }),
+      ),
+    getBySlug: async (token: string, slug: string): Promise<ScenarioDetail> =>
+      parse(ScenarioDetail, await request(`/scenarios/${encodeURIComponent(slug)}`, { token })),
+  },
 };
 
 // Back-compat for the M0 home page until it's refactored.

@@ -4,9 +4,10 @@ Scenario-based training platform for CI cyber, digital forensics, and
 related investigative-reasoning skill areas. Designed to run locally on a
 laptop or internal server, with a path to broader online deployment.
 
-This repo has shipped milestones **M0** (repo skeleton + end-to-end wiring)
-and **M1** (local accounts, sessions, role guards, seed). Scenarios,
-artifacts, and the workspace UI start landing in M2.
+This repo has shipped milestones **M0** (repo skeleton + end-to-end
+wiring), **M1** (local accounts, sessions, role guards, seed), and
+**M2** (scenario catalog + brief browse). Artifacts and the workspace
+UI land in M3.
 
 ## Stack
 
@@ -25,9 +26,10 @@ api never serves a UI; the web never talks to the db directly.
 ```
 apps/
   web/          Next.js 15 app (server-renders the home page, fetches API)
-  api/          NestJS API (auth, health, hello + Prisma migrations)
+  api/          NestJS API (auth, scenarios, health + Prisma migrations)
                 /v1/healthz, /v1/readyz, /v1/hello,
-                /v1/auth/login, /v1/auth/logout, /v1/auth/me
+                /v1/auth/login, /v1/auth/logout, /v1/auth/me,
+                /v1/scenarios, /v1/scenarios/:slug
 packages/
   contracts/    Shared Zod schemas + inferred TS types
 docker-compose.yml
@@ -178,6 +180,13 @@ After `docker compose up --build`, you should see:
    to `/admin` is bounced back to `/scenarios` (role guard). Logging out
    clears the cookie, revokes the server-side session, and any further
    request to `/auth/me` with that token returns 401.
+7. `/scenarios` lists the two seeded scenarios with skill-area / difficulty
+   chips. `?skillArea=rf_awareness` filters to the awareness module
+   scenario. `/scenarios/rf-awareness-clean-sweep-001` renders the brief
+   with the awareness-only disclaimer banner above it. `/scenarios/bec-vendor-redirect-001`
+   renders without the disclaimer. Unknown slugs return 404. Trainees
+   cannot view drafts (the API returns 404 for trainees, not 403, so the
+   existence of a draft isn't leaked).
 
 If `/v1/readyz` reports the postgres check as failing, the api is up but
 cannot reach the db — check `DATABASE_URL` and that the `db` service is

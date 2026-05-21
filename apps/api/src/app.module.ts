@@ -8,6 +8,7 @@ import { HelloModule } from "./modules/hello/hello.module";
 import { AuthModule } from "./modules/auth/auth.module";
 import { AuthGuard } from "./modules/auth/guards/auth.guard";
 import { RolesGuard } from "./modules/auth/guards/roles.guard";
+import { ScenariosModule } from "./modules/scenarios/scenarios.module";
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { RolesGuard } from "./modules/auth/guards/roles.guard";
     ]),
     DatabaseModule,
     AuthModule,
+    ScenariosModule,
     HealthModule,
     HelloModule,
   ],

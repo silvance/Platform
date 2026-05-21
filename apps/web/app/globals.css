@@ -45,3 +45,70 @@ h2 { font-size: 1.15rem; margin: 2rem 0 .5rem; color: var(--muted); font-weight:
 .tag-bad { color: var(--bad); font-weight: 600; }
 
 footer { color: var(--muted); font-size: .85rem; margin-top: 3rem; }
+
+.md h1 { font-size: 1.5rem; margin: 1.5rem 0 .75rem; color: var(--fg); }
+.md h2 { font-size: 1.15rem; margin: 1.5rem 0 .5rem; color: var(--fg); }
+.md h3 { font-size: 1rem; margin: 1rem 0 .25rem; color: var(--fg); }
+.md p { margin: .65rem 0; }
+.md ul, .md ol { padding-left: 1.5rem; }
+.md li { margin: .25rem 0; }
+.md code { background: #0b1020; border: 1px solid #1f2845; border-radius: 4px; padding: 0 .35em; font-size: .9em; }
+.md pre { background: #0b1020; border: 1px solid #1f2845; border-radius: 6px; padding: .75rem 1rem; overflow-x: auto; }
+.md blockquote {
+  border-left: 3px solid #2a3556;
+  margin: .5rem 0;
+  padding: .25rem 1rem;
+  color: var(--muted);
+}
+.md a { color: var(--accent); }
+.md table { border-collapse: collapse; margin: 1rem 0; }
+.md th, .md td { border: 1px solid #1f2845; padding: .35rem .65rem; }
+.md th { background: #131a30; }
+
+.md-callout {
+  background: rgba(255, 196, 0, 0.06);
+  border: 1px solid rgba(255, 196, 0, 0.35);
+  border-left-width: 3px;
+  border-radius: 6px;
+  padding: .5rem 1rem;
+  margin: 0 0 1rem;
+  color: #f0d68a;
+}
+.md-callout p { margin: .35rem 0; }
+.md-callout blockquote {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  color: inherit;
+}
+.md-callout a { color: #ffd066; }
+
+.chip {
+  display: inline-block;
+  background: #131a30;
+  border: 1px solid #2a3556;
+  border-radius: 999px;
+  padding: .1rem .55rem;
+  font-size: .75rem;
+  color: var(--muted);
+  margin: 0 .3rem .3rem 0;
+}
+.chip-skill { color: var(--accent); border-color: rgba(106, 168, 255, 0.45); }
+.chip-difficulty { color: #f0d68a; border-color: rgba(240, 214, 138, 0.45); }
+.chip-rf { color: #f0d68a; border-color: rgba(240, 214, 138, 0.45); background: rgba(255, 196, 0, 0.06); }
+
+.scenario-list { display: grid; gap: .75rem; margin: 1rem 0; }
+.scenario-card a {
+  display: block;
+  padding: 1rem 1.25rem;
+  background: var(--card);
+  border: 1px solid #1f2845;
+  border-radius: 10px;
+  color: var(--fg);
+  text-decoration: none;
+}
+.scenario-card a:hover {
+  border-color: var(--accent);
+}
+.scenario-card h3 { margin: 0 0 .35rem; }
+.scenario-card .summary { color: var(--muted); font-size: .9rem; margin: .25rem 0 .5rem; }
