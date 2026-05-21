@@ -8,8 +8,9 @@ This repo has shipped milestones **M0** (repo skeleton + end-to-end
 wiring), **M1** (local accounts, sessions, role guards, seed), **M2**
 (scenario catalog + brief browse), **M3** (artifact storage + tabbed
 workspace viewers), **M4** (EML viewer with header / auth-result
-parsing), and **M5** (questions, attempts, debrief). Indicator-select
-question type lands in M6; instructor authoring + review lands in M7.
+parsing), **M5** (questions, attempts, debrief), and **M6**
+(indicator-selection question type). Instructor authoring + review
+lands in M7.
 
 ## Stack
 

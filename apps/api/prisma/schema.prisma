@@ -109,11 +109,12 @@ model Scenario {
   createdAt        DateTime       @default(now()) @map("created_at")
   updatedAt        DateTime       @updatedAt @map("updated_at")
 
-  brief     ScenarioBrief?
-  artifacts Artifact[]
-  questions Question[]
-  attempts  Attempt[]
-  author    User?          @relation("ScenarioAuthor", fields: [authorUserId], references: [id], onDelete: SetNull)
+  brief         ScenarioBrief?
+  artifacts     Artifact[]
+  questions     Question[]
+  attempts      Attempt[]
+  indicatorSets IndicatorSet[]
+  author        User?         @relation("ScenarioAuthor", fields: [authorUserId], references: [id], onDelete: SetNull)
 
   @@index([status])
   @@index([skillAreas], type: Gin)
@@ -154,7 +155,11 @@ model Artifact {
   viewerHint   String?      @map("viewer_hint") @db.VarChar(60)
   createdAt    DateTime     @default(now()) @map("created_at")
 
-  scenario Scenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  scenario             Scenario       @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  // M6: indicator sets that point at this artifact for their source.
+  // ON DELETE SET NULL so deleting an artifact doesn't take the
+  // indicator set down — the items_json content survives.
+  sourcedIndicatorSets IndicatorSet[]
 
   @@unique([scenarioId, ordinal])
   @@index([scenarioId])
@@ -167,6 +172,7 @@ enum QuestionType {
   short_answer
   long_answer
   confidence
+  select_indicators
 }
 
 enum AutoScoreOutcome {
@@ -183,23 +189,52 @@ enum AutoScoreOutcome {
 // other types it's `null`. Correctness lives ONLY on the AnswerKey row
 // so a leaked Question record can't expose the expected answer.
 model Question {
-  id          String       @id @default(uuid()) @db.Uuid
-  scenarioId  String       @map("scenario_id") @db.Uuid
-  ordinal     Int
-  type        QuestionType
-  promptMd    String       @map("prompt_md")
-  optionsJson Json?        @map("options_json")
-  weight      Int          @default(1)
-  createdAt   DateTime     @default(now()) @map("created_at")
-  updatedAt   DateTime     @updatedAt @map("updated_at")
+  id              String       @id @default(uuid()) @db.Uuid
+  scenarioId      String       @map("scenario_id") @db.Uuid
+  ordinal         Int
+  type            QuestionType
+  promptMd        String       @map("prompt_md")
+  optionsJson     Json?        @map("options_json")
+  // M6: nullable FK to indicator_sets. Required for select_indicators
+  // questions and forbidden for other types — enforced by a CHECK
+  // constraint in the migration.
+  indicatorSetId  String?      @map("indicator_set_id") @db.Uuid
+  weight          Int          @default(1)
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
 
-  scenario  Scenario       @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
-  answerKey AnswerKey?
-  answers   AttemptAnswer[]
+  scenario     Scenario        @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  indicatorSet IndicatorSet?   @relation(fields: [indicatorSetId], references: [id], onDelete: Restrict)
+  answerKey    AnswerKey?
+  answers      AttemptAnswer[]
 
   @@unique([scenarioId, ordinal])
   @@index([scenarioId])
+  @@index([indicatorSetId])
   @@map("questions")
+}
+
+// M6: indicator sets. Authored independently of questions so the same
+// set can back multiple questions (e.g. "which support BEC?" and
+// "which overclaim?"). Items are stored as JSONB; correctness is NOT
+// here — it lives in AnswerKey.expectedJson, same isolation as MC.
+model IndicatorSet {
+  id               String   @id @default(uuid()) @db.Uuid
+  scenarioId       String   @map("scenario_id") @db.Uuid
+  slug             String   @db.VarChar(120)
+  displayName      String   @map("display_name") @db.VarChar(120)
+  sourceArtifactId String?  @map("source_artifact_id") @db.Uuid
+  itemsJson        Json     @map("items_json")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  scenario       Scenario   @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  sourceArtifact Artifact?  @relation(fields: [sourceArtifactId], references: [id], onDelete: SetNull)
+  questions      Question[]
+
+  @@unique([scenarioId, slug])
+  @@index([scenarioId])
+  @@map("indicator_sets")
 }
 
 // 1:1 with Question. `expectedJson` is intentionally separate so that

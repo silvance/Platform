@@ -171,4 +171,61 @@ describe("GradingService", () => {
       },
     );
   });
+
+  describe("select_indicators", () => {
+    const expected = {
+      type: "select_indicators" as const,
+      correctIds: ["a", "b", "c"],
+    };
+
+    it("exact match → 1.0 / correct", () => {
+      const r = svc.grade({
+        type: "select_indicators",
+        expectedJson: expected,
+        responseJson: { type: "select_indicators", data: { selectedIds: ["a", "b", "c"] } },
+      });
+      expect(r.score).toBe(1);
+      expect(r.outcome).toBe("correct");
+    });
+
+    it("subset with no false positives → partial credit", () => {
+      const r = svc.grade({
+        type: "select_indicators",
+        expectedJson: expected,
+        responseJson: { type: "select_indicators", data: { selectedIds: ["a", "b"] } },
+      });
+      expect(r.score).toBeCloseTo(2 / 3);
+      expect(r.outcome).toBe("partial");
+    });
+
+    it("any false positive → 0 / incorrect", () => {
+      const r = svc.grade({
+        type: "select_indicators",
+        expectedJson: expected,
+        responseJson: { type: "select_indicators", data: { selectedIds: ["a", "z"] } },
+      });
+      expect(r.score).toBe(0);
+      expect(r.outcome).toBe("incorrect");
+    });
+
+    it("empty response → 0 / incorrect", () => {
+      const r = svc.grade({
+        type: "select_indicators",
+        expectedJson: expected,
+        responseJson: null,
+      });
+      expect(r.score).toBe(0);
+      expect(r.outcome).toBe("incorrect");
+    });
+
+    it("malformed expected key → ungradable", () => {
+      const r = svc.grade({
+        type: "select_indicators",
+        expectedJson: { not: "valid" },
+        responseJson: { type: "select_indicators", data: { selectedIds: ["a"] } },
+      });
+      expect(r.score).toBeNull();
+      expect(r.outcome).toBe("ungradable");
+    });
+  });
 });

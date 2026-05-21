@@ -5,6 +5,7 @@ import {
   AutoScoreOutcome,
   ConfidenceResponse,
   McResponse,
+  SelectIndicatorsResponse,
 } from "@ci-train/contracts";
 
 export interface GradingInput {
@@ -35,6 +36,10 @@ const ExpectedConfidence = z.object({
     z.number().int().min(1).max(5),
   ]),
 });
+const ExpectedSelectIndicators = z.object({
+  type: z.literal("select_indicators"),
+  correctIds: z.array(z.string()).min(1),
+});
 
 @Injectable()
 export class GradingService {
@@ -48,6 +53,8 @@ export class GradingService {
           return this.gradeMultiChoice(input);
         case "confidence":
           return this.gradeConfidence(input);
+        case "select_indicators":
+          return this.gradeSelectIndicators(input);
         case "short_answer":
         case "long_answer":
           // Narrative answers need instructor review (M7).
@@ -88,6 +95,37 @@ export class GradingService {
           score: picked.size / correct.size,
           outcome: "partial",
         };
+      }
+    }
+    return { score: 0, outcome: "incorrect" };
+  }
+
+  // Same logic as multi_choice but tied to indicator sets. Partial
+  // credit always available (indicator selection is implicitly
+  // multi-select). False positives → 0/incorrect.
+  private gradeSelectIndicators(input: GradingInput): GradingResult {
+    const expected = ExpectedSelectIndicators.safeParse(input.expectedJson);
+    if (!expected.success) return { score: null, outcome: "ungradable" };
+    if (input.responseJson === null || input.responseJson === undefined) {
+      return { score: 0, outcome: "incorrect" };
+    }
+    const response = SelectIndicatorsResponse.safeParse(
+      unwrapData("select_indicators", input.responseJson),
+    );
+    if (!response.success) return { score: 0, outcome: "incorrect" };
+
+    const correct = new Set(expected.data.correctIds);
+    const picked = new Set(response.data.selectedIds);
+    const exactMatch =
+      correct.size === picked.size &&
+      [...correct].every((id) => picked.has(id));
+    if (exactMatch) {
+      return { score: 1, outcome: "correct" };
+    }
+    if (picked.size > 0) {
+      const allCorrect = [...picked].every((id) => correct.has(id));
+      if (allCorrect && picked.size < correct.size) {
+        return { score: picked.size / correct.size, outcome: "partial" };
       }
     }
     return { score: 0, outcome: "incorrect" };
