@@ -1,0 +1,77 @@
+# ci-train local / self-hosted stack.
+# Online deployment will eventually use the same images behind a managed
+# Postgres and object store, but the service boundary stays identical:
+#   web  ──► api  ──► db
+#                └──► (future) artifact storage volume
+#
+# Usage:
+#   cp .env.example .env
+#   docker compose up --build
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-citrain}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-citrain_dev_password_change_me}
+      POSTGRES_DB: ${POSTGRES_DB:-citrain}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    # No host port published by default — only the api should reach the db.
+    expose:
+      - "5432"
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      API_HOST: 0.0.0.0
+      API_PORT: ${API_PORT:-4000}
+      DATABASE_URL: postgres://${POSTGRES_USER:-citrain}:${POSTGRES_PASSWORD:-citrain_dev_password_change_me}@db:5432/${POSTGRES_DB:-citrain}
+    ports:
+      - "${API_PORT:-4000}:4000"
+    # readyz returns 503 (and wget exits non-zero) until the api can reach
+    # the db, so dependents wait for real readiness, not just liveness.
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:4000/v1/readyz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: ${WEB_PORT:-3000}
+      HOSTNAME: 0.0.0.0
+      API_INTERNAL_URL: http://api:4000
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+
+volumes:
+  db-data:
