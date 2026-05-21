@@ -84,7 +84,10 @@ model Scenario {
   title            String         @db.VarChar(200)
   summary          String         @db.VarChar(1000)
   skillAreas       SkillArea[]    @map("skill_areas")
-  difficulty       Int            // 1..5; validated at the API layer
+  // 1..5; enforced by a DB CHECK constraint (`scenarios_difficulty_range`,
+  // see the init_scenarios migration) and mirrored by the Zod Difficulty
+  // schema in @ci-train/contracts.
+  difficulty       Int
   estimatedMinutes Int?           @map("estimated_minutes")
   authorUserId     String?        @map("author_user_id") @db.Uuid
   version          Int            @default(1)

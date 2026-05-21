@@ -14,16 +14,46 @@ function readSingle(v: string | string[] | undefined): string | undefined {
   return v;
 }
 
+// Field-by-field safeParse so a single bad query param doesn't take
+// the rest of the user's filters with it. Returns the salvaged query
+// plus the names of fields whose values were dropped.
+function parseScenarioFilters(
+  sp: Record<string, string | string[] | undefined>,
+): { query: ScenarioListQuery; invalidFilterFields: string[] } {
+  const shape = ScenarioListQuery.shape;
+  const raw = {
+    skillArea: readSingle(sp["skillArea"]),
+    difficulty: readSingle(sp["difficulty"]),
+    tag: readSingle(sp["tag"]),
+  };
+  const query: Record<string, unknown> = {};
+  const invalid: string[] = [];
+  for (const key of Object.keys(raw) as Array<keyof typeof raw>) {
+    const value = raw[key];
+    if (value === undefined) continue;
+    const r = shape[key].safeParse(value);
+    if (r.success) {
+      if (r.data !== undefined) query[key] = r.data;
+    } else {
+      invalid.push(key);
+    }
+  }
+  return {
+    query: query as ScenarioListQuery,
+    invalidFilterFields: invalid,
+  };
+}
+
 export default async function ScenariosPage({ searchParams }: Props) {
   const user = await requireUser();
   const token = await readToken();
 
   const sp = await searchParams;
-  const query = ScenarioListQuery.parse({
-    skillArea: readSingle(sp["skillArea"]),
-    difficulty: readSingle(sp["difficulty"]),
-    tag: readSingle(sp["tag"]),
-  });
+  // Per-field safeParse, not whole-object .parse(): a hand-typed URL like
+  // ?difficulty=99 or ?skillArea=nope must not crash the page. Invalid
+  // fields are dropped individually so a single bad query value doesn't
+  // silently wipe out the user's other valid filters.
+  const { query, invalidFilterFields } = parseScenarioFilters(sp);
 
   const list = await api.scenarios.list(token!, query);
 
@@ -34,6 +64,22 @@ export default async function ScenariosPage({ searchParams }: Props) {
         Welcome, {user.displayName}. Pick a scenario to read the brief.
         Artifacts and questions land in upcoming milestones (M3, M5).
       </p>
+
+      {invalidFilterFields.length > 0 ? (
+        <div
+          className="card"
+          style={{
+            borderColor: "rgba(255, 196, 0, 0.45)",
+            background: "rgba(255, 196, 0, 0.06)",
+            color: "#f0d68a",
+          }}
+        >
+          Ignored invalid filter{invalidFilterFields.length === 1 ? "" : "s"}:{" "}
+          {invalidFilterFields.map((f) => (
+            <code key={f} style={{ marginRight: ".5rem" }}>{f}</code>
+          ))}
+        </div>
+      ) : null}
 
       <FilterBar query={query} totalShown={list.scenarios.length} total={list.total} />
 

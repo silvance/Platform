@@ -63,9 +63,17 @@ export type ScenarioListResponse = z.infer<typeof ScenarioListResponse>;
 
 // Detail view includes the brief markdown + optional awareness disclaimer.
 // Artifacts and questions land in later milestones.
+//
+// Size caps are deliberately large but finite: 100 KB of markdown is many
+// pages of prose (Moby Dick chapter 1 is ~30 KB), so any legitimate brief
+// fits, while a malformed pack import or a buggy authoring path can't
+// stream multi-megabyte payloads through the API or the renderer.
+export const MAX_BRIEF_MARKDOWN_BYTES = 100_000;
+export const MAX_DISCLAIMER_MARKDOWN_BYTES = 20_000;
+
 export const ScenarioBriefPayload = z.object({
-  markdownBody: z.string(),
-  disclaimerMd: z.string().nullable(),
+  markdownBody: z.string().max(MAX_BRIEF_MARKDOWN_BYTES),
+  disclaimerMd: z.string().max(MAX_DISCLAIMER_MARKDOWN_BYTES).nullable(),
 });
 export type ScenarioBriefPayload = z.infer<typeof ScenarioBriefPayload>;
 

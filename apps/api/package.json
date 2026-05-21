@@ -49,7 +49,8 @@
     "moduleFileExtensions": ["ts", "js", "json"],
     "testMatch": ["<rootDir>/src/**/*.spec.ts"],
     "moduleNameMapper": {
-      "^@ci-train/contracts$": "<rootDir>/../../packages/contracts/dist/index.js"
+      "^@ci-train/contracts$": "<rootDir>/../../packages/contracts/src/index.ts",
+      "^(\\.{1,2}/.*)\\.js$": "$1"
     }
   }
 }
