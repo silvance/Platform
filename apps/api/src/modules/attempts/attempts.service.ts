@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -12,13 +13,56 @@ import {
   AnswerKeyPayload,
   DebriefAnswerPayload,
   DebriefPayload,
+  McOptionsSpec,
   QuestionPayload,
   QuestionResponse,
   SaveAnswerRequest,
   AutoScoreOutcome,
 } from "@ci-train/contracts";
+import { z } from "zod";
 import { PrismaService } from "../database/prisma.service";
 import { GradingService } from "./grading.service";
+
+// Local schemas for the expected_json shapes stored on answer_keys.
+// These mirror the discriminated union exposed by AnswerKeyPayload but
+// live alongside the service that consumes them — the API contract
+// describes what crosses the wire, these describe what's in the DB.
+const ExpectedMc = z.object({
+  type: z.literal("multi_choice"),
+  correctIds: z.array(z.string()).min(1),
+  allowMultiple: z.boolean(),
+});
+const ExpectedShortAnswer = z.object({
+  type: z.literal("short_answer"),
+  rubricNote: z.string().nullable(),
+});
+const ExpectedLongAnswer = z.object({
+  type: z.literal("long_answer"),
+  rubricNote: z.string().nullable(),
+});
+const ExpectedConfidence = z.object({
+  type: z.literal("confidence"),
+  expectedRange: z.tuple([
+    z.number().int().min(1).max(5),
+    z.number().int().min(1).max(5),
+  ]),
+});
+const ExpectedAny = z.discriminatedUnion("type", [
+  ExpectedMc,
+  ExpectedShortAnswer,
+  ExpectedLongAnswer,
+  ExpectedConfidence,
+]);
+
+// Pessimistic-lock row shape returned by SELECT ... FOR UPDATE.
+interface LockedAttemptRow {
+  id: string;
+  scenario_id: string;
+  trainee_user_id: string;
+  locked: boolean;
+  submitted_at: Date | null;
+  max_score: number;
+}
 
 @Injectable()
 export class AttemptsService {
@@ -28,9 +72,6 @@ export class AttemptsService {
   ) {}
 
   // POST /v1/scenarios/:slug/attempts
-  // Idempotent: if the trainee already has an attempt for this scenario,
-  // return it. Otherwise create one. Trainees only — instructors don't
-  // take attempts in M5.
   async startOrGet(
     role: Role,
     traineeUserId: string,
@@ -45,7 +86,6 @@ export class AttemptsService {
     });
     if (!scenario) throw new NotFoundException("Scenario not found.");
     if (scenario.status !== "published") {
-      // Same 404-not-403 stance as scenario detail — don't leak draft existence.
       throw new NotFoundException("Scenario not found.");
     }
 
@@ -98,6 +138,14 @@ export class AttemptsService {
   }
 
   // PATCH /v1/attempts/:id/answers/:questionId
+  //
+  // Race-safety: we open a transaction and SELECT FOR UPDATE on the
+  // attempt row. Submit holds the same lock for its full grading run,
+  // so an autosave that arrives during submit either runs first
+  // (submit waits and re-reads the latest answers) or runs after
+  // submit (and sees locked=true and 409s). There is no window in
+  // which an autosave can write a new responseJson into a row that
+  // submit has already graded.
   async saveAnswer(
     role: Role,
     actorUserId: string,
@@ -105,143 +153,156 @@ export class AttemptsService {
     questionId: string,
     body: SaveAnswerRequest,
   ): Promise<AttemptAnswerPayload> {
-    const attempt = await this.prisma.attempt.findUnique({
-      where: { id: attemptId },
-      select: { id: true, traineeUserId: true, locked: true },
-    });
-    if (!attempt) throw new NotFoundException("Attempt not found.");
-    // Only the owning trainee may write answers. Instructors can read but
-    // never write in M5.
-    if (role !== "trainee" || actorUserId !== attempt.traineeUserId) {
-      throw new ForbiddenException("Cannot write to another user's attempt.");
-    }
-    if (attempt.locked) {
-      throw new ConflictException("Attempt is locked; submit is final.");
-    }
+    return this.prisma.$transaction(async (tx) => {
+      const attempt = await this.lockAttempt(tx, attemptId);
+      if (!attempt) throw new NotFoundException("Attempt not found.");
+      if (role !== "trainee" || actorUserId !== attempt.trainee_user_id) {
+        throw new ForbiddenException("Cannot write to another user's attempt.");
+      }
+      if (attempt.locked) {
+        throw new ConflictException("Attempt is locked; submit is final.");
+      }
 
-    const question = await this.prisma.question.findUnique({
-      where: { id: questionId },
-      select: { id: true, scenarioId: true, type: true },
-    });
-    if (!question) throw new NotFoundException("Question not found.");
-    // The question must belong to the attempt's scenario.
-    const ownScenario = await this.prisma.attempt.findFirst({
-      where: { id: attemptId, scenarioId: question.scenarioId },
-      select: { id: true },
-    });
-    if (!ownScenario) throw new NotFoundException("Question not found.");
+      // Single query: question must exist AND belong to the attempt's
+      // scenario. Collapses the previous two-query check into one.
+      const question = await tx.question.findFirst({
+        where: { id: questionId, scenarioId: attempt.scenario_id },
+        select: { id: true, type: true, optionsJson: true },
+      });
+      if (!question) throw new NotFoundException("Question not found.");
 
-    // Validate the response shape matches the declared question type.
-    if (body.response.type !== question.type) {
-      throw new ConflictException(
-        `Response type ${body.response.type} does not match question type ${question.type}.`,
-      );
-    }
+      // Response type must match the question's declared type.
+      if (body.response.type !== question.type) {
+        throw new ConflictException(
+          `Response type ${body.response.type} does not match question type ${question.type}.`,
+        );
+      }
 
-    const saved = await this.prisma.attemptAnswer.upsert({
-      where: {
-        attemptId_questionId: {
+      // For multi_choice, every selectedId must be in the question's
+      // option set. If allowMultiple is false, at most one selection.
+      // Bad data (unknown ids, too many selections) is rejected before
+      // it ever lands in the DB.
+      if (body.response.type === "multi_choice") {
+        const spec = McOptionsSpec.safeParse(question.optionsJson);
+        if (!spec.success) {
+          throw new ConflictException("Question is misconfigured (invalid options).");
+        }
+        const validIds = new Set(spec.data.options.map((o) => o.id));
+        const picked = body.response.data.selectedIds;
+        const unknown = picked.filter((id) => !validIds.has(id));
+        if (unknown.length > 0) {
+          throw new BadRequestException({
+            message: "Unknown option id(s) for this question.",
+            unknown,
+          });
+        }
+        if (!spec.data.allowMultiple && picked.length > 1) {
+          throw new BadRequestException(
+            "This question allows at most one selection.",
+          );
+        }
+      }
+
+      const saved = await tx.attemptAnswer.upsert({
+        where: {
+          attemptId_questionId: {
+            attemptId: attempt.id,
+            questionId: question.id,
+          },
+        },
+        update: { responseJson: body.response as unknown as Prisma.InputJsonValue },
+        create: {
           attemptId: attempt.id,
           questionId: question.id,
+          responseJson: body.response as unknown as Prisma.InputJsonValue,
         },
-      },
-      update: { responseJson: body.response as object },
-      create: {
-        attemptId: attempt.id,
-        questionId: question.id,
-        responseJson: body.response as object,
-      },
-    });
+      });
 
-    return this.composeAnswerPayload(saved);
+      return this.composeAnswerPayload(saved);
+    });
   }
 
-  // POST /v1/attempts/:id/submit
-  // Idempotent: re-submitting a locked attempt returns the same state.
+  // POST /v1/attempts/:id/submit — idempotent; grades + locks atomically.
   async submit(
     role: Role,
     actorUserId: string,
     attemptId: string,
   ): Promise<AttemptPayload> {
-    const attempt = await this.prisma.attempt.findUnique({
-      where: { id: attemptId },
-      include: {
-        scenario: {
-          include: { questions: { include: { answerKey: true }, orderBy: { ordinal: "asc" } } },
-        },
-        answers: true,
-      },
-    });
-    if (!attempt) throw new NotFoundException("Attempt not found.");
-    if (role !== "trainee" || actorUserId !== attempt.traineeUserId) {
-      throw new ForbiddenException("Cannot submit another user's attempt.");
-    }
-    if (attempt.locked) {
-      // Idempotent re-submit — return current state.
-      return this.composeAttemptPayload(attempt, attempt.scenario);
-    }
-
-    // Compute auto-grades for every question that has an answer key.
-    const answersByQuestion = new Map(attempt.answers.map((a) => [a.questionId, a]));
-    let total = 0;
-    const updates: Array<{
-      where: { attemptId_questionId: { attemptId: string; questionId: string } };
-      update: { autoScore: number | null; autoOutcome: AutoScoreOutcome | null };
-      create: Prisma.AttemptAnswerUncheckedCreateInput;
-    }> = [];
-
-    for (const q of attempt.scenario.questions) {
-      const ans = answersByQuestion.get(q.id);
-      const result = this.grading.grade({
-        type: q.type,
-        expectedJson: q.answerKey?.expectedJson ?? null,
-        responseJson: ans?.responseJson ?? null,
-      });
-      if (result.score !== null) {
-        total += result.score * q.weight;
+    return this.prisma.$transaction(async (tx) => {
+      const attempt = await this.lockAttempt(tx, attemptId);
+      if (!attempt) throw new NotFoundException("Attempt not found.");
+      if (role !== "trainee" || actorUserId !== attempt.trainee_user_id) {
+        throw new ForbiddenException("Cannot submit another user's attempt.");
       }
-      updates.push({
-        where: { attemptId_questionId: { attemptId: attempt.id, questionId: q.id } },
-        update: { autoScore: result.score, autoOutcome: result.outcome },
-        create: {
-          attemptId: attempt.id,
-          questionId: q.id,
-          responseJson: Prisma.JsonNull,
-          autoScore: result.score,
-          autoOutcome: result.outcome,
-        },
-      });
-    }
 
-    const submittedAt = new Date();
-    await this.prisma.$transaction([
-      ...updates.map((u) =>
-        this.prisma.attemptAnswer.upsert({
-          where: u.where,
-          update: u.update,
-          create: u.create,
-        }),
-      ),
-      this.prisma.attempt.update({
+      // Idempotent re-submit — locked rows return current state without
+      // re-grading.
+      if (attempt.locked) {
+        const cur = await tx.attempt.findUniqueOrThrow({
+          where: { id: attempt.id },
+          include: {
+            scenario: { include: { questions: { orderBy: { ordinal: "asc" } } } },
+            answers: true,
+          },
+        });
+        return this.composeAttemptPayload(cur, cur.scenario);
+      }
+
+      // Read every question + key + the trainee's latest answers under
+      // the same FOR UPDATE lock so no autosave can race in between.
+      const questions = await tx.question.findMany({
+        where: { scenarioId: attempt.scenario_id },
+        include: { answerKey: true },
+        orderBy: { ordinal: "asc" },
+      });
+      const answers = await tx.attemptAnswer.findMany({
+        where: { attemptId: attempt.id },
+      });
+      const answersByQuestion = new Map(answers.map((a) => [a.questionId, a]));
+
+      let total = 0;
+      for (const q of questions) {
+        const ans = answersByQuestion.get(q.id);
+        const result = this.grading.grade({
+          type: q.type,
+          expectedJson: q.answerKey?.expectedJson ?? null,
+          responseJson: ans?.responseJson ?? null,
+        });
+        if (result.score !== null) {
+          total += result.score * q.weight;
+        }
+        await tx.attemptAnswer.upsert({
+          where: { attemptId_questionId: { attemptId: attempt.id, questionId: q.id } },
+          update: { autoScore: result.score, autoOutcome: result.outcome },
+          create: {
+            attemptId: attempt.id,
+            questionId: q.id,
+            responseJson: Prisma.JsonNull,
+            autoScore: result.score,
+            autoOutcome: result.outcome,
+          },
+        });
+      }
+
+      const submittedAt = new Date();
+      await tx.attempt.update({
         where: { id: attempt.id },
         data: {
           locked: true,
           submittedAt,
           totalScore: total,
         },
-      }),
-    ]);
+      });
 
-    const refreshed = await this.prisma.attempt.findUniqueOrThrow({
-      where: { id: attempt.id },
-      include: {
-        scenario: {
-          include: { questions: { orderBy: { ordinal: "asc" } } },
+      const refreshed = await tx.attempt.findUniqueOrThrow({
+        where: { id: attempt.id },
+        include: {
+          scenario: { include: { questions: { orderBy: { ordinal: "asc" } } } },
+          answers: true,
         },
-        answers: true,
-      },
+      });
+      return this.composeAttemptPayload(refreshed, refreshed.scenario);
     });
-    return this.composeAttemptPayload(refreshed, refreshed.scenario);
   }
 
   // GET /v1/attempts/:id/debrief — only available once submitted.
@@ -273,26 +334,31 @@ export class AttemptsService {
     }
 
     const answersByQ = new Map(attempt.answers.map((a) => [a.questionId, a]));
-    const debriefAnswers: DebriefAnswerPayload[] = attempt.scenario.questions.map((q) => {
-      const a = answersByQ.get(q.id);
-      const question: QuestionPayload = toQuestionPayload(q);
-      const answerKey: AnswerKeyPayload = toAnswerKeyPayload(q);
-      const responseParsed = a?.responseJson
-        ? QuestionResponse.safeParse(a.responseJson)
-        : null;
-      return {
-        questionId: q.id,
-        response: responseParsed?.success ? responseParsed.data : null,
-        autoScore: a?.autoScore ?? null,
-        autoOutcome: (a?.autoOutcome ?? null) as AutoScoreOutcome | null,
-        manualScore: a?.manualScore ?? null,
-        instructorNotesMd: a?.instructorNotesMd ?? null,
-        question,
-        answerKey,
-      };
-    });
+    const debriefAnswers: DebriefAnswerPayload[] = attempt.scenario.questions.map(
+      (q) => {
+        const a = answersByQ.get(q.id);
+        const question = toQuestionPayload(q);
+        const answerKey = toAnswerKeyPayload(q);
+        const responseParsed = a?.responseJson
+          ? QuestionResponse.safeParse(a.responseJson)
+          : null;
+        return {
+          questionId: q.id,
+          response: responseParsed?.success ? responseParsed.data : null,
+          autoScore: a?.autoScore ?? null,
+          autoOutcome: (a?.autoOutcome ?? null) as AutoScoreOutcome | null,
+          manualScore: a?.manualScore ?? null,
+          instructorNotesMd: a?.instructorNotesMd ?? null,
+          question,
+          answerKey,
+        };
+      },
+    );
 
-    return {
+    // Final validation so any drift between Prisma row shapes and the
+    // shared contract surfaces here as a 500 rather than as
+    // silently-wrong client renders.
+    return DebriefPayload.parse({
       attemptId: attempt.id,
       scenarioSlug: attempt.scenario.slug,
       scenarioTitle: attempt.scenario.title,
@@ -300,10 +366,26 @@ export class AttemptsService {
       totalScore: attempt.totalScore ?? 0,
       maxScore: attempt.maxScore,
       answers: debriefAnswers,
-    };
+    });
   }
 
   // ─── helpers ────────────────────────────────────────────────────
+
+  // SELECT ... FOR UPDATE on the attempts row inside the given
+  // transaction. Returns null when the row doesn't exist (handled by
+  // callers as 404).
+  private async lockAttempt(
+    tx: Prisma.TransactionClient,
+    attemptId: string,
+  ): Promise<LockedAttemptRow | null> {
+    const rows = await tx.$queryRaw<LockedAttemptRow[]>`
+      SELECT id, scenario_id, trainee_user_id, locked, submitted_at, max_score
+      FROM "attempts"
+      WHERE id = ${attemptId}::uuid
+      FOR UPDATE
+    `;
+    return rows[0] ?? null;
+  }
 
   private assertCanRead(role: Role, actorUserId: string, traineeUserId: string) {
     if (role === "instructor") return;
@@ -389,19 +471,22 @@ type QuestionRow = {
   } | null;
 };
 
+// Validates optionsJson via McOptionsSpec rather than casting. If the
+// JSON is malformed, degrade gracefully: emit no options + allowMultiple=
+// false. The trainee won't have anything to pick (and the misconfigured
+// question becomes a no-op), but the API surface stays valid.
 function toQuestionPayload(q: QuestionRow): QuestionPayload {
-  // Pull options through a defensive shape rather than re-using the
-  // contract's full union — `options` and `allowMultiple` are nullable
-  // for non-mc rows.
   let options: QuestionPayload["options"] = null;
   let allowMultiple: QuestionPayload["allowMultiple"] = null;
-  if (q.type === "multi_choice" && q.optionsJson) {
-    const raw = q.optionsJson as {
-      options?: Array<{ id: string; label: string }>;
-      allowMultiple?: boolean;
-    };
-    options = raw.options ?? null;
-    allowMultiple = raw.allowMultiple ?? null;
+  if (q.type === "multi_choice") {
+    const parsed = McOptionsSpec.safeParse(q.optionsJson);
+    if (parsed.success) {
+      options = parsed.data.options;
+      allowMultiple = parsed.data.allowMultiple;
+    } else {
+      options = [];
+      allowMultiple = false;
+    }
   }
   return {
     id: q.id,
@@ -414,27 +499,49 @@ function toQuestionPayload(q: QuestionRow): QuestionPayload {
   };
 }
 
+// Validates expectedJson via ExpectedAny rather than casting. If a row
+// is malformed, degrade to a placeholder that the contract accepts —
+// the debrief still renders, just without a usable expected answer.
 function toAnswerKeyPayload(q: QuestionRow): AnswerKeyPayload {
-  // expectedJson is the discriminated shape per type. We trust the seed
-  // to write it correctly; safeParse defends against drift.
   const key = q.answerKey;
   if (!key) {
-    // No authored answer key — degrade gracefully so debrief still shows
-    // *something* for the question.
+    return placeholderAnswerKey(q.type);
+  }
+  const parsed = ExpectedAny.safeParse(key.expectedJson);
+  if (!parsed.success || parsed.data.type !== q.type) {
     return {
-      expected:
-        q.type === "multi_choice"
-          ? { type: "multi_choice", correctIds: [], allowMultiple: false }
-          : q.type === "confidence"
-            ? { type: "confidence", expectedRange: [3, 3] }
-            : { type: q.type, rubricNote: null },
-      debriefMd: "_No debrief authored for this question._",
+      expected: placeholderExpected(q.type),
+      debriefMd:
+        "_The authored answer key for this question is malformed; the rubric below may not apply._\n\n" +
+        key.debriefMd,
     };
   }
   return {
-    // The contract validates this at the controller boundary; we trust
-    // the seed/import paths to write the right shape.
-    expected: key.expectedJson as AnswerKeyPayload["expected"],
+    expected: parsed.data,
     debriefMd: key.debriefMd,
   };
+}
+
+function placeholderAnswerKey(
+  type: QuestionRow["type"],
+): AnswerKeyPayload {
+  return {
+    expected: placeholderExpected(type),
+    debriefMd: "_No debrief authored for this question._",
+  };
+}
+
+function placeholderExpected(
+  type: QuestionRow["type"],
+): AnswerKeyPayload["expected"] {
+  switch (type) {
+    case "multi_choice":
+      return { type: "multi_choice", correctIds: [], allowMultiple: false };
+    case "confidence":
+      return { type: "confidence", expectedRange: [3, 3] };
+    case "short_answer":
+      return { type: "short_answer", rubricNote: null };
+    case "long_answer":
+      return { type: "long_answer", rubricNote: null };
+  }
 }
