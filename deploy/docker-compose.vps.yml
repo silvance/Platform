@@ -1,0 +1,68 @@
+# ci-train — VPS-mode Compose.
+#
+# Targets a small public-internet VPS with:
+#   • db   — Postgres 16 (bind-mounted to a host data root)
+#   • api  — NestJS on 127.0.0.1:4000 only; Caddy fronts it
+#   • (no web — Next.js frontend deploys to Vercel)
+#
+# Usage (from repo root):
+#   docker compose --env-file deploy/env/vps.env \
+#                  -f deploy/docker-compose.vps.yml \
+#                  up -d --build
+#
+# All app-level config (URLs, DB, storage root) comes from env vars.
+# See docs/deployment.md for the full deploy procedure and
+# docs/backups.md for the backup script + restore checklist.
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      # Bind onto the host so nightly backups (docs/backups.md) can
+      # pg_dump and tar without dipping into the Docker volume driver.
+      - ${CITRAIN_DATA_ROOT:-/var/lib/citrain}/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    # Postgres is reachable only from the api over the internal docker
+    # network. Do not publish a host port.
+    expose:
+      - "5432"
+
+  api:
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      API_HOST: 0.0.0.0
+      API_PORT: 4000
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      ARTIFACT_STORAGE_ROOT: /data/artifacts
+      # Caddy is the only hop in front. Setting this wrong breaks
+      # /auth/login throttling — see docs/deployment.md § security.
+      TRUST_PROXY: ${TRUST_PROXY:-1}
+      SEED_INSTRUCTOR_EMAIL: ${SEED_INSTRUCTOR_EMAIL:-instructor@example.local}
+      SEED_TRAINEE_EMAIL: ${SEED_TRAINEE_EMAIL:-trainee@example.local}
+    volumes:
+      - ${CITRAIN_DATA_ROOT:-/var/lib/citrain}/artifacts:/data/artifacts
+    # Loopback only. Caddy on the host terminates TLS and forwards.
+    ports:
+      - "127.0.0.1:4000:4000"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:4000/v1/readyz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
