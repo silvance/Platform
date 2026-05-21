@@ -156,12 +156,21 @@ regenerates passwords for the same emails (`instructor@example.local`,
 After `docker compose up --build`, you should see:
 
 1. `db` container becomes healthy (Postgres `pg_isready` passes).
-2. `api` container becomes healthy (`GET /v1/healthz` returns `{ status: "ok", ... }`).
+2. `api` container becomes healthy. Two endpoints exist with distinct
+   roles:
+   - `GET /v1/healthz` — **liveness**. Returns `{ status: "ok", ... }`
+     as long as the Node process is responsive; does not exercise the
+     database. Suitable for orchestrator restart/liveness probes.
+   - `GET /v1/readyz` — **readiness**. Runs a Postgres `SELECT 1` via
+     Prisma and returns **200** when the DB is reachable, **503**
+     otherwise. **This is the endpoint the Compose API healthcheck
+     targets**, so `depends_on: service_healthy` gates dependents on
+     real DB readiness — not just process liveness.
 3. `web` container becomes healthy (`GET /api/health` on the web app returns ok).
-4. Opening <http://localhost:3000> renders the API hello payload — the
-   page is server-rendered by Next.js, which calls `http://api:4000/v1/hello`
-   inside the Docker network. The response is validated against the
-   `HelloResponse` Zod schema from `@ci-train/contracts`.
+4. Opening <http://localhost:3000> — the root path **redirects to
+   `/login` unless a valid session cookie is already present**, in
+   which case it redirects to `/admin` (instructor) or `/scenarios`
+   (trainee). The M0 hello-payload landing page is gone as of M1.
 5. <http://localhost:4000/v1/readyz> reports `ready: true` with the
    `postgres` check passing.
 6. After seeding, signing in at <http://localhost:3000/login> redirects an
