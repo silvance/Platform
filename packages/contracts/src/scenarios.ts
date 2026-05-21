@@ -31,6 +31,38 @@ export function isAwarenessOnly(area: SkillArea): boolean {
 export const ScenarioStatus = z.enum(["draft", "published", "archived"]);
 export type ScenarioStatus = z.infer<typeof ScenarioStatus>;
 
+// Keep in sync with `enum ArtifactKind` in apps/api/prisma/schema.prisma.
+// M3 supports text, csv, json, pdf, image. EML lands in M4; pcap/disk
+// images / Windows registry slabs come later.
+export const ArtifactKind = z.enum(["text", "csv", "json", "pdf", "image"]);
+export type ArtifactKind = z.infer<typeof ArtifactKind>;
+
+// Per-kind rendering hints. UI viewer dispatch is driven by `kind`; the
+// mime type is shown to trainees but does not pick the renderer (some
+// .csv files arrive as text/plain in real-world tooling).
+export function defaultMimeFor(kind: ArtifactKind): string {
+  switch (kind) {
+    case "text": return "text/plain; charset=utf-8";
+    case "csv":  return "text/csv; charset=utf-8";
+    case "json": return "application/json; charset=utf-8";
+    case "pdf":  return "application/pdf";
+    case "image": return "application/octet-stream"; // overridden by stored mime
+  }
+}
+
+export const ArtifactListItem = z.object({
+  id: z.string().uuid(),
+  ordinal: z.number().int().nonnegative(),
+  displayName: z.string().min(1).max(200),
+  kind: ArtifactKind,
+  sha256: z.string().regex(/^[0-9a-f]{64}$/),
+  sizeBytes: z.number().int().nonnegative(),
+  mimeType: z.string().min(1).max(120),
+  viewerHint: z.string().max(60).nullable(),
+  createdAt: z.string().datetime(),
+});
+export type ArtifactListItem = z.infer<typeof ArtifactListItem>;
+
 export const ScenarioSource = z.enum(["authored", "imported"]);
 export type ScenarioSource = z.infer<typeof ScenarioSource>;
 
@@ -79,6 +111,7 @@ export type ScenarioBriefPayload = z.infer<typeof ScenarioBriefPayload>;
 
 export const ScenarioDetail = ScenarioListItem.extend({
   brief: ScenarioBriefPayload.nullable(),
+  artifacts: z.array(ArtifactListItem),
 });
 export type ScenarioDetail = z.infer<typeof ScenarioDetail>;
 

@@ -1,21 +1,13 @@
 import "reflect-metadata";
-import { randomBytes } from "node:crypto";
-import { PrismaClient, type Role } from "@prisma/client";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
+import { promises as fs } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { PrismaClient, type Role, type ArtifactKind } from "@prisma/client";
 import { hash, Algorithm } from "@node-rs/argon2";
 
-// Standalone seed runner.
-//
-//  - Creates one instructor and one trainee with freshly-generated
-//    passwords printed to stdout.
-//  - Upserts two demonstration scenarios so M2 has something to browse
-//    out of the box:
-//        bec-vendor-redirect-001          (email_headers + bec)
-//        rf-awareness-clean-sweep-001     (rf_awareness — exercises the
-//                                          awareness-only disclaimer)
-//
-// Re-running regenerates passwords for the same emails (idempotent on
-// identity, non-idempotent on secrets) and refreshes scenario content
-// in place.
+// Standalone seed runner. Creates one instructor and one trainee with
+// freshly-generated passwords, upserts the two demonstration scenarios,
+// and writes their artifact bytes into the storage root.
 //
 // Usage (host):  pnpm --filter @ci-train/api seed
 // Usage (docker): docker compose run --rm api node dist/scripts/seed.js
@@ -24,6 +16,9 @@ const SEED_INSTRUCTOR_EMAIL =
   process.env.SEED_INSTRUCTOR_EMAIL ?? "instructor@example.local";
 const SEED_TRAINEE_EMAIL =
   process.env.SEED_TRAINEE_EMAIL ?? "trainee@example.local";
+const STORAGE_ROOT = resolve(
+  process.env.ARTIFACT_STORAGE_ROOT ?? "/data/artifacts",
+);
 
 const ARGON_OPTS = {
   algorithm: Algorithm.Argon2id,
@@ -33,7 +28,6 @@ const ARGON_OPTS = {
 };
 
 function randomPassword(): string {
-  // 18 random bytes → 24 base64url chars. Easy to copy/paste, ~108 bits.
   return randomBytes(18).toString("base64url");
 }
 
@@ -61,6 +55,14 @@ const RF_AWARENESS_DISCLAIMER = `
 > to qualified TSCM personnel and document observations conservatively.
 `.trim();
 
+interface ArtifactSeed {
+  ordinal: number;
+  displayName: string;
+  kind: ArtifactKind;
+  mimeType: string;
+  bytes: Buffer;
+}
+
 interface ScenarioSeed {
   slug: string;
   title: string;
@@ -71,6 +73,55 @@ interface ScenarioSeed {
   tags: string[];
   brief: string;
   disclaimer?: string;
+  artifacts: ArtifactSeed[];
+}
+
+// A minimal but valid 1x1 transparent PNG. Tiny enough to embed inline;
+// big enough to prove the image-viewer dispatch works end-to-end.
+const TINY_PNG_BASE64 =
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+
+// A minimal valid one-page PDF. Hand-built to keep the seed self-
+// contained (no PDF library dependency). Renders the single line of
+// text "ci-train seed PDF artifact" in any standards-compliant viewer.
+function buildTinyPdf(): Buffer {
+  const text = "(ci-train seed PDF artifact)";
+  const stream = `BT /F1 24 Tf 60 720 Td ${text} Tj ET`;
+  const streamBytes = Buffer.from(stream, "ascii");
+
+  // Object byte offsets are needed for the xref table — build the
+  // body string while tracking them.
+  const objects: string[] = [
+    "1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n",
+    "2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj\n",
+    "3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] " +
+      "/Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >> endobj\n",
+    `4 0 obj << /Length ${streamBytes.length} >>\nstream\n${stream}\nendstream\nendobj\n`,
+    "5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj\n",
+  ];
+  const header = "%PDF-1.4\n%\xE2\xE3\xCF\xD3\n";
+  const offsets: number[] = [];
+  let cursor = Buffer.byteLength(header, "binary");
+  for (const o of objects) {
+    offsets.push(cursor);
+    cursor += Buffer.byteLength(o, "binary");
+  }
+  const xrefOffset = cursor;
+  let xref = `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  for (const off of offsets) {
+    xref += `${String(off).padStart(10, "0")} 00000 n \n`;
+  }
+  const trailer = `trailer << /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`;
+  return Buffer.concat([
+    Buffer.from(header, "binary"),
+    ...objects.map((o) => Buffer.from(o, "binary")),
+    Buffer.from(xref, "binary"),
+    Buffer.from(trailer, "binary"),
+  ]);
+}
+
+function utf8(s: string): Buffer {
+  return Buffer.from(s, "utf-8");
 }
 
 const SCENARIOS: ScenarioSeed[] = [
@@ -93,19 +144,22 @@ invoice be redirected to a new account.
 
 You have been asked to triage the email and advise the controller.
 
-## What you'll have access to (later milestones)
+## Open the artifacts
 
-Artifacts arrive in M3:
-- The original \`.eml\` file (with full headers, including authentication
-  results).
-- A 24-hour slice of the partner firm's web-proxy log.
-- A PDF copy of the vendor's normal invoice template.
+The workspace tabs hold the supporting material:
+
+- A **24-hour slice of the partner firm's web-proxy log** (CSV).
+- The **vendor's normal invoice template** (PDF).
+- The **controller's contemporaneous note** of the request (plain text).
+- A **machine-parsed summary** of the suspect email's key headers
+  (JSON). The full \`.eml\` and an inline header parser arrive in M4.
 
 ## Goals for this scenario
 
-You'll be asked to:
+In later milestones (M5), you'll be asked to:
 
-1. Identify header lines that support — or refute — a BEC hypothesis.
+1. Identify the indicators in the headers + proxy log that support — or
+   refute — a BEC hypothesis.
 2. State your confidence that this is a BEC attempt, on a 1–5 scale.
 3. Recommend the next investigative step, with one sentence on *why*.
 4. Draft a one-paragraph escalation note for the SAC, distinguishing
@@ -113,14 +167,94 @@ You'll be asked to:
 
 ## Reasoning discipline
 
-This scenario explicitly trains the difference between:
+Distinguish:
 
 - **Proven:** authentication failures present in the headers; URLs that
   resolve to attacker-controlled infrastructure; etc.
 - **Inferred:** intent, attribution, and likely scope of compromise.
-
-Your debrief will grade the *report*, not just the verdict.
 `.trim(),
+    artifacts: [
+      {
+        ordinal: 1,
+        displayName: "controller-note.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "Date:    14:07 local",
+            "Author:  J. Smith, Controller",
+            "",
+            "Received an email that looked like it was from jane.doe@vendor.example",
+            "asking us to update the routing for invoice INV-2026-0418. Replied",
+            "asking to confirm by phone but the response said she was in a meeting",
+            "until tomorrow and the payment was urgent.",
+            "",
+            "Flagged this to CI cyber instead of routing it to AP. Not sending yet.",
+            "",
+            "— J.S.",
+          ].join("\n") + "\n",
+        ),
+      },
+      {
+        ordinal: 2,
+        displayName: "proxy-log-24h.csv",
+        kind: "csv",
+        mimeType: "text/csv; charset=utf-8",
+        bytes: utf8(
+          [
+            "timestamp,src_ip,user,host,url,status,bytes,user_agent",
+            "2026-04-18T13:51:02Z,10.4.7.18,j.smith,vendor.example,/login,200,4321,Mozilla/5.0",
+            "2026-04-18T13:52:14Z,10.4.7.18,j.smith,vendor.example,/invoices/INV-2026-0418,200,18211,Mozilla/5.0",
+            "2026-04-18T14:06:48Z,10.4.7.18,j.smith,vendor-lookup-alike.com,/secure-payment,200,2104,Mozilla/5.0",
+            "2026-04-18T14:06:53Z,10.4.7.18,j.smith,vendor-lookup-alike.com,/api/account-update,200,884,Mozilla/5.0",
+            "2026-04-18T14:07:21Z,10.4.7.18,j.smith,smtp.gmail.com,/inbox,200,17033,Mozilla/5.0",
+            "2026-04-18T14:09:02Z,10.4.7.18,j.smith,vendor.example,/account,401,118,Mozilla/5.0",
+            "2026-04-18T14:09:11Z,10.4.7.18,j.smith,vendor.example,/login,200,4319,Mozilla/5.0",
+            "2026-04-18T14:12:33Z,10.4.7.18,j.smith,internal.partner.local,/wiki/wire-change-policy,200,28442,Mozilla/5.0",
+          ].join("\n") + "\n",
+        ),
+      },
+      {
+        ordinal: 3,
+        displayName: "email-headers-summary.json",
+        kind: "json",
+        mimeType: "application/json; charset=utf-8",
+        bytes: utf8(
+          JSON.stringify(
+            {
+              note: "Machine-parsed summary; full .eml + inline parser arrive in M4.",
+              from_display: "Jane Doe",
+              from_address: "jane.doe@vendor.example",
+              reply_to: "ceo.urgent@gmail.com",
+              return_path: "<noreply@vendor-lookup-alike.com>",
+              received_chain: [
+                "from mail.vendor-lookup-alike.com",
+                "by inbound.partner.local",
+              ],
+              auth_results: {
+                spf: "neutral",
+                dkim: "fail",
+                dmarc: "fail",
+              },
+              suspect_links: [
+                "https://vendor-lookup-alike.com/secure-payment",
+                "https://vendor-lookup-alike.com/api/account-update",
+              ],
+              attachments: ["INV-2026-0418-revised.pdf"],
+            },
+            null,
+            2,
+          ) + "\n",
+        ),
+      },
+      {
+        ordinal: 4,
+        displayName: "vendor-invoice-template.pdf",
+        kind: "pdf",
+        mimeType: "application/pdf",
+        bytes: buildTinyPdf(),
+      },
+    ],
   },
   {
     slug: "rf-awareness-clean-sweep-001",
@@ -143,6 +277,15 @@ The report concludes:
 You are asked to review the report's language **before it goes to the SAC**
 and recommend revisions if any are warranted.
 
+## Open the artifacts
+
+The workspace tabs hold:
+
+- The **draft report itself** (plain text) — read it for overclaim.
+- An **observation log** of band activity during the sweep (JSON).
+- A **placeholder spectrum-display image** (PNG). The image is not the
+  exercise: the language in the draft report is.
+
 ## What this scenario is — and is not
 
 This is an **awareness module**, not a TSCM training scenario.
@@ -156,40 +299,125 @@ This is an **awareness module**, not a TSCM training scenario.
 
 ## Reasoning focus
 
-The dominant trap here is **absence of evidence ≠ evidence of absence**:
-a 90-minute observation does not foreclose the possibility of
-intermittent transmitters, RF-quiet devices, or devices outside the
-observation band. Watch for language that collapses that distinction.
-
-## Goals for this scenario
-
-You'll be asked to (in later milestones, once question UI lands):
-
-1. Identify phrases in the draft report that overstate certainty.
-2. Rate your confidence that the space is RF-clean, on a 1–5 scale,
-   given only what the report tells you.
-3. State the threshold at which you would escalate to qualified TSCM
-   personnel and why.
-4. Rewrite the conclusion in language that does not overclaim.
+**Absence of evidence ≠ evidence of absence.** A 90-minute observation
+does not foreclose intermittent transmitters, RF-quiet devices, or
+devices outside the observation band. Watch for language that collapses
+that distinction.
 `.trim(),
     disclaimer: RF_AWARENESS_DISCLAIMER,
+    artifacts: [
+      {
+        ordinal: 1,
+        displayName: "draft-sweep-report.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "FIELD OBSERVATION REPORT — DRAFT",
+            "Date:        2026-04-18",
+            "Location:    Conference room 4B",
+            "Duration:    90 minutes (10:00–11:30 local)",
+            "Equipment:   handheld spectrum analyzer (band coverage 25 MHz – 6 GHz)",
+            "",
+            "Findings:",
+            "  - No signals of interest observed in the swept bands.",
+            "  - Wi-Fi and Bluetooth traffic observed at expected levels.",
+            "  - Background cellular activity nominal.",
+            "",
+            "Conclusion:",
+            "  Sweep was clean. No surveillance devices present.",
+            "",
+            "Recommendation:",
+            "  Room is safe for sensitive discussions.",
+            "",
+            "— Field element 9",
+          ].join("\n") + "\n",
+        ),
+      },
+      {
+        ordinal: 2,
+        displayName: "observation-log.json",
+        kind: "json",
+        mimeType: "application/json; charset=utf-8",
+        bytes: utf8(
+          JSON.stringify(
+            {
+              note: "Periodic snapshots from the sweep tool. Awareness module — illustrative only.",
+              equipment: "handheld spectrum analyzer (25 MHz – 6 GHz)",
+              start_local: "2026-04-18T10:00:00",
+              end_local: "2026-04-18T11:30:00",
+              snapshots: [
+                { t: "10:05", band: "2.4GHz", observations: "WiFi, Bluetooth" },
+                { t: "10:18", band: "5GHz", observations: "WiFi" },
+                { t: "10:34", band: "850MHz", observations: "cellular (carrier)" },
+                { t: "10:51", band: "2.4GHz", observations: "WiFi, Bluetooth" },
+                { t: "11:07", band: "1.9GHz", observations: "cellular (carrier)" },
+                { t: "11:22", band: "5GHz", observations: "WiFi" },
+              ],
+              notes: [
+                "No persistent signals outside known carrier/Wi-Fi/BT profiles.",
+                "Coverage limited to 25 MHz – 6 GHz; bands outside this window were not assessed.",
+                "Observation window: 90 minutes. Burst / duty-cycled emitters outside the window would not appear.",
+              ],
+            },
+            null,
+            2,
+          ) + "\n",
+        ),
+      },
+      {
+        ordinal: 3,
+        displayName: "spectrum-snapshot.png",
+        kind: "image",
+        mimeType: "image/png",
+        bytes: Buffer.from(TINY_PNG_BASE64, "base64"),
+      },
+    ],
   },
 ];
+
+function sha256(buf: Buffer): string {
+  return createHash("sha256").update(buf).digest("hex");
+}
+
+async function writeArtifactBytes(
+  scenarioId: string,
+  artifactId: string,
+  ext: string,
+  bytes: Buffer,
+): Promise<string> {
+  // Relative path is stored verbatim in the DB so future moves don't
+  // require schema changes. The path is set by trusted code (this seed
+  // and the M8 importer) — never derived from user input.
+  const rel = join("scenarios", scenarioId, `${artifactId}${ext}`);
+  const abs = resolve(STORAGE_ROOT, rel);
+  await fs.mkdir(dirname(abs), { recursive: true });
+  await fs.writeFile(abs, bytes);
+  return rel;
+}
+
+function extForKind(displayName: string, kind: ArtifactKind): string {
+  const dot = displayName.lastIndexOf(".");
+  if (dot >= 0) return displayName.slice(dot);
+  switch (kind) {
+    case "text": return ".txt";
+    case "csv":  return ".csv";
+    case "json": return ".json";
+    case "pdf":  return ".pdf";
+    case "image": return ".png";
+  }
+}
 
 async function upsertScenario(
   prisma: PrismaClient,
   authorId: string,
   s: ScenarioSeed,
 ): Promise<void> {
-  // Two-step upsert: scenario, then brief, so the brief's scenario_id
-  // can reference the scenario row in either branch.
   const scenario = await prisma.scenario.upsert({
     where: { slug: s.slug },
     update: {
       title: s.title,
       summary: s.summary,
-      // skillAreas is a Prisma enum array; Prisma accepts the string
-      // members directly.
       skillAreas: s.skillAreas as never,
       difficulty: s.difficulty,
       estimatedMinutes: s.estimatedMinutes,
@@ -221,11 +449,39 @@ async function upsertScenario(
       disclaimerMd: s.disclaimer ?? null,
     },
   });
+
+  // Replace any prior artifacts for this scenario so seed is idempotent
+  // on ordinals — no orphan files left behind in the DB.
+  await prisma.artifact.deleteMany({ where: { scenarioId: scenario.id } });
+
+  for (const a of s.artifacts) {
+    // Real v4 UUID. The ParseUUIDPipe on the artifact streaming
+    // endpoint requires v4 specifically, so synthesizing format-like
+    // strings (as an earlier revision tried) fails validation.
+    const uuid = randomUUID();
+    const ext = extForKind(a.displayName, a.kind);
+    const relativePath = await writeArtifactBytes(scenario.id, uuid, ext, a.bytes);
+    await prisma.artifact.create({
+      data: {
+        id: uuid,
+        scenarioId: scenario.id,
+        ordinal: a.ordinal,
+        displayName: a.displayName,
+        kind: a.kind,
+        relativePath,
+        sha256: sha256(a.bytes),
+        sizeBytes: a.bytes.length,
+        mimeType: a.mimeType,
+      },
+    });
+  }
 }
 
 async function main(): Promise<void> {
   const prisma = new PrismaClient();
   try {
+    await fs.mkdir(STORAGE_ROOT, { recursive: true });
+
     const instructor = await upsertUser(
       prisma,
       SEED_INSTRUCTOR_EMAIL,
@@ -255,8 +511,11 @@ async function main(): Promise<void> {
     console.log("────────────────────────────────────────");
     console.log(`  scenarios upserted: ${SCENARIOS.length}`);
     for (const s of SCENARIOS) {
-      console.log(`    - ${s.slug}  (${s.skillAreas.join(", ")})`);
+      console.log(
+        `    - ${s.slug}  (${s.skillAreas.join(", ")})  artifacts: ${s.artifacts.length}`,
+      );
     }
+    console.log(`  artifact storage root: ${STORAGE_ROOT}`);
     console.log("────────────────────────────────────────\n");
     console.log("Copy passwords now — they are not stored anywhere else.");
   } finally {

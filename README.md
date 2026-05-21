@@ -5,9 +5,10 @@ related investigative-reasoning skill areas. Designed to run locally on a
 laptop or internal server, with a path to broader online deployment.
 
 This repo has shipped milestones **M0** (repo skeleton + end-to-end
-wiring), **M1** (local accounts, sessions, role guards, seed), and
-**M2** (scenario catalog + brief browse). Artifacts and the workspace
-UI land in M3.
+wiring), **M1** (local accounts, sessions, role guards, seed), **M2**
+(scenario catalog + brief browse), and **M3** (artifact storage +
+tabbed workspace viewers). EML parsing and the header viewer land in
+M4; questions, attempts, and the debrief view land in M5.
 
 ## Stack
 
@@ -26,10 +27,11 @@ api never serves a UI; the web never talks to the db directly.
 ```
 apps/
   web/          Next.js 15 app (server-renders the home page, fetches API)
-  api/          NestJS API (auth, scenarios, health + Prisma migrations)
+  api/          NestJS API (auth, scenarios, artifacts, health + Prisma migrations)
                 /v1/healthz, /v1/readyz, /v1/hello,
                 /v1/auth/login, /v1/auth/logout, /v1/auth/me,
-                /v1/scenarios, /v1/scenarios/:slug
+                /v1/scenarios, /v1/scenarios/:slug,
+                /v1/scenarios/:slug/artifacts/:id/content (streams bytes)
 packages/
   contracts/    Shared Zod schemas + inferred TS types
 docker-compose.yml
@@ -187,6 +189,15 @@ After `docker compose up --build`, you should see:
    renders without the disclaimer. Unknown slugs return 404. Trainees
    cannot view drafts (the API returns 404 for trainees, not 403, so the
    existence of a draft isn't leaked).
+8. Each scenario detail page shows a **tabbed workspace**. The "Brief"
+   tab renders the markdown body; each artifact tab dispatches to a
+   per-kind viewer (text / CSV / JSON / PDF / image). Artifact bytes
+   flow browser → web proxy → API only — the raw bearer token never
+   reaches the browser. PDF and image artifacts render inline (sandboxed
+   iframe / `<img>` from a same-origin URL); text/CSV/JSON arrive as
+   `Content-Disposition: attachment` from the API and are rendered
+   server-side. A garbage `?artifact=<id>` falls back to the brief
+   silently.
 
 If `/v1/readyz` reports the postgres check as failing, the api is up but
 cannot reach the db — check `DATABASE_URL` and that the `db` service is
@@ -213,15 +224,46 @@ to Kubernetes or a managed PaaS later without architectural change:
 Kubernetes manifests / Helm chart are **not** included in M0 and are
 deferred until the platform has real functionality worth deploying.
 
+## Artifact storage (M3)
+
+Artifact metadata lives in the `artifacts` table; **bytes live on
+disk** under the configured storage root (`ARTIFACT_STORAGE_ROOT`,
+default `/data/artifacts`). The API streams artifact bytes through a
+single authenticated endpoint:
+
+```
+GET /v1/scenarios/:slug/artifacts/:id/content
+```
+
+with strict response headers (`X-Content-Type-Options: nosniff`,
+strict `Content-Security-Policy` including `sandbox`, `ETag` =
+`sha256-<digest>`). Trainees can stream only artifacts attached to
+**published** scenarios; trainee access to a draft artifact returns
+**404, not 403**, mirroring the scenario-detail leak protection.
+
+Storage is abstracted behind an `ArtifactStorage` interface. M3 ships
+a `LocalFileSystemStorage` implementation; an S3-compatible backend
+can be added later by implementing the interface without changing
+`ArtifactsService`. The local implementation **rejects absolute paths
+and `..` traversal** and verifies the resolved path lives inside the
+configured root before reading or writing.
+
+The browser only ever talks to the web origin. Next.js runs an
+authenticated proxy at `/scenarios/:slug/artifacts/:id/raw` that reads
+the user's HttpOnly session cookie, forwards the bearer token to the
+API server-side, and streams the response. The raw API token never
+reaches the browser.
+
 ## What's intentionally not here yet
 
-- Scenario data model, persistence, importer
-- Artifact storage, viewers, EML parser
-- Question types, attempts, debriefs
-- Instructor review UI
+- EML viewer + header parser (M4)
+- Question types, attempts, debriefs (M5)
+- Instructor review UI (M7)
+- Pack import / export (M8)
 - Self-service user registration / password reset / MFA
 - Python parser sidecar
 - Optional Ollama feedback service
+- S3-compatible artifact storage backend (interface in place; impl deferred)
 
 These land in later milestones (M2 onward). See the architecture plan in
 the project discussion for the full build order.

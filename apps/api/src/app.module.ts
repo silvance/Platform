@@ -9,6 +9,7 @@ import { AuthModule } from "./modules/auth/auth.module";
 import { AuthGuard } from "./modules/auth/guards/auth.guard";
 import { RolesGuard } from "./modules/auth/guards/roles.guard";
 import { ScenariosModule } from "./modules/scenarios/scenarios.module";
+import { ArtifactsModule } from "./modules/artifacts/artifacts.module";
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { ScenariosModule } from "./modules/scenarios/scenarios.module";
     DatabaseModule,
     AuthModule,
     ScenariosModule,
+    ArtifactsModule,
     HealthModule,
     HelloModule,
   ],
