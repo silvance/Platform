@@ -32,9 +32,16 @@ export const ScenarioStatus = z.enum(["draft", "published", "archived"]);
 export type ScenarioStatus = z.infer<typeof ScenarioStatus>;
 
 // Keep in sync with `enum ArtifactKind` in apps/api/prisma/schema.prisma.
-// M3 supports text, csv, json, pdf, image. EML lands in M4; pcap/disk
+// M3 added text, csv, json, pdf, image. M4 adds eml. pcap/disk
 // images / Windows registry slabs come later.
-export const ArtifactKind = z.enum(["text", "csv", "json", "pdf", "image"]);
+export const ArtifactKind = z.enum([
+  "text",
+  "csv",
+  "json",
+  "pdf",
+  "image",
+  "eml",
+]);
 export type ArtifactKind = z.infer<typeof ArtifactKind>;
 
 // Per-kind rendering hints. UI viewer dispatch is driven by `kind`; the
@@ -47,6 +54,7 @@ export function defaultMimeFor(kind: ArtifactKind): string {
     case "json": return "application/json; charset=utf-8";
     case "pdf":  return "application/pdf";
     case "image": return "application/octet-stream"; // overridden by stored mime
+    case "eml":  return "message/rfc822";
   }
 }
 
@@ -86,6 +94,11 @@ export function safeServeMimeFor(
       // so the browser doesn't try to interpret it.
       return { mime: "application/octet-stream", inline: false };
     }
+    case "eml":
+      // .eml files are downloaded as attachments. The renderable view
+      // comes from the parsed JSON endpoint, not from streaming the
+      // raw bytes through a viewer.
+      return { mime: "message/rfc822", inline: false };
   }
 }
 
@@ -150,16 +163,20 @@ export type ScenarioListResponse = z.infer<typeof ScenarioListResponse>;
 // Detail view includes the brief markdown + optional awareness disclaimer.
 // Artifacts and questions land in later milestones.
 //
-// Size caps are deliberately large but finite: 100 KB of markdown is many
-// pages of prose (Moby Dick chapter 1 is ~30 KB), so any legitimate brief
-// fits, while a malformed pack import or a buggy authoring path can't
-// stream multi-megabyte payloads through the API or the renderer.
-export const MAX_BRIEF_MARKDOWN_BYTES = 100_000;
-export const MAX_DISCLAIMER_MARKDOWN_BYTES = 20_000;
+// Size caps are deliberately large but finite: 100 000 characters of
+// markdown is many pages of prose (Moby Dick chapter 1 is ~30 000),
+// so any legitimate brief fits, while a malformed pack import or a
+// buggy authoring path can't stream multi-megabyte payloads through
+// the API or the renderer. The unit is JS string length (UTF-16 code
+// units) — matches Zod's `.max()` semantics. For ASCII this equals
+// bytes; for multi-byte characters it's a closer match to "render
+// cost" than a true byte cap.
+export const MAX_BRIEF_MARKDOWN_CHARS = 100_000;
+export const MAX_DISCLAIMER_MARKDOWN_CHARS = 20_000;
 
 export const ScenarioBriefPayload = z.object({
-  markdownBody: z.string().max(MAX_BRIEF_MARKDOWN_BYTES),
-  disclaimerMd: z.string().max(MAX_DISCLAIMER_MARKDOWN_BYTES).nullable(),
+  markdownBody: z.string().max(MAX_BRIEF_MARKDOWN_CHARS),
+  disclaimerMd: z.string().max(MAX_DISCLAIMER_MARKDOWN_CHARS).nullable(),
 });
 export type ScenarioBriefPayload = z.infer<typeof ScenarioBriefPayload>;
 

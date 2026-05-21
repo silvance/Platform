@@ -148,11 +148,14 @@ You have been asked to triage the email and advise the controller.
 
 The workspace tabs hold the supporting material:
 
-- A **24-hour slice of the partner firm's web-proxy log** (CSV).
-- The **vendor's normal invoice template** (PDF).
+- The **suspect email itself** (\`.eml\`), rendered with parsed headers,
+  Authentication-Results highlighting (SPF / DKIM / DMARC), the text
+  body, and attachment metadata.
 - The **controller's contemporaneous note** of the request (plain text).
+- A **24-hour slice of the partner firm's web-proxy log** (CSV).
 - A **machine-parsed summary** of the suspect email's key headers
-  (JSON). The full \`.eml\` and an inline header parser arrive in M4.
+  (JSON). Useful for cross-checking against the live parsed view.
+- The **vendor's normal invoice template** (PDF).
 
 ## Goals for this scenario
 
@@ -176,6 +179,51 @@ Distinguish:
     artifacts: [
       {
         ordinal: 1,
+        displayName: "suspect-email.eml",
+        kind: "eml",
+        mimeType: "message/rfc822",
+        bytes: utf8(
+          [
+            'From: "Jane Doe" <jane.doe@vendor.example>',
+            "To: controller@partner.example",
+            "Reply-To: ceo.urgent@gmail.com",
+            "Return-Path: <noreply@vendor-lookup-alike.com>",
+            "Subject: URGENT: Updated wire instructions for INV-2026-0418",
+            "Date: Thu, 18 Apr 2026 14:07:02 +0000",
+            "Message-ID: <bec-1234abcd@vendor-lookup-alike.com>",
+            "Authentication-Results: mx.partner.example;",
+            " spf=neutral smtp.mailfrom=vendor-lookup-alike.com;",
+            " dkim=fail header.d=vendor.example;",
+            " dmarc=fail policy.dmarc=reject",
+            "Received: from mail.vendor-lookup-alike.com (203.0.113.42)",
+            " by inbound.partner.local (1.2.3.4) with ESMTP id ABC123;",
+            " Thu, 18 Apr 2026 14:07:00 +0000",
+            "MIME-Version: 1.0",
+            'Content-Type: multipart/alternative; boundary="BEC-BOUNDARY"',
+            "",
+            "--BEC-BOUNDARY",
+            "Content-Type: text/plain; charset=utf-8",
+            "",
+            "Hi,",
+            "",
+            "Please update the wire instructions for invoice INV-2026-0418 to",
+            "the new account immediately. Confidentiality is critical until",
+            "this clears. Confirm via reply only — do not call.",
+            "",
+            "Thanks,",
+            "Jane",
+            "--BEC-BOUNDARY",
+            "Content-Type: text/html; charset=utf-8",
+            "",
+            "<p>Hi,</p><p>Please update the wire instructions for",
+            " <b>INV-2026-0418</b> to the new account immediately.</p>",
+            "--BEC-BOUNDARY--",
+            "",
+          ].join("\r\n"),
+        ),
+      },
+      {
+        ordinal: 2,
         displayName: "controller-note.txt",
         kind: "text",
         mimeType: "text/plain; charset=utf-8",
@@ -196,7 +244,7 @@ Distinguish:
         ),
       },
       {
-        ordinal: 2,
+        ordinal: 3,
         displayName: "proxy-log-24h.csv",
         kind: "csv",
         mimeType: "text/csv; charset=utf-8",
@@ -215,14 +263,14 @@ Distinguish:
         ),
       },
       {
-        ordinal: 3,
+        ordinal: 4,
         displayName: "email-headers-summary.json",
         kind: "json",
         mimeType: "application/json; charset=utf-8",
         bytes: utf8(
           JSON.stringify(
             {
-              note: "Machine-parsed summary; full .eml + inline parser arrive in M4.",
+              note: "Machine-parsed summary; cross-check against the live EML view in the workspace.",
               from_display: "Jane Doe",
               from_address: "jane.doe@vendor.example",
               reply_to: "ceo.urgent@gmail.com",
@@ -248,7 +296,7 @@ Distinguish:
         ),
       },
       {
-        ordinal: 4,
+        ordinal: 5,
         displayName: "vendor-invoice-template.pdf",
         kind: "pdf",
         mimeType: "application/pdf",
@@ -405,6 +453,7 @@ function extForKind(displayName: string, kind: ArtifactKind): string {
     case "json": return ".json";
     case "pdf":  return ".pdf";
     case "image": return ".png";
+    case "eml":  return ".eml";
   }
 }
 
