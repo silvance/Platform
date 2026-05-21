@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import type { Role } from "@prisma/client";
 import { PrismaService } from "../database/prisma.service";
 import type {
+  ArtifactListItem,
   ScenarioListItem,
   ScenarioListQuery,
   ScenarioDetail,
@@ -62,7 +63,10 @@ export class ScenariosService {
   async getBySlug(role: Role, slug: string): Promise<ScenarioDetail> {
     const row = await this.prisma.scenario.findUnique({
       where: { slug },
-      include: { brief: true },
+      include: {
+        brief: true,
+        artifacts: { orderBy: { ordinal: "asc" } },
+      },
     });
     if (!row) throw new NotFoundException("Scenario not found.");
 
@@ -79,9 +83,22 @@ export class ScenariosService {
         }
       : null;
 
+    const artifacts: ArtifactListItem[] = row.artifacts.map((a) => ({
+      id: a.id,
+      ordinal: a.ordinal,
+      displayName: a.displayName,
+      kind: a.kind,
+      sha256: a.sha256,
+      sizeBytes: a.sizeBytes,
+      mimeType: a.mimeType,
+      viewerHint: a.viewerHint ?? null,
+      createdAt: a.createdAt.toISOString(),
+    }));
+
     return {
       ...toListItem(row),
       brief,
+      artifacts,
     };
   }
 }

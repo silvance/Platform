@@ -42,6 +42,15 @@ enum ScenarioSource {
   imported
 }
 
+// Keep in sync with ArtifactKind in packages/contracts/src/scenarios.ts.
+enum ArtifactKind {
+  text
+  csv
+  json
+  pdf
+  image
+}
+
 model User {
   id           String   @id @default(uuid()) @db.Uuid
   email        String   @unique @db.Citext
@@ -98,8 +107,9 @@ model Scenario {
   createdAt        DateTime       @default(now()) @map("created_at")
   updatedAt        DateTime       @updatedAt @map("updated_at")
 
-  brief  ScenarioBrief?
-  author User?          @relation("ScenarioAuthor", fields: [authorUserId], references: [id], onDelete: SetNull)
+  brief     ScenarioBrief?
+  artifacts Artifact[]
+  author    User?          @relation("ScenarioAuthor", fields: [authorUserId], references: [id], onDelete: SetNull)
 
   @@index([status])
   @@index([skillAreas], type: Gin)
@@ -120,4 +130,29 @@ model ScenarioBrief {
   scenario Scenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
 
   @@map("scenario_briefs")
+}
+
+// Artifact records are metadata only; bytes live in the storage backend
+// at `relativePath`. The storage path is *never* derived from user input
+// — it is set by the seed/import paths and only read by validated UUID
+// lookup. Defense-in-depth: the storage layer also rejects paths that
+// resolve outside the configured root.
+model Artifact {
+  id           String       @id @default(uuid()) @db.Uuid
+  scenarioId   String       @map("scenario_id") @db.Uuid
+  ordinal      Int          // display order within the scenario workspace
+  displayName  String       @map("display_name") @db.VarChar(200)
+  kind         ArtifactKind
+  relativePath String       @map("relative_path") @db.VarChar(400)
+  sha256       String       @db.Char(64)
+  sizeBytes    Int          @map("size_bytes")
+  mimeType     String       @map("mime_type") @db.VarChar(120)
+  viewerHint   String?      @map("viewer_hint") @db.VarChar(60)
+  createdAt    DateTime     @default(now()) @map("created_at")
+
+  scenario Scenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+
+  @@unique([scenarioId, ordinal])
+  @@index([scenarioId])
+  @@map("artifacts")
 }

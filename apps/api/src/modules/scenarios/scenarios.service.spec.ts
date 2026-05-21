@@ -41,7 +41,11 @@ function makeFakePrisma(rows: Array<Record<string, unknown>>) {
           return filter(args?.where).length;
         }),
         findUnique: jest.fn(async (args: { where: { slug: string }; include?: unknown }) => {
-          return rows.find((r) => r["slug"] === args.where.slug) ?? null;
+          const row = rows.find((r) => r["slug"] === args.where.slug);
+          if (!row) return null;
+          // Service expects `artifacts` to be present when include sets it;
+          // default to an empty array if the test didn't provide one.
+          return { artifacts: [], ...row };
         }),
       },
     } as unknown as PrismaService,

@@ -12,6 +12,7 @@ import {
 } from "@ci-train/contracts";
 import { ScenariosService } from "./scenarios.service";
 import { ZodValidationPipe } from "../../common/zod-validation.pipe";
+import { ScenarioSlugPipe } from "../../common/scenario-slug.pipe";
 import { CurrentSession } from "../auth/decorators/current-user.decorator";
 import type { SessionContext } from "../auth/auth.service";
 
@@ -31,7 +32,7 @@ export class ScenariosController {
   @Get(":slug")
   async getBySlug(
     @CurrentSession() session: SessionContext | undefined,
-    @Param("slug") slug: string,
+    @Param("slug", ScenarioSlugPipe) slug: string,
   ): Promise<ScenarioDetail> {
     if (!session) throw new UnauthorizedException();
     return this.scenarios.getBySlug(session.user.role, slug);
