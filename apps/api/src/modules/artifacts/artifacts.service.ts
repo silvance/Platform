@@ -1,6 +1,7 @@
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 import type { Role } from "@prisma/client";
 import type { Readable } from "node:stream";
+import { safeServeMimeFor } from "@ci-train/contracts";
 import { PrismaService } from "../database/prisma.service";
 import {
   ARTIFACT_STORAGE,
@@ -9,12 +10,21 @@ import type { ArtifactStorage } from "./storage/artifact-storage";
 
 export interface ArtifactStreamResult {
   stream: Readable;
+  // Canonical, *kind-derived* Content-Type that the controller serves.
+  // Independent of the DB's `mime_type` column so a stale/imported/
+  // malicious row (e.g. `text/html` recorded under kind=text) cannot
+  // get a renderable MIME past the API.
   mimeType: string;
   sizeBytes: number;
   displayName: string;
-  // pdf + image render inline; everything else downloads to be safe.
+  // `inline` is reserved for PDF and images whose stored MIME is in
+  // the allowlist. Anything else is served as an attachment so the
+  // browser does not try to render it.
   contentDisposition: "inline" | "attachment";
   sha256: string;
+  // The MIME stored in the DB (echoed back for debug/audit; not used
+  // for Content-Type).
+  storedMimeType: string;
 }
 
 @Injectable()
@@ -48,17 +58,17 @@ export class ArtifactsService {
       throw new NotFoundException("Artifact bytes not found on disk.");
     }
 
+    const { mime, inline } = safeServeMimeFor(artifact.kind, artifact.mimeType);
     const stream = await this.storage.read(artifact.relativePath);
-    const contentDisposition: "inline" | "attachment" =
-      artifact.kind === "pdf" || artifact.kind === "image" ? "inline" : "attachment";
 
     return {
       stream,
-      mimeType: artifact.mimeType,
+      mimeType: mime,
       sizeBytes: artifact.sizeBytes,
       displayName: artifact.displayName,
-      contentDisposition,
+      contentDisposition: inline ? "inline" : "attachment",
       sha256: artifact.sha256,
+      storedMimeType: artifact.mimeType,
     };
   }
 }

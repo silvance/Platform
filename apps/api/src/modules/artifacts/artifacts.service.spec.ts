@@ -37,6 +37,80 @@ const BASE_ARTIFACT = {
   scenario: { slug: "my-scenario", status: "published" },
 };
 
+describe("ArtifactsService — canonical MIME (audit #1)", () => {
+  it("ignores a stale/malicious text/html DB MIME and serves text/plain", async () => {
+    const svc = new ArtifactsService(
+      makeFakePrisma([{ ...BASE_ARTIFACT, kind: "text", mimeType: "text/html" }]),
+      makeFakeStorage(),
+    );
+    const r = await svc.streamArtifact("trainee", "my-scenario", BASE_ARTIFACT.id);
+    expect(r!.mimeType).toBe("text/plain; charset=utf-8");
+    expect(r!.contentDisposition).toBe("attachment");
+    // The DB-recorded MIME is still surfaced for audit but never used as Content-Type.
+    expect(r!.storedMimeType).toBe("text/html");
+  });
+
+  it("ignores application/javascript on a JSON artifact and serves application/json", async () => {
+    const svc = new ArtifactsService(
+      makeFakePrisma([
+        { ...BASE_ARTIFACT, kind: "json", mimeType: "application/javascript" },
+      ]),
+      makeFakeStorage(),
+    );
+    const r = await svc.streamArtifact("trainee", "my-scenario", BASE_ARTIFACT.id);
+    expect(r!.mimeType).toBe("application/json; charset=utf-8");
+    expect(r!.contentDisposition).toBe("attachment");
+  });
+
+  it("forces application/pdf on kind=pdf regardless of DB MIME", async () => {
+    const svc = new ArtifactsService(
+      makeFakePrisma([
+        { ...BASE_ARTIFACT, kind: "pdf", mimeType: "text/html" },
+      ]),
+      makeFakeStorage(),
+    );
+    const r = await svc.streamArtifact("trainee", "my-scenario", BASE_ARTIFACT.id);
+    expect(r!.mimeType).toBe("application/pdf");
+    expect(r!.contentDisposition).toBe("inline");
+  });
+
+  it("allows image/png as inline", async () => {
+    const svc = new ArtifactsService(
+      makeFakePrisma([
+        { ...BASE_ARTIFACT, kind: "image", mimeType: "image/png" },
+      ]),
+      makeFakeStorage(),
+    );
+    const r = await svc.streamArtifact("trainee", "my-scenario", BASE_ARTIFACT.id);
+    expect(r!.mimeType).toBe("image/png");
+    expect(r!.contentDisposition).toBe("inline");
+  });
+
+  it("rejects image/svg+xml — downgrades to octet-stream + attachment (SVG can carry script)", async () => {
+    const svc = new ArtifactsService(
+      makeFakePrisma([
+        { ...BASE_ARTIFACT, kind: "image", mimeType: "image/svg+xml" },
+      ]),
+      makeFakeStorage(),
+    );
+    const r = await svc.streamArtifact("trainee", "my-scenario", BASE_ARTIFACT.id);
+    expect(r!.mimeType).toBe("application/octet-stream");
+    expect(r!.contentDisposition).toBe("attachment");
+  });
+
+  it("strips parameters and lower-cases when matching image MIME allowlist", async () => {
+    const svc = new ArtifactsService(
+      makeFakePrisma([
+        { ...BASE_ARTIFACT, kind: "image", mimeType: "Image/JPEG; charset=binary" },
+      ]),
+      makeFakeStorage(),
+    );
+    const r = await svc.streamArtifact("trainee", "my-scenario", BASE_ARTIFACT.id);
+    expect(r!.mimeType).toBe("image/jpeg");
+    expect(r!.contentDisposition).toBe("inline");
+  });
+});
+
 describe("ArtifactsService (unit)", () => {
   it("returns the stream + metadata for a matching published scenario", async () => {
     const svc = new ArtifactsService(

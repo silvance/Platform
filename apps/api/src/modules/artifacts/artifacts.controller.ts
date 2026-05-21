@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Header,
+  Logger,
   NotFoundException,
   Param,
   ParseUUIDPipe,
@@ -12,9 +13,12 @@ import type { Response } from "express";
 import { ArtifactsService } from "./artifacts.service";
 import { CurrentSession } from "../auth/decorators/current-user.decorator";
 import type { SessionContext } from "../auth/auth.service";
+import { ScenarioSlugPipe } from "../../common/scenario-slug.pipe";
 
 @Controller("scenarios/:slug/artifacts")
 export class ArtifactsController {
+  private readonly logger = new Logger(ArtifactsController.name);
+
   constructor(private readonly artifacts: ArtifactsService) {}
 
   // Strict CSP on rendered artifacts. We never want a PDF or image to
@@ -28,7 +32,7 @@ export class ArtifactsController {
   )
   async stream(
     @CurrentSession() session: SessionContext | undefined,
-    @Param("slug") slug: string,
+    @Param("slug", ScenarioSlugPipe) slug: string,
     @Param("id", new ParseUUIDPipe({ version: "4" })) id: string,
     @Res() res: Response,
   ): Promise<void> {
@@ -52,8 +56,10 @@ export class ArtifactsController {
     res.setHeader("ETag", `"sha256-${result.sha256}"`);
 
     result.stream.on("error", (err) => {
-      // eslint-disable-next-line no-console
-      console.error("artifact stream error", err);
+      this.logger.error(
+        `artifact stream error: ${err instanceof Error ? err.message : String(err)}`,
+        err instanceof Error ? err.stack : undefined,
+      );
       if (!res.headersSent) {
         res.status(500).json({ message: "Artifact stream error." });
       } else {
