@@ -1,11 +1,15 @@
 import { z, ZodError } from "zod";
 import {
+  AttemptAnswerPayload,
+  AttemptPayload,
+  DebriefPayload,
   HelloResponse,
   HealthResponse,
   LoginRequest,
   LoginResponse,
   MeResponse,
   ParsedEmlPayload,
+  SaveAnswerRequest,
   ScenarioDetail,
   ScenarioListQuery,
   ScenarioListResponse,
@@ -119,6 +123,47 @@ export const api = {
           `/scenarios/${encodeURIComponent(slug)}/artifacts/${encodeURIComponent(artifactId)}/parsed`,
           { token },
         ),
+      ),
+  },
+  attempts: {
+    start: async (token: string, slug: string): Promise<AttemptPayload> =>
+      parse(
+        AttemptPayload,
+        await request(`/scenarios/${encodeURIComponent(slug)}/attempts`, {
+          method: "POST",
+          token,
+        }),
+      ),
+    get: async (token: string, attemptId: string): Promise<AttemptPayload> =>
+      parse(
+        AttemptPayload,
+        await request(`/attempts/${encodeURIComponent(attemptId)}`, { token }),
+      ),
+    saveAnswer: async (
+      token: string,
+      attemptId: string,
+      questionId: string,
+      body: SaveAnswerRequest,
+    ): Promise<AttemptAnswerPayload> =>
+      parse(
+        AttemptAnswerPayload,
+        await request(
+          `/attempts/${encodeURIComponent(attemptId)}/answers/${encodeURIComponent(questionId)}`,
+          { method: "PATCH", body, token },
+        ),
+      ),
+    submit: async (token: string, attemptId: string): Promise<AttemptPayload> =>
+      parse(
+        AttemptPayload,
+        await request(`/attempts/${encodeURIComponent(attemptId)}/submit`, {
+          method: "POST",
+          token,
+        }),
+      ),
+    debrief: async (token: string, attemptId: string): Promise<DebriefPayload> =>
+      parse(
+        DebriefPayload,
+        await request(`/attempts/${encodeURIComponent(attemptId)}/debrief`, { token }),
       ),
   },
 };

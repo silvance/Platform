@@ -7,8 +7,9 @@ laptop or internal server, with a path to broader online deployment.
 This repo has shipped milestones **M0** (repo skeleton + end-to-end
 wiring), **M1** (local accounts, sessions, role guards, seed), **M2**
 (scenario catalog + brief browse), **M3** (artifact storage + tabbed
-workspace viewers), and **M4** (EML viewer with header / auth-result
-parsing). Questions, attempts, and the debrief view land in M5.
+workspace viewers), **M4** (EML viewer with header / auth-result
+parsing), and **M5** (questions, attempts, debrief). Indicator-select
+question type lands in M6; instructor authoring + review lands in M7.
 
 ## Stack
 
@@ -27,12 +28,14 @@ api never serves a UI; the web never talks to the db directly.
 ```
 apps/
   web/          Next.js 15 app (server-renders the home page, fetches API)
-  api/          NestJS API (auth, scenarios, artifacts, health + Prisma migrations)
+  api/          NestJS API (auth, scenarios, artifacts, attempts, health + Prisma migrations)
                 /v1/healthz, /v1/readyz, /v1/hello,
                 /v1/auth/login, /v1/auth/logout, /v1/auth/me,
                 /v1/scenarios, /v1/scenarios/:slug,
                 /v1/scenarios/:slug/artifacts/:id/content (streams bytes),
-                /v1/scenarios/:slug/artifacts/:id/parsed (kind=eml only)
+                /v1/scenarios/:slug/artifacts/:id/parsed (kind=eml only),
+                /v1/scenarios/:slug/attempts (POST: start/get),
+                /v1/attempts/:id (GET; PATCH/answers/:qid; POST /submit; GET /debrief)
 packages/
   contracts/    Shared Zod schemas + inferred TS types
 docker-compose.yml
