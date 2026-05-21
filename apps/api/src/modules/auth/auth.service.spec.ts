@@ -43,6 +43,29 @@ describe("AuthService (unit)", () => {
     });
   });
 
+  describe("user-enumeration mitigation (dummy hash)", () => {
+    it("onModuleInit populates a real argon2id hash", async () => {
+      await svc.onModuleInit();
+      const dummy = svc.getDummyHashForTest();
+      expect(dummy).not.toBeNull();
+      expect(dummy).toMatch(/^\$argon2id\$v=19\$m=\d+,t=\d+,p=\d+\$[^$]+\$[^$]+$/);
+    });
+
+    it("verifyAgainstDummy returns false without throwing", async () => {
+      await svc.onModuleInit();
+      await expect(svc.verifyAgainstDummy("anything")).resolves.toBe(false);
+      await expect(svc.verifyAgainstDummy("")).resolves.toBe(false);
+    });
+
+    it("falls back to lazy init if onModuleInit was skipped", async () => {
+      // Construct a fresh instance, deliberately skipping onModuleInit.
+      const fresh = new AuthService(fakePrisma);
+      expect(fresh.getDummyHashForTest()).toBeNull();
+      await expect(fresh.verifyAgainstDummy("anything")).resolves.toBe(false);
+      expect(fresh.getDummyHashForTest()).toMatch(/^\$argon2id\$/);
+    });
+  });
+
   describe("constantTimeEqualHex", () => {
     it("returns true for identical hex strings", () => {
       expect(AuthService.constantTimeEqualHex("deadbeef", "deadbeef")).toBe(true);

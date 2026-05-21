@@ -1,6 +1,7 @@
 import {
   Injectable,
   Logger,
+  OnModuleInit,
   UnauthorizedException,
 } from "@nestjs/common";
 import { hash, verify, Algorithm } from "@node-rs/argon2";
@@ -33,10 +34,29 @@ const ARGON_OPTS = {
 };
 
 @Injectable()
-export class AuthService {
+export class AuthService implements OnModuleInit {
   private readonly logger = new Logger(AuthService.name);
 
+  // A real, valid Argon2id hash used to keep the "unknown email" path
+  // doing the same hashing work as the "wrong password" path. The actual
+  // plaintext is randomized at startup and never used for authentication,
+  // so verify() against any submitted password always returns false while
+  // running the full KDF.
+  //
+  // Note: this mitigates timing-based *user enumeration* (the dominant
+  // concern). It does NOT make the two paths perfectly equal — a row
+  // fetch on a hit still costs a few extra ms — but it eliminates the
+  // ~30ms gap between "no hash to verify" and "verify a real hash".
+  private dummyHash: string | null = null;
+
   constructor(private readonly prisma: PrismaService) {}
+
+  async onModuleInit(): Promise<void> {
+    this.dummyHash = await hash(
+      randomBytes(32).toString("base64url"),
+      ARGON_OPTS,
+    );
+  }
 
   async hashPassword(plain: string): Promise<string> {
     return hash(plain, ARGON_OPTS);
@@ -50,6 +70,25 @@ export class AuthService {
     }
   }
 
+  // Test/diagnostic accessor — never call in production code paths.
+  getDummyHashForTest(): string | null {
+    return this.dummyHash;
+  }
+
+  // Awaits a real Argon2id verify against a random hash. Always returns
+  // false; the point is the work, not the answer.
+  async verifyAgainstDummy(plain: string): Promise<boolean> {
+    if (!this.dummyHash) {
+      // Lifecycle should have populated it; lazy fallback prevents a
+      // first-request crash if onModuleInit somehow hasn't run yet.
+      this.dummyHash = await hash(
+        randomBytes(32).toString("base64url"),
+        ARGON_OPTS,
+      );
+    }
+    return this.verifyPassword(this.dummyHash, plain);
+  }
+
   async login(
     email: string,
     plain: string,
@@ -57,14 +96,11 @@ export class AuthService {
   ): Promise<{ token: string; expiresAt: Date; user: AuthenticatedUser }> {
     const user = await this.prisma.user.findUnique({ where: { email } });
 
-    // Always verify against *something* to keep timing consistent between
-    // "no such user" and "wrong password" paths. We hash a dummy on misses.
+    // On a miss, do the same Argon2id work against the precomputed dummy
+    // hash so the response time isn't a user-enumeration oracle.
     const passwordOk = user
       ? await this.verifyPassword(user.passwordHash, plain)
-      : await this.verifyPassword(
-          "$argon2id$v=19$m=19456,t=2,p=1$AAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
-          plain,
-        ).then(() => false);
+      : await this.verifyAgainstDummy(plain);
 
     if (!user || user.disabled || !passwordOk) {
       throw new UnauthorizedException("Invalid email or password.");
@@ -137,8 +173,8 @@ export class AuthService {
     }
   }
 
-  // Constant-time SHA-256 of the bearer token. The raw token never lands
-  // in the DB; an attacker with DB read access cannot replay sessions.
+  // SHA-256 of the bearer token. The raw token never lands in the DB;
+  // an attacker with DB read access cannot replay sessions.
   hashToken(token: string): string {
     return createHash("sha256").update(token).digest("hex");
   }

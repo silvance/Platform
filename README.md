@@ -45,9 +45,9 @@ docker compose up --build
 
 Then:
 
-- Web UI: <http://localhost:3000> — shows the API hello payload rendered server-side.
-- API liveness: <http://localhost:4000/v1/healthz>
-- API readiness (DB ping): <http://localhost:4000/v1/readyz>
+- Web UI: <http://localhost:3000> — root redirects unauthenticated visitors to `/login`; after sign-in, instructors go to `/admin` and trainees to `/scenarios`.
+- API liveness: <http://localhost:4000/v1/healthz> — always 200 if Node is responsive.
+- API readiness (DB ping): <http://localhost:4000/v1/readyz> — returns 200 only when Postgres is reachable, 503 otherwise. The Compose API healthcheck targets `/v1/readyz`, so `depends_on: service_healthy` gates dependents on real DB readiness.
 
 To shut down and wipe the DB volume:
 
@@ -85,7 +85,8 @@ editing shared schemas.
 | `pnpm install` | Install all workspace deps (use the committed lockfile) |
 | `pnpm build` | Build `contracts`, then `api` and `web` |
 | `pnpm typecheck` | Run `tsc --noEmit` across every workspace |
-| `pnpm test` | M0 placeholder — runs `typecheck`. A real test suite (Jest for the api, Playwright for the web) lands in a later milestone. |
+| `pnpm test` | Runs the workspace test suites. Currently the API Jest unit tests (auth service — 12 cases). Web Playwright/integration tests land in a later milestone. |
+| `pnpm seed` | Create or refresh the seed instructor + trainee accounts and print their generated passwords once. |
 | `pnpm dev:api` / `pnpm dev:web` | Run a single app outside Docker |
 | `pnpm compose:up` | `docker compose up --build` |
 | `pnpm compose:down` | `docker compose down -v` (wipes the db volume) |
@@ -114,9 +115,21 @@ regenerates passwords for the same emails (`instructor@example.local`,
   only stores the SHA-256 hash of the token (`sessions.token_hash`) — a DB
   leak does not expose live session credentials.
 - **Transport:** the API accepts `Authorization: Bearer <token>`. The web
-  app sets an `HttpOnly; SameSite=Strict; Secure` cookie on its own origin
-  and forwards the token to the API on server-side fetches; the browser
-  never sees the raw API token.
+  app sets the cookie with `HttpOnly`, `SameSite=Strict`, `Path=/`, and
+  `Secure` **when `NODE_ENV=production`** (`Secure` is off in development
+  so the cookie works over `http://localhost`). The browser never sees the
+  raw API token; Next.js reads the cookie server-side and forwards the
+  token via `Authorization` on internal fetches.
+- **User-enumeration mitigation:** on a missed email, the login path
+  performs a real Argon2id verify against a precomputed, throwaway hash
+  initialized at startup. This evens out the ~30 ms timing gap between
+  "no user" and "wrong password". It is not a perfect constant-time
+  guarantee — a successful row fetch still costs a few extra ms — but it
+  closes the dominant signal.
+- **Reverse-proxy trust:** off by default. See `TRUST_PROXY` in
+  `.env.example`. Enable only behind a proxy that sanitizes
+  `X-Forwarded-*`; otherwise login throttling can be bypassed by spoofed
+  headers.
 - **Guards:** a global `AuthGuard` requires a bearer token on every route
   except those marked `@Public()` (currently `/healthz`, `/readyz`,
   `/hello`, and `/auth/login`). `@Roles('instructor')` adds role gating;
