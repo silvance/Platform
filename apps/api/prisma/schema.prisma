@@ -1,5 +1,6 @@
-// M1 schema: users + sessions only. M2 introduces scenarios, artifacts,
-// questions, attempts, etc. — keep this file tight for now.
+// M1 schema: users + sessions.
+// M2 schema: + scenarios, scenario_briefs.
+// M3+ will add artifacts, questions, attempts, etc.
 
 generator client {
   provider      = "prisma-client-js"
@@ -16,6 +17,31 @@ enum Role {
   trainee
 }
 
+// Keep in sync with SkillArea in packages/contracts/src/scenarios.ts.
+enum SkillArea {
+  email_headers
+  bec
+  df_artifacts
+  removable_media
+  windows_artifacts
+  network_logs
+  account_compromise
+  rf_awareness
+  report_writing
+  inference_discipline
+}
+
+enum ScenarioStatus {
+  draft
+  published
+  archived
+}
+
+enum ScenarioSource {
+  authored
+  imported
+}
+
 model User {
   id           String   @id @default(uuid()) @db.Uuid
   email        String   @unique @db.Citext
@@ -27,7 +53,8 @@ model User {
   updatedAt    DateTime @updatedAt @map("updated_at")
   lastLoginAt  DateTime? @map("last_login_at")
 
-  sessions Session[]
+  sessions          Session[]
+  authoredScenarios Scenario[] @relation("ScenarioAuthor")
 
   @@map("users")
 }
@@ -49,4 +76,48 @@ model Session {
   @@index([userId])
   @@index([expiresAt])
   @@map("sessions")
+}
+
+model Scenario {
+  id               String         @id @default(uuid()) @db.Uuid
+  slug             String         @unique @db.VarChar(120)
+  title            String         @db.VarChar(200)
+  summary          String         @db.VarChar(1000)
+  skillAreas       SkillArea[]    @map("skill_areas")
+  // 1..5; enforced by a DB CHECK constraint (`scenarios_difficulty_range`,
+  // see the init_scenarios migration) and mirrored by the Zod Difficulty
+  // schema in @ci-train/contracts.
+  difficulty       Int
+  estimatedMinutes Int?           @map("estimated_minutes")
+  authorUserId     String?        @map("author_user_id") @db.Uuid
+  version          Int            @default(1)
+  status           ScenarioStatus @default(draft)
+  source           ScenarioSource @default(authored)
+  importedPackHash String?        @map("imported_pack_hash")
+  tags             String[]       @default([])
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+
+  brief  ScenarioBrief?
+  author User?          @relation("ScenarioAuthor", fields: [authorUserId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([skillAreas], type: Gin)
+  @@index([tags], type: Gin)
+  @@map("scenarios")
+}
+
+// 1-to-1 with Scenario. Held out of the scenarios table so list
+// endpoints stay light — the brief body can be many KB of markdown.
+model ScenarioBrief {
+  id           String  @id @default(uuid()) @db.Uuid
+  scenarioId   String  @unique @map("scenario_id") @db.Uuid
+  markdownBody String  @map("markdown_body")
+  // Populated for awareness-only skill areas (e.g. rf_awareness). The
+  // UI renders this above the brief and above the debrief.
+  disclaimerMd String? @map("disclaimer_md")
+
+  scenario Scenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+
+  @@map("scenario_briefs")
 }
