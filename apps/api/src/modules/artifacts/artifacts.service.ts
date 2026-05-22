@@ -1,29 +1,31 @@
-import { Inject, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  NotFoundException,
+  PayloadTooLargeException,
+} from "@nestjs/common";
 import type { Role } from "@prisma/client";
 import type { Readable } from "node:stream";
-import { safeServeMimeFor } from "@ci-train/contracts";
+import {
+  MAX_PARSED_EML_BYTES,
+  ParsedEmlPayload,
+  safeServeMimeFor,
+} from "@ci-train/contracts";
 import { PrismaService } from "../database/prisma.service";
 import {
   ARTIFACT_STORAGE,
 } from "./storage/storage.module";
 import type { ArtifactStorage } from "./storage/artifact-storage";
+import { EmlParseService } from "./eml-parse.service";
 
 export interface ArtifactStreamResult {
   stream: Readable;
-  // Canonical, *kind-derived* Content-Type that the controller serves.
-  // Independent of the DB's `mime_type` column so a stale/imported/
-  // malicious row (e.g. `text/html` recorded under kind=text) cannot
-  // get a renderable MIME past the API.
   mimeType: string;
   sizeBytes: number;
   displayName: string;
-  // `inline` is reserved for PDF and images whose stored MIME is in
-  // the allowlist. Anything else is served as an attachment so the
-  // browser does not try to render it.
   contentDisposition: "inline" | "attachment";
   sha256: string;
-  // The MIME stored in the DB (echoed back for debug/audit; not used
-  // for Content-Type).
   storedMimeType: string;
 }
 
@@ -32,6 +34,7 @@ export class ArtifactsService {
   constructor(
     private readonly prisma: PrismaService,
     @Inject(ARTIFACT_STORAGE) private readonly storage: ArtifactStorage,
+    private readonly emlParse: EmlParseService,
   ) {}
 
   // Returns null when the caller may not see it. The controller maps that
@@ -42,17 +45,8 @@ export class ArtifactsService {
     scenarioSlug: string,
     artifactId: string,
   ): Promise<ArtifactStreamResult | null> {
-    const artifact = await this.prisma.artifact.findUnique({
-      where: { id: artifactId },
-      include: {
-        scenario: { select: { slug: true, status: true } },
-      },
-    });
+    const artifact = await this.findVisibleArtifact(role, scenarioSlug, artifactId);
     if (!artifact) return null;
-    if (artifact.scenario.slug !== scenarioSlug) return null;
-    if (role === "trainee" && artifact.scenario.status !== "published") {
-      return null;
-    }
 
     if (!(await this.storage.exists(artifact.relativePath))) {
       throw new NotFoundException("Artifact bytes not found on disk.");
@@ -70,5 +64,58 @@ export class ArtifactsService {
       sha256: artifact.sha256,
       storedMimeType: artifact.mimeType,
     };
+  }
+
+  // Returns the parsed EML view for a kind=eml artifact, or null when
+  // the caller may not see it. Throws BadRequest when the artifact is
+  // a different kind (callers should dispatch by kind on the client).
+  async parseEml(
+    role: Role,
+    scenarioSlug: string,
+    artifactId: string,
+  ): Promise<ParsedEmlPayload | null> {
+    const artifact = await this.findVisibleArtifact(role, scenarioSlug, artifactId);
+    if (!artifact) return null;
+    if (artifact.kind !== "eml") {
+      throw new BadRequestException(
+        "Parsed view is only available for EML artifacts.",
+      );
+    }
+    // simpleParser() buffers the whole message in memory. Refuse to
+    // parse anything larger than MAX_PARSED_EML_BYTES — the raw .eml
+    // download via /content is unaffected. The recorded size in the
+    // DB is the source of truth here; we trust it because both seed
+    // and import paths set it from the actual on-disk byte count.
+    if (artifact.sizeBytes > MAX_PARSED_EML_BYTES) {
+      throw new PayloadTooLargeException(
+        `EML is ${artifact.sizeBytes} bytes; parsed view is limited to ${MAX_PARSED_EML_BYTES} bytes. Download the raw .eml via /content instead.`,
+      );
+    }
+    if (!(await this.storage.exists(artifact.relativePath))) {
+      throw new NotFoundException("Artifact bytes not found on disk.");
+    }
+    const stream = await this.storage.read(artifact.relativePath);
+    return this.emlParse.parse(stream);
+  }
+
+  // Shared lookup that applies the same role / slug / draft-leak rules
+  // both endpoints rely on.
+  private async findVisibleArtifact(
+    role: Role,
+    scenarioSlug: string,
+    artifactId: string,
+  ) {
+    const artifact = await this.prisma.artifact.findUnique({
+      where: { id: artifactId },
+      include: {
+        scenario: { select: { slug: true, status: true } },
+      },
+    });
+    if (!artifact) return null;
+    if (artifact.scenario.slug !== scenarioSlug) return null;
+    if (role === "trainee" && artifact.scenario.status !== "published") {
+      return null;
+    }
+    return artifact;
   }
 }

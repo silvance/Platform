@@ -14,6 +14,7 @@ import { ArtifactsService } from "./artifacts.service";
 import { CurrentSession } from "../auth/decorators/current-user.decorator";
 import type { SessionContext } from "../auth/auth.service";
 import { ScenarioSlugPipe } from "../../common/scenario-slug.pipe";
+import type { ParsedEmlPayload } from "@ci-train/contracts";
 
 @Controller("scenarios/:slug/artifacts")
 export class ArtifactsController {
@@ -67,5 +68,24 @@ export class ArtifactsController {
       }
     });
     result.stream.pipe(res);
+  }
+
+  // Structured view of an EML artifact. Returns 400 if the artifact is
+  // a different kind (clients dispatch by `kind` on the metadata side
+  // before hitting this endpoint).
+  @Get(":id/parsed")
+  async parsed(
+    @CurrentSession() session: SessionContext | undefined,
+    @Param("slug", ScenarioSlugPipe) slug: string,
+    @Param("id", new ParseUUIDPipe({ version: "4" })) id: string,
+  ): Promise<ParsedEmlPayload> {
+    if (!session) throw new UnauthorizedException();
+    const parsed = await this.artifacts.parseEml(
+      session.user.role,
+      slug,
+      id,
+    );
+    if (!parsed) throw new NotFoundException("Artifact not found.");
+    return parsed;
   }
 }

@@ -6,9 +6,10 @@ laptop or internal server, with a path to broader online deployment.
 
 This repo has shipped milestones **M0** (repo skeleton + end-to-end
 wiring), **M1** (local accounts, sessions, role guards, seed), **M2**
-(scenario catalog + brief browse), and **M3** (artifact storage +
-tabbed workspace viewers). EML parsing and the header viewer land in
-M4; questions, attempts, and the debrief view land in M5.
+(scenario catalog + brief browse), **M3** (artifact storage + tabbed
+workspace viewers), **M4** (EML viewer with header / auth-result
+parsing), and **M5** (questions, attempts, debrief). Indicator-select
+question type lands in M6; instructor authoring + review lands in M7.
 
 ## Stack
 
@@ -27,11 +28,14 @@ api never serves a UI; the web never talks to the db directly.
 ```
 apps/
   web/          Next.js 15 app (server-renders the home page, fetches API)
-  api/          NestJS API (auth, scenarios, artifacts, health + Prisma migrations)
+  api/          NestJS API (auth, scenarios, artifacts, attempts, health + Prisma migrations)
                 /v1/healthz, /v1/readyz, /v1/hello,
                 /v1/auth/login, /v1/auth/logout, /v1/auth/me,
                 /v1/scenarios, /v1/scenarios/:slug,
-                /v1/scenarios/:slug/artifacts/:id/content (streams bytes)
+                /v1/scenarios/:slug/artifacts/:id/content (streams bytes),
+                /v1/scenarios/:slug/artifacts/:id/parsed (kind=eml only),
+                /v1/scenarios/:slug/attempts (POST: start/get),
+                /v1/attempts/:id (GET; PATCH/answers/:qid; POST /submit; GET /debrief)
 packages/
   contracts/    Shared Zod schemas + inferred TS types
 docker-compose.yml
@@ -89,7 +93,7 @@ editing shared schemas.
 | `pnpm install` | Install all workspace deps (use the committed lockfile) |
 | `pnpm build` | Build `contracts`, then `api` and `web` |
 | `pnpm typecheck` | Run `tsc --noEmit` across every workspace |
-| `pnpm test` | Runs the workspace test suites. Currently the API Jest unit tests (auth service — 12 cases). Web Playwright/integration tests land in a later milestone. |
+| `pnpm test` | Runs the workspace test suites. Currently the API Jest unit tests (auth service, scenarios service, contracts, storage path safety, artifacts service, slug pipe, EML parser — 73 cases as of M4). Web Playwright/integration tests land in a later milestone. |
 | `pnpm seed` | Create or refresh the seed instructor + trainee accounts and print their generated passwords once. |
 | `pnpm dev:api` / `pnpm dev:web` | Run a single app outside Docker |
 | `pnpm compose:up` | `docker compose up --build` |
@@ -277,10 +281,45 @@ schema before any DB lookup: lowercase alphanumeric and hyphens
 only, no leading/trailing hyphen, max 120 chars (matching the DB
 column). The same pipe is applied to `/v1/scenarios/:slug` and
 `/v1/scenarios/:slug/artifacts/:id/content`.
+## EML viewer (M4)
+
+The first investigative viewer. `kind=eml` artifacts get a dedicated
+endpoint that parses the raw `.eml` server-side and returns a
+structured JSON payload:
+
+```
+GET /v1/scenarios/:slug/artifacts/:id/parsed
+```
+
+Returns the subject, `From` / `To` / `Cc` / `Reply-To` / `Return-Path`
+addresses, the parsed `Date`, the `Message-ID`, every header in
+arrival order (capped), and a parsed `Authentication-Results` header
+broken out per mechanism (`SPF`, `DKIM`, `DMARC`) with the verdict
+and the free-form remainder. The text/plain body is returned with a
+200 KB cap; HTML body presence is signalled as a byte count only
+(the sanitized HTML render lands in **M4.1**). Attachment metadata
+(filename, content-type, size, content-disposition) is returned;
+inline attachment streaming is deferred. Endpoint enforces the same
+role gate as `/content` and returns `400` for non-EML artifacts.
+
+The web viewer highlights two BEC indicators automatically:
+
+- **Reply-To differs from From** — common identity-spoof signal.
+- **Return-Path domain differs from From domain** — common lookalike
+  domain signal.
+
+Authentication-Results verdicts get color chips: `pass` green, `fail`
+red, `softfail` / `neutral` / `policy` / `temperror` / `permerror` /
+`none` yellow, `missing` muted (and called out explicitly so trainees
+read it as absence of evidence, not evidence of absence).
+
+Parsing happens on the trusted API server (via `mailparser`) — the
+web bundle has no mail-parsing dependency.
 
 ## What's intentionally not here yet
 
-- EML viewer + header parser (M4)
+- Sanitized HTML body rendering for EML (M4.1)
+- Inline download of embedded EML attachments (M4.1+)
 - Question types, attempts, debriefs (M5)
 - Instructor review UI (M7)
 - Pack import / export (M8)

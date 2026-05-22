@@ -49,6 +49,7 @@ enum ArtifactKind {
   json
   pdf
   image
+  eml
 }
 
 model User {
@@ -64,6 +65,7 @@ model User {
 
   sessions          Session[]
   authoredScenarios Scenario[] @relation("ScenarioAuthor")
+  attempts          Attempt[]
 
   @@map("users")
 }
@@ -109,6 +111,8 @@ model Scenario {
 
   brief     ScenarioBrief?
   artifacts Artifact[]
+  questions Question[]
+  attempts  Attempt[]
   author    User?          @relation("ScenarioAuthor", fields: [authorUserId], references: [id], onDelete: SetNull)
 
   @@index([status])
@@ -155,4 +159,101 @@ model Artifact {
   @@unique([scenarioId, ordinal])
   @@index([scenarioId])
   @@map("artifacts")
+}
+
+// Keep in sync with QuestionType in packages/contracts/src/questions.ts.
+enum QuestionType {
+  multi_choice
+  short_answer
+  long_answer
+  confidence
+}
+
+enum AutoScoreOutcome {
+  correct
+  incorrect
+  partial
+  in_range
+  out_of_range
+  ungradable
+}
+
+// Authored question. `optionsJson` carries the type-specific payload:
+// for multi_choice that's { options:[{id,label}], allowMultiple }; for
+// other types it's `null`. Correctness lives ONLY on the AnswerKey row
+// so a leaked Question record can't expose the expected answer.
+model Question {
+  id          String       @id @default(uuid()) @db.Uuid
+  scenarioId  String       @map("scenario_id") @db.Uuid
+  ordinal     Int
+  type        QuestionType
+  promptMd    String       @map("prompt_md")
+  optionsJson Json?        @map("options_json")
+  weight      Int          @default(1)
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  scenario  Scenario       @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  answerKey AnswerKey?
+  answers   AttemptAnswer[]
+
+  @@unique([scenarioId, ordinal])
+  @@index([scenarioId])
+  @@map("questions")
+}
+
+// 1:1 with Question. `expectedJson` is intentionally separate so that
+// the trainee-facing endpoints never select against it. `debriefMd`
+// joins back only at the debrief endpoint.
+model AnswerKey {
+  id           String @id @default(uuid()) @db.Uuid
+  questionId   String @unique @map("question_id") @db.Uuid
+  expectedJson Json   @map("expected_json")
+  debriefMd    String @map("debrief_md")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@map("answer_keys")
+}
+
+model Attempt {
+  id            String   @id @default(uuid()) @db.Uuid
+  scenarioId    String   @map("scenario_id") @db.Uuid
+  traineeUserId String   @map("trainee_user_id") @db.Uuid
+  startedAt     DateTime @default(now()) @map("started_at")
+  submittedAt   DateTime? @map("submitted_at")
+  locked        Boolean  @default(false)
+  totalScore    Float?   @map("total_score")
+  maxScore      Float    @map("max_score")
+
+  scenario Scenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  trainee  User     @relation(fields: [traineeUserId], references: [id], onDelete: Cascade)
+  answers  AttemptAnswer[]
+
+  // One attempt per (scenario, trainee) in M5. Re-attempts get a UX
+  // and a separate row in a later milestone.
+  @@unique([scenarioId, traineeUserId])
+  @@index([traineeUserId])
+  @@map("attempts")
+}
+
+model AttemptAnswer {
+  id                String   @id @default(uuid()) @db.Uuid
+  attemptId         String   @map("attempt_id") @db.Uuid
+  questionId        String   @map("question_id") @db.Uuid
+  responseJson      Json?    @map("response_json")
+  autoScore         Float?   @map("auto_score")
+  autoOutcome       AutoScoreOutcome? @map("auto_outcome")
+  manualScore       Float?   @map("manual_score")
+  instructorNotesMd String?  @map("instructor_notes_md")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  attempt  Attempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([attemptId, questionId])
+  @@index([attemptId])
+  @@map("attempt_answers")
 }

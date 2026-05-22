@@ -4,6 +4,7 @@ import { requireUser, readToken } from "@/lib/session";
 import { api, ApiError } from "@/lib/api";
 import { Markdown } from "@/components/markdown";
 import { ArtifactViewer } from "@/components/viewers/artifact-viewer";
+import { AttemptControl } from "@/components/attempt-control";
 import { isAwarenessOnly, type ArtifactListItem } from "@ci-train/contracts";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +20,7 @@ function readSingle(v: string | string[] | undefined): string | undefined {
 }
 
 export default async function ScenarioDetailPage({ params, searchParams }: Props) {
-  await requireUser();
+  const user = await requireUser();
   const token = await readToken();
   const { slug } = await params;
   const sp = await searchParams;
@@ -81,6 +82,10 @@ export default async function ScenarioDetailPage({ params, searchParams }: Props
           <span key={t} className="chip">#{t}</span>
         ))}
       </div>
+
+      {user.role === "trainee" ? (
+        <AttemptControl slug={slug} />
+      ) : null}
 
       {disclaimer ? <Markdown source={disclaimer} variant="callout" /> : null}
 

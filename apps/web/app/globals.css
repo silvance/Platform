@@ -180,3 +180,63 @@ footer { color: var(--muted); font-size: .85rem; margin-top: 3rem; }
 }
 .artifact-csv th { background: #131a30; color: var(--fg); }
 .artifact-csv td { background: #0b1020; color: var(--fg); }
+
+.eml-viewer { display: flex; flex-direction: column; gap: .75rem; }
+.eml-kv { display: grid; grid-template-columns: 9rem 1fr; gap: .35rem .9rem; margin: 0; font-size: .9rem; }
+.eml-kv dt { color: var(--muted); }
+.eml-kv dd { margin: 0; word-break: break-word; }
+.eml-monospace { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+.auth-chip { padding: .15rem .65rem; font-size: .8rem; }
+.auth-pass     { color: var(--ok);  border-color: rgba(74,222,128,.5); background: rgba(74,222,128,.06); }
+.auth-fail     { color: var(--bad); border-color: rgba(248,113,113,.55); background: rgba(248,113,113,.07); }
+.auth-softfail,
+.auth-neutral,
+.auth-policy,
+.auth-temperror,
+.auth-permerror,
+.auth-none     { color: #f0d68a; border-color: rgba(240,214,138,.45); background: rgba(255,196,0,.06); }
+.auth-unknown,
+.auth-missing  { color: var(--muted); }
+
+.eml-raw-headers summary { font-size: .85rem; }
+.eml-raw-headers pre { max-height: 18rem; overflow: auto; }
+
+.q-panel { display: flex; flex-direction: column; gap: .75rem; }
+.q-card { padding: 1rem 1.25rem; }
+.q-card .q-header { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; margin-bottom: .5rem; }
+.q-ordinal { font-weight: 600; font-size: .9rem; color: var(--muted); margin-right: .25rem; }
+.q-prompt { margin: .25rem 0 .75rem; }
+.q-prompt p:first-child { margin-top: 0; }
+.q-prompt p:last-child { margin-bottom: 0; }
+.q-widget { margin-top: .5rem; }
+
+.confidence-pill {
+  background: transparent;
+  border: 1px solid #2a3556;
+  border-radius: 999px;
+  padding: .35rem .85rem;
+  color: var(--fg);
+  cursor: pointer;
+  font: inherit;
+}
+.confidence-pill:hover { border-color: var(--accent); }
+.confidence-active { background: rgba(106, 168, 255, 0.12); border-color: var(--accent); }
+.confidence-pill:disabled { cursor: not-allowed; opacity: .65; }
+
+.save-badge {
+  display: inline-block;
+  margin-left: .5rem;
+  padding: 0 .5rem;
+  border-radius: 4px;
+  font-size: .7rem;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+.save-saving { color: var(--muted); }
+.save-saved  { color: var(--ok); }
+.save-error  { color: var(--bad); }
+
+.chip-ok       { color: var(--ok);  border-color: rgba(74,222,128,.5);   background: rgba(74,222,128,.06); }
+.chip-bad      { color: var(--bad); border-color: rgba(248,113,113,.55); background: rgba(248,113,113,.07); }
+.chip-partial  { color: #f0d68a;    border-color: rgba(240,214,138,.45); background: rgba(255,196,0,.06); }

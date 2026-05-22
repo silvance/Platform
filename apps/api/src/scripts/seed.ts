@@ -63,6 +63,24 @@ interface ArtifactSeed {
   bytes: Buffer;
 }
 
+interface QuestionSeed {
+  ordinal: number;
+  type: "multi_choice" | "short_answer" | "long_answer" | "confidence";
+  promptMd: string;
+  weight: number;
+  // For multi_choice only. Other types leave this undefined.
+  options?: Array<{ id: string; label: string }>;
+  allowMultiple?: boolean;
+  // Type-specific expected payload. See AnswerKeyPayload in
+  // @ci-train/contracts for the exact shape per type.
+  expected:
+    | { type: "multi_choice"; correctIds: string[]; allowMultiple: boolean }
+    | { type: "short_answer"; rubricNote: string | null }
+    | { type: "long_answer"; rubricNote: string | null }
+    | { type: "confidence"; expectedRange: [number, number] };
+  debriefMd: string;
+}
+
 interface ScenarioSeed {
   slug: string;
   title: string;
@@ -74,6 +92,7 @@ interface ScenarioSeed {
   brief: string;
   disclaimer?: string;
   artifacts: ArtifactSeed[];
+  questions: QuestionSeed[];
 }
 
 // A minimal but valid 1x1 transparent PNG. Tiny enough to embed inline;
@@ -148,11 +167,14 @@ You have been asked to triage the email and advise the controller.
 
 The workspace tabs hold the supporting material:
 
-- A **24-hour slice of the partner firm's web-proxy log** (CSV).
-- The **vendor's normal invoice template** (PDF).
+- The **suspect email itself** (\`.eml\`), rendered with parsed headers,
+  Authentication-Results highlighting (SPF / DKIM / DMARC), the text
+  body, and attachment metadata.
 - The **controller's contemporaneous note** of the request (plain text).
+- A **24-hour slice of the partner firm's web-proxy log** (CSV).
 - A **machine-parsed summary** of the suspect email's key headers
-  (JSON). The full \`.eml\` and an inline header parser arrive in M4.
+  (JSON). Useful for cross-checking against the live parsed view.
+- The **vendor's normal invoice template** (PDF).
 
 ## Goals for this scenario
 
@@ -176,6 +198,51 @@ Distinguish:
     artifacts: [
       {
         ordinal: 1,
+        displayName: "suspect-email.eml",
+        kind: "eml",
+        mimeType: "message/rfc822",
+        bytes: utf8(
+          [
+            'From: "Jane Doe" <jane.doe@vendor.example>',
+            "To: controller@partner.example",
+            "Reply-To: ceo.urgent@gmail.com",
+            "Return-Path: <noreply@vendor-lookup-alike.com>",
+            "Subject: URGENT: Updated wire instructions for INV-2026-0418",
+            "Date: Thu, 18 Apr 2026 14:07:02 +0000",
+            "Message-ID: <bec-1234abcd@vendor-lookup-alike.com>",
+            "Authentication-Results: mx.partner.example;",
+            " spf=neutral smtp.mailfrom=vendor-lookup-alike.com;",
+            " dkim=fail header.d=vendor.example;",
+            " dmarc=fail policy.dmarc=reject",
+            "Received: from mail.vendor-lookup-alike.com (203.0.113.42)",
+            " by inbound.partner.local (1.2.3.4) with ESMTP id ABC123;",
+            " Thu, 18 Apr 2026 14:07:00 +0000",
+            "MIME-Version: 1.0",
+            'Content-Type: multipart/alternative; boundary="BEC-BOUNDARY"',
+            "",
+            "--BEC-BOUNDARY",
+            "Content-Type: text/plain; charset=utf-8",
+            "",
+            "Hi,",
+            "",
+            "Please update the wire instructions for invoice INV-2026-0418 to",
+            "the new account immediately. Confidentiality is critical until",
+            "this clears. Confirm via reply only — do not call.",
+            "",
+            "Thanks,",
+            "Jane",
+            "--BEC-BOUNDARY",
+            "Content-Type: text/html; charset=utf-8",
+            "",
+            "<p>Hi,</p><p>Please update the wire instructions for",
+            " <b>INV-2026-0418</b> to the new account immediately.</p>",
+            "--BEC-BOUNDARY--",
+            "",
+          ].join("\r\n"),
+        ),
+      },
+      {
+        ordinal: 2,
         displayName: "controller-note.txt",
         kind: "text",
         mimeType: "text/plain; charset=utf-8",
@@ -196,7 +263,7 @@ Distinguish:
         ),
       },
       {
-        ordinal: 2,
+        ordinal: 3,
         displayName: "proxy-log-24h.csv",
         kind: "csv",
         mimeType: "text/csv; charset=utf-8",
@@ -215,14 +282,14 @@ Distinguish:
         ),
       },
       {
-        ordinal: 3,
+        ordinal: 4,
         displayName: "email-headers-summary.json",
         kind: "json",
         mimeType: "application/json; charset=utf-8",
         bytes: utf8(
           JSON.stringify(
             {
-              note: "Machine-parsed summary; full .eml + inline parser arrive in M4.",
+              note: "Machine-parsed summary; cross-check against the live EML view in the workspace.",
               from_display: "Jane Doe",
               from_address: "jane.doe@vendor.example",
               reply_to: "ceo.urgent@gmail.com",
@@ -248,11 +315,105 @@ Distinguish:
         ),
       },
       {
-        ordinal: 4,
+        ordinal: 5,
         displayName: "vendor-invoice-template.pdf",
         kind: "pdf",
         mimeType: "application/pdf",
         bytes: buildTinyPdf(),
+      },
+    ],
+    questions: [
+      {
+        ordinal: 1,
+        type: "multi_choice",
+        weight: 2,
+        promptMd:
+          "Which of these signals — present in the EML viewer's parsed Authentication-Results and header strip — support a BEC hypothesis? Select all that apply.",
+        options: [
+          { id: "spf-neutral", label: "SPF result is `neutral`" },
+          { id: "dkim-fail", label: "DKIM result is `fail`" },
+          { id: "dmarc-fail", label: "DMARC result is `fail`" },
+          { id: "reply-to-divergent", label: "Reply-To address is on a different domain than From" },
+          { id: "return-path-lookalike", label: "Return-Path is on a vendor-lookalike domain" },
+          { id: "subject-uppercase", label: "Subject is in all caps" },
+        ],
+        allowMultiple: true,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["dkim-fail", "dmarc-fail", "reply-to-divergent", "return-path-lookalike"],
+          allowMultiple: true,
+        },
+        debriefMd: [
+          "**Proven by the artifacts:**",
+          "",
+          "- `dkim=fail header.d=vendor.example` — the message claims to be from the real vendor domain but DKIM does not validate.",
+          "- `dmarc=fail policy.dmarc=reject` — the receiving MTA's DMARC policy refused the message; this is a strong technical signal.",
+          "- Reply-To divergence (`ceo.urgent@gmail.com` vs `jane.doe@vendor.example`) — classic identity-spoof / out-of-band reply trick.",
+          "- Return-Path on `vendor-lookup-alike.com` — lookalike domain registered to receive bounce mail away from the real vendor.",
+          "",
+          "**Not enough to claim by itself:**",
+          "",
+          "- An all-caps subject and `URGENT` framing are *social engineering markers*, not proof of forgery.",
+          "- `spf=neutral` is not pass *or* fail — by itself it doesn't prove anything; combined with the DKIM/DMARC failures it firms up the picture.",
+        ].join("\n"),
+      },
+      {
+        ordinal: 2,
+        type: "confidence",
+        weight: 1,
+        promptMd:
+          "On a 1–5 scale, how confident are you that this email is a BEC attempt? (1 = not confident, 5 = certain)",
+        expected: { type: "confidence", expectedRange: [3, 5] },
+        debriefMd: [
+          "A confident **5** is unwarranted on the headers alone — the headers establish *spoofing*, not yet *intent and operational scope*.",
+          "",
+          "A **3 or 4** reflects calibrated reasoning given the available evidence: technical auth failures + Reply-To/Return-Path divergence + lookalike domain registration cluster strongly toward BEC, but proving the attacker accessed the vendor's account vs. simply impersonating it externally requires more work.",
+          "",
+          "A **1 or 2** ignores the multiple corroborating signals already in the artifacts.",
+        ].join("\n"),
+      },
+      {
+        ordinal: 3,
+        type: "short_answer",
+        weight: 1,
+        promptMd:
+          "Name one investigative step you would take next and explain *why* in one sentence.",
+        expected: {
+          type: "short_answer",
+          rubricNote:
+            "Acceptable: pivoting on the Return-Path domain (whois / passive DNS), pulling proxy-log activity around 14:07 local for the suspect domain, contacting the vendor via a known-good channel to corroborate, or pulling the broader Received chain via the raw .eml. The 'why' should connect the step to closing a specific evidentiary gap (proving inbound auth failure vs. confirming the alternate account is attacker-controlled).",
+        },
+        debriefMd: [
+          "Several defensible answers; the rubric grades the *connection to evidence*, not the specific step:",
+          "",
+          "- *Out-of-band contact with the vendor* closes the \"is this account compromised at the source?\" gap.",
+          "- *Pivot on the lookalike domain* (whois, passive DNS, infrastructure overlap) — closes the attribution gap.",
+          "- *Pull the proxy-log slice* around 14:07 local — confirms the trainee/controller did not click through the Reply-To address.",
+          "",
+          "An answer like \"escalate to leadership\" without a specific evidentiary purpose does not satisfy the rubric.",
+        ].join("\n"),
+      },
+      {
+        ordinal: 4,
+        type: "long_answer",
+        weight: 3,
+        promptMd:
+          "Draft a one-paragraph escalation note for the SAC. Distinguish what you can *prove* from what you can only *infer*. Include a recommended containment action and your confidence level.",
+        expected: {
+          type: "long_answer",
+          rubricNote:
+            "Must (a) clearly separate proven (DKIM/DMARC fail, lookalike Return-Path, Reply-To divergence) from inferred (vendor account compromise, attacker identity, scope); (b) state a containment action (block the lookalike domain, hold the wire, notify the vendor via known-good channel); (c) include a calibrated confidence statement, not 'definitely a BEC' or 'we don't know'.",
+        },
+        debriefMd: [
+          "Strong write-ups will:",
+          "",
+          "- Open with the **proven** facts in concrete terms — \"the message failed DKIM and DMARC\" rather than \"the email looks suspicious\".",
+          "- Mark inferences as inferences — \"the lookalike domain registration *suggests* deliberate targeting\".",
+          "- Include a containment action: hold the pending wire, block the lookalike domain at the proxy, notify the vendor via a known-good channel.",
+          "- State confidence on a scale and *justify* it — not \"100% BEC\".",
+          "",
+          "This question is instructor-graded (M7); the rubric above describes the grading frame.",
+        ].join("\n"),
       },
     ],
   },
@@ -373,6 +534,78 @@ that distinction.
         bytes: Buffer.from(TINY_PNG_BASE64, "base64"),
       },
     ],
+    questions: [
+      {
+        ordinal: 1,
+        type: "multi_choice",
+        weight: 2,
+        promptMd:
+          "Which phrases in the draft sweep report overstate what a 90-minute, 25 MHz–6 GHz observation can actually conclude? Select all that apply.",
+        options: [
+          { id: "sweep-clean", label: "\"Sweep was clean.\"" },
+          { id: "no-devices", label: "\"No surveillance devices present.\"" },
+          { id: "safe-for-discussions", label: "\"Room is safe for sensitive discussions.\"" },
+          { id: "wifi-observed", label: "\"Wi-Fi and Bluetooth traffic observed at expected levels.\"" },
+          { id: "background-nominal", label: "\"Background cellular activity nominal.\"" },
+        ],
+        allowMultiple: true,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["sweep-clean", "no-devices", "safe-for-discussions"],
+          allowMultiple: true,
+        },
+        debriefMd: [
+          "**Overclaims:**",
+          "",
+          "- *\"Sweep was clean.\"* collapses a finite observation into a definitive negative finding.",
+          "- *\"No surveillance devices present.\"* claims absence; the 90-minute / 25 MHz–6 GHz observation does not foreclose intermittent transmitters, RF-quiet devices, or out-of-band emitters.",
+          "- *\"Room is safe for sensitive discussions.\"* is a *judgment*, not a measurement; the report should not assert it from this evidence alone.",
+          "",
+          "**Not overclaims:**",
+          "",
+          "- The Wi-Fi / Bluetooth / cellular observations are descriptions of what *was* observed during the window — they don't claim anything about what wasn't.",
+          "",
+          "Awareness module reminder: this exercise trains *language discipline*. It does not qualify you to render TSCM findings.",
+        ].join("\n"),
+      },
+      {
+        ordinal: 2,
+        type: "confidence",
+        weight: 1,
+        promptMd:
+          "On a 1–5 scale, how confident should the report's conclusion be that the room is RF-clean, given ONLY the evidence in the artifacts?",
+        expected: { type: "confidence", expectedRange: [1, 2] },
+        debriefMd: [
+          "The well-calibrated answer is **1 or 2**.",
+          "",
+          "The observation log explicitly notes the band coverage (25 MHz – 6 GHz) and the 90-minute window. A duty-cycled emitter or one operating outside the observed band would not appear; that is precisely the case where *absence of evidence is not evidence of absence*.",
+          "",
+          "A **3 or above** treats a bounded observation as a stronger negative finding than it is.",
+        ].join("\n"),
+      },
+      {
+        ordinal: 3,
+        type: "long_answer",
+        weight: 2,
+        promptMd:
+          "Rewrite the conclusion in language that does not overstate. Include the threshold at which you would escalate to qualified TSCM personnel and why.",
+        expected: {
+          type: "long_answer",
+          rubricNote:
+            "Acceptable rewrite uses bounded language (e.g., \"no signals of interest observed within the swept bands during the 90-minute observation window\"); names the observation limits (band coverage, time window); states a specific escalation threshold (anomalous transient observation, mission criticality, requirement for a finding, presence-of-evidence questions outside CI cyber's scope) tied to qualified TSCM personnel; avoids declaring the room safe.",
+        },
+        debriefMd: [
+          "Strong rewrites will:",
+          "",
+          "- Replace \"clean\" with *bounded* language: \"no signals of interest observed within the swept bands during the 90-minute window.\"",
+          "- Acknowledge the observation limits explicitly.",
+          "- State an escalation threshold that ties to qualified TSCM personnel (not to CI cyber).",
+          "- Not declare the room \"safe\" — that's a judgment outside the observation's reach.",
+          "",
+          "This question is instructor-graded (M7); the rubric describes the grading frame.",
+        ].join("\n"),
+      },
+    ],
   },
 ];
 
@@ -405,6 +638,7 @@ function extForKind(displayName: string, kind: ArtifactKind): string {
     case "json": return ".json";
     case "pdf":  return ".pdf";
     case "image": return ".png";
+    case "eml":  return ".eml";
   }
 }
 
@@ -472,6 +706,39 @@ async function upsertScenario(
         sha256: sha256(a.bytes),
         sizeBytes: a.bytes.length,
         mimeType: a.mimeType,
+      },
+    });
+  }
+
+  // Replace any prior questions (cascades to AnswerKey rows). Existing
+  // Attempt rows for the scenario survive but lose answer-row links by
+  // FK cascade — re-running the seed on a database with live attempts
+  // is intentionally destructive of those attempts. Real authoring
+  // tooling (M7) will require a smarter migration path.
+  await prisma.question.deleteMany({ where: { scenarioId: scenario.id } });
+
+  for (const q of s.questions) {
+    const optionsJson =
+      q.type === "multi_choice"
+        ? { options: q.options ?? [], allowMultiple: q.allowMultiple ?? false }
+        : null;
+    const question = await prisma.question.create({
+      data: {
+        scenarioId: scenario.id,
+        ordinal: q.ordinal,
+        type: q.type,
+        promptMd: q.promptMd,
+        weight: q.weight,
+        optionsJson: optionsJson as never,
+      },
+    });
+    await prisma.answerKey.create({
+      data: {
+        questionId: question.id,
+        // Store the discriminated shape so AttemptsService can read it
+        // without re-deriving type from the question row.
+        expectedJson: q.expected as never,
+        debriefMd: q.debriefMd,
       },
     });
   }

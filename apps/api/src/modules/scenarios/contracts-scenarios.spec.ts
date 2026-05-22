@@ -1,8 +1,8 @@
 import {
   ScenarioListQuery,
   ScenarioBriefPayload,
-  MAX_BRIEF_MARKDOWN_BYTES,
-  MAX_DISCLAIMER_MARKDOWN_BYTES,
+  MAX_BRIEF_MARKDOWN_CHARS,
+  MAX_DISCLAIMER_MARKDOWN_CHARS,
   isAwarenessOnly,
 } from "@ci-train/contracts";
 
@@ -32,7 +32,7 @@ describe("ScenarioListQuery", () => {
 describe("ScenarioBriefPayload — size caps", () => {
   it("accepts a brief at the maximum allowed length", () => {
     const ok = ScenarioBriefPayload.safeParse({
-      markdownBody: "x".repeat(MAX_BRIEF_MARKDOWN_BYTES),
+      markdownBody: "x".repeat(MAX_BRIEF_MARKDOWN_CHARS),
       disclaimerMd: null,
     });
     expect(ok.success).toBe(true);
@@ -40,7 +40,7 @@ describe("ScenarioBriefPayload — size caps", () => {
 
   it("rejects a brief that exceeds the markdown cap", () => {
     const tooBig = ScenarioBriefPayload.safeParse({
-      markdownBody: "x".repeat(MAX_BRIEF_MARKDOWN_BYTES + 1),
+      markdownBody: "x".repeat(MAX_BRIEF_MARKDOWN_CHARS + 1),
       disclaimerMd: null,
     });
     expect(tooBig.success).toBe(false);
@@ -49,7 +49,7 @@ describe("ScenarioBriefPayload — size caps", () => {
   it("rejects a disclaimer that exceeds its cap", () => {
     const tooBig = ScenarioBriefPayload.safeParse({
       markdownBody: "ok",
-      disclaimerMd: "x".repeat(MAX_DISCLAIMER_MARKDOWN_BYTES + 1),
+      disclaimerMd: "x".repeat(MAX_DISCLAIMER_MARKDOWN_CHARS + 1),
     });
     expect(tooBig.success).toBe(false);
   });
