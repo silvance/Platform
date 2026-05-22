@@ -11,6 +11,7 @@ import { RolesGuard } from "./modules/auth/guards/roles.guard";
 import { ScenariosModule } from "./modules/scenarios/scenarios.module";
 import { ArtifactsModule } from "./modules/artifacts/artifacts.module";
 import { AttemptsModule } from "./modules/attempts/attempts.module";
+import { AuthoringModule } from "./modules/authoring/authoring.module";
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { AttemptsModule } from "./modules/attempts/attempts.module";
     ScenariosModule,
     ArtifactsModule,
     AttemptsModule,
+    AuthoringModule,
     HealthModule,
     HelloModule,
   ],

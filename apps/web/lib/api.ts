@@ -1,5 +1,11 @@
 import { z, ZodError } from "zod";
 import {
+  AdminScenarioDetail,
+  AdminScenarioListResponse,
+  AdminScenarioSummary,
+  AuthoredQuestion,
+  CreateQuestionRequest,
+  CreateScenarioRequest,
   HelloResponse,
   HealthResponse,
   LoginRequest,
@@ -12,6 +18,8 @@ import {
   ScenarioProgressPayload,
   SubmitAnswerRequest,
   SubmitAnswerResponse,
+  UpdateQuestionRequest,
+  UpdateScenarioRequest,
 } from "@ci-train/contracts";
 
 const API_INTERNAL_URL =
@@ -123,6 +131,79 @@ export const api = {
           { token },
         ),
       ),
+  },
+  authoring: {
+    list: async (token: string): Promise<AdminScenarioListResponse> =>
+      parse(AdminScenarioListResponse, await request("/admin/challenges", { token })),
+    get: async (token: string, slug: string): Promise<AdminScenarioDetail> =>
+      parse(
+        AdminScenarioDetail,
+        await request(`/admin/challenges/${encodeURIComponent(slug)}`, { token }),
+      ),
+    create: async (
+      token: string,
+      body: CreateScenarioRequest,
+    ): Promise<AdminScenarioSummary> =>
+      parse(
+        AdminScenarioSummary,
+        await request("/admin/challenges", { method: "POST", body, token }),
+      ),
+    update: async (
+      token: string,
+      slug: string,
+      body: UpdateScenarioRequest,
+    ): Promise<AdminScenarioSummary> =>
+      parse(
+        AdminScenarioSummary,
+        await request(`/admin/challenges/${encodeURIComponent(slug)}`, {
+          method: "PATCH",
+          body,
+          token,
+        }),
+      ),
+    remove: async (token: string, slug: string): Promise<void> => {
+      await request(`/admin/challenges/${encodeURIComponent(slug)}`, {
+        method: "DELETE",
+        token,
+        expect: "empty",
+      });
+    },
+    addQuestion: async (
+      token: string,
+      slug: string,
+      body: CreateQuestionRequest,
+    ): Promise<AuthoredQuestion> =>
+      parse(
+        AuthoredQuestion,
+        await request(`/admin/challenges/${encodeURIComponent(slug)}/questions`, {
+          method: "POST",
+          body,
+          token,
+        }),
+      ),
+    updateQuestion: async (
+      token: string,
+      slug: string,
+      questionId: string,
+      body: UpdateQuestionRequest,
+    ): Promise<AuthoredQuestion> =>
+      parse(
+        AuthoredQuestion,
+        await request(
+          `/admin/challenges/${encodeURIComponent(slug)}/questions/${encodeURIComponent(questionId)}`,
+          { method: "PATCH", body, token },
+        ),
+      ),
+    removeQuestion: async (
+      token: string,
+      slug: string,
+      questionId: string,
+    ): Promise<void> => {
+      await request(
+        `/admin/challenges/${encodeURIComponent(slug)}/questions/${encodeURIComponent(questionId)}`,
+        { method: "DELETE", token, expect: "empty" },
+      );
+    },
   },
   progress: {
     get: async (token: string, slug: string): Promise<ScenarioProgressPayload> =>

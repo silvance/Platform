@@ -4,3 +4,4 @@ export * from "./auth.js";
 export * from "./scenarios.js";
 export * from "./eml.js";
 export * from "./questions.js";
+export * from "./authoring.js";
