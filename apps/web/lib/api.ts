@@ -11,6 +11,7 @@ import {
   CreateScenarioRequest,
   HelloResponse,
   HealthResponse,
+  ImportPackResponse,
   LoginRequest,
   LoginResponse,
   MeResponse,
@@ -285,6 +286,35 @@ export const api = {
         { method: "DELETE", token, expect: "empty" },
       );
     },
+    exportPack: async (
+      token: string,
+      slug: string,
+    ): Promise<{ filename: string; bytes: ArrayBuffer }> => {
+      const url = `${API_INTERNAL_URL}/v1/admin/challenges/${encodeURIComponent(slug)}/export`;
+      const res = await fetch(url, {
+        headers: { authorization: `Bearer ${token}` },
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        throw new ApiError(res.status, `Export failed: ${res.status}`);
+      }
+      const disposition = res.headers.get("content-disposition") ?? "";
+      const match = /filename="([^"]+)"/.exec(disposition);
+      const filename = match?.[1] ?? `${slug}.zip`;
+      return { filename, bytes: await res.arrayBuffer() };
+    },
+    importPack: async (
+      token: string,
+      fd: FormData,
+    ): Promise<ImportPackResponse> =>
+      parse(
+        ImportPackResponse,
+        await request("/admin/challenges/_import", {
+          method: "POST",
+          formData: fd,
+          token,
+        }),
+      ),
   },
   progress: {
     get: async (token: string, slug: string): Promise<ScenarioProgressPayload> =>

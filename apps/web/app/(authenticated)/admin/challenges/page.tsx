@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireInstructor, readToken } from "@/lib/session";
 import { api } from "@/lib/api";
+import { ImportPackForm } from "./import-pack-form";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,18 @@ export default async function AdminChallengesPage() {
       <p style={{ color: "var(--muted)", marginTop: 0 }}>
         Author and manage challenge content. Drafts are visible only to admins.
       </p>
+
+      <details
+        className="card"
+        style={{ padding: ".75rem 1.25rem", marginBottom: ".75rem" }}
+      >
+        <summary style={{ cursor: "pointer", color: "var(--muted)" }}>
+          Import scenario pack (.zip)
+        </summary>
+        <div style={{ marginTop: ".75rem" }}>
+          <ImportPackForm />
+        </div>
+      </details>
 
       {scenarios.length === 0 ? (
         <div className="card">
