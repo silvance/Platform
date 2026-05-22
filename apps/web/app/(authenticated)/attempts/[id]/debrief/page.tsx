@@ -155,6 +155,17 @@ function ResponseBlock({
       </ul>
     );
   }
+  if (r.type === "select_indicators") {
+    const ids = new Set(r.data.selectedIds);
+    const items = question.indicatorSet?.items ?? [];
+    return (
+      <ul style={{ margin: 0, paddingLeft: "1.25rem" }}>
+        {items.filter((i) => ids.has(i.id)).map((i) => (
+          <li key={i.id}>{i.label}</li>
+        ))}
+      </ul>
+    );
+  }
   if (r.type === "confidence") {
     return <p style={{ margin: 0 }}><strong>{r.data.value} / 5</strong></p>;
   }
@@ -178,6 +189,17 @@ function ExpectedBlock({
       <ul style={{ margin: 0, paddingLeft: "1.25rem" }}>
         {options.filter((o) => correct.has(o.id)).map((o) => (
           <li key={o.id}>{o.label}</li>
+        ))}
+      </ul>
+    );
+  }
+  if (exp.type === "select_indicators") {
+    const correct = new Set(exp.correctIds);
+    const items = question.indicatorSet?.items ?? [];
+    return (
+      <ul style={{ margin: 0, paddingLeft: "1.25rem" }}>
+        {items.filter((i) => correct.has(i.id)).map((i) => (
+          <li key={i.id}>{i.label}</li>
         ))}
       </ul>
     );

@@ -13,6 +13,7 @@ import {
   AnswerKeyPayload,
   DebriefAnswerPayload,
   DebriefPayload,
+  IndicatorItem,
   McOptionsSpec,
   QuestionPayload,
   QuestionResponse,
@@ -47,11 +48,16 @@ const ExpectedConfidence = z.object({
     z.number().int().min(1).max(5),
   ]),
 });
+const ExpectedSelectIndicators = z.object({
+  type: z.literal("select_indicators"),
+  correctIds: z.array(z.string()).min(1),
+});
 const ExpectedAny = z.discriminatedUnion("type", [
   ExpectedMc,
   ExpectedShortAnswer,
   ExpectedLongAnswer,
   ExpectedConfidence,
+  ExpectedSelectIndicators,
 ]);
 
 // Pessimistic-lock row shape returned by SELECT ... FOR UPDATE.
@@ -82,7 +88,7 @@ export class AttemptsService {
     }
     const scenario = await this.prisma.scenario.findUnique({
       where: { slug },
-      include: { questions: { orderBy: { ordinal: "asc" } } },
+      include: { questions: { orderBy: { ordinal: "asc" }, include: { indicatorSet: true } } },
     });
     if (!scenario) throw new NotFoundException("Scenario not found.");
     if (scenario.status !== "published") {
@@ -126,7 +132,7 @@ export class AttemptsService {
       include: {
         answers: true,
         scenario: {
-          include: { questions: { orderBy: { ordinal: "asc" } } },
+          include: { questions: { orderBy: { ordinal: "asc" }, include: { indicatorSet: true } } },
         },
       },
     });
@@ -165,9 +171,16 @@ export class AttemptsService {
 
       // Single query: question must exist AND belong to the attempt's
       // scenario. Collapses the previous two-query check into one.
+      // For select_indicators we also need the indicator set's items
+      // to validate the response — pulled in via the include.
       const question = await tx.question.findFirst({
         where: { id: questionId, scenarioId: attempt.scenario_id },
-        select: { id: true, type: true, optionsJson: true },
+        select: {
+          id: true,
+          type: true,
+          optionsJson: true,
+          indicatorSet: { select: { id: true, itemsJson: true } },
+        },
       });
       if (!question) throw new NotFoundException("Question not found.");
 
@@ -200,6 +213,36 @@ export class AttemptsService {
           throw new BadRequestException(
             "This question allows at most one selection.",
           );
+        }
+      }
+
+      // For select_indicators, every selectedId must be in the
+      // question's indicator set's items. The set itself must exist
+      // (DB CHECK already enforces this for the question, but defend
+      // in depth in case row state ever drifts).
+      if (body.response.type === "select_indicators") {
+        if (!question.indicatorSet) {
+          throw new ConflictException(
+            "Question is misconfigured (missing indicator set).",
+          );
+        }
+        const items = z.array(IndicatorItem).safeParse(
+          (question.indicatorSet.itemsJson as { items?: unknown })?.items ??
+            question.indicatorSet.itemsJson,
+        );
+        if (!items.success) {
+          throw new ConflictException(
+            "Indicator set is misconfigured (invalid items).",
+          );
+        }
+        const validIds = new Set(items.data.map((i) => i.id));
+        const picked = body.response.data.selectedIds;
+        const unknown = picked.filter((id) => !validIds.has(id));
+        if (unknown.length > 0) {
+          throw new BadRequestException({
+            message: "Unknown indicator id(s) for this question.",
+            unknown,
+          });
         }
       }
 
@@ -241,7 +284,7 @@ export class AttemptsService {
         const cur = await tx.attempt.findUniqueOrThrow({
           where: { id: attempt.id },
           include: {
-            scenario: { include: { questions: { orderBy: { ordinal: "asc" } } } },
+            scenario: { include: { questions: { orderBy: { ordinal: "asc" }, include: { indicatorSet: true } } } },
             answers: true,
           },
         });
@@ -297,7 +340,7 @@ export class AttemptsService {
       const refreshed = await tx.attempt.findUniqueOrThrow({
         where: { id: attempt.id },
         include: {
-          scenario: { include: { questions: { orderBy: { ordinal: "asc" } } } },
+          scenario: { include: { questions: { orderBy: { ordinal: "asc" }, include: { indicatorSet: true } } } },
           answers: true,
         },
       });
@@ -457,14 +500,21 @@ export class AttemptsService {
 }
 
 // Shape returned by Prisma includes for a Question row with optional
-// optionsJson and an optional answerKey relation.
+// optionsJson, an optional indicator set, and an optional answerKey.
 type QuestionRow = {
   id: string;
   ordinal: number;
-  type: "multi_choice" | "short_answer" | "long_answer" | "confidence";
+  type: "multi_choice" | "short_answer" | "long_answer" | "confidence" | "select_indicators";
   promptMd: string;
   weight: number;
   optionsJson: unknown;
+  indicatorSet?: {
+    id: string;
+    slug: string;
+    displayName: string;
+    sourceArtifactId: string | null;
+    itemsJson: unknown;
+  } | null;
   answerKey?: {
     expectedJson: unknown;
     debriefMd: string;
@@ -488,6 +538,22 @@ function toQuestionPayload(q: QuestionRow): QuestionPayload {
       allowMultiple = false;
     }
   }
+  let indicatorSet: QuestionPayload["indicatorSet"] = null;
+  if (q.type === "select_indicators" && q.indicatorSet) {
+    // items_json may be stored either as a bare array or as `{ items: […] }`.
+    // We accept both for forward compatibility with the import path.
+    const rawItems =
+      (q.indicatorSet.itemsJson as { items?: unknown })?.items ??
+      q.indicatorSet.itemsJson;
+    const parsed = z.array(IndicatorItem).safeParse(rawItems);
+    indicatorSet = {
+      id: q.indicatorSet.id,
+      slug: q.indicatorSet.slug,
+      displayName: q.indicatorSet.displayName,
+      sourceArtifactId: q.indicatorSet.sourceArtifactId,
+      items: parsed.success ? parsed.data : [],
+    };
+  }
   return {
     id: q.id,
     ordinal: q.ordinal,
@@ -496,6 +562,7 @@ function toQuestionPayload(q: QuestionRow): QuestionPayload {
     weight: q.weight,
     options,
     allowMultiple,
+    indicatorSet,
   };
 }
 
@@ -543,5 +610,7 @@ function placeholderExpected(
       return { type: "short_answer", rubricNote: null };
     case "long_answer":
       return { type: "long_answer", rubricNote: null };
+    case "select_indicators":
+      return { type: "select_indicators", correctIds: [] };
   }
 }

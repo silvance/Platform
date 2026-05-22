@@ -3,6 +3,7 @@ import { Markdown } from "@/components/markdown";
 import { MultiChoiceQuestion } from "./multi-choice-question";
 import { ConfidenceQuestion } from "./confidence-question";
 import { TextQuestion } from "./text-question";
+import { SelectIndicatorsQuestion } from "./select-indicators-question";
 
 interface Props {
   attemptId: string;
@@ -94,6 +95,18 @@ function QuestionWidget({
           initialText={initial}
           locked={locked}
           variant="long"
+        />
+      );
+    }
+    case "select_indicators": {
+      const r = answer?.response;
+      const initial = r && r.type === "select_indicators" ? r.data.selectedIds : [];
+      return (
+        <SelectIndicatorsQuestion
+          attemptId={attemptId}
+          question={question}
+          initialSelectedIds={initial}
+          locked={locked}
         />
       );
     }

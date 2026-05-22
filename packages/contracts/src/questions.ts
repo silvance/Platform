@@ -1,12 +1,14 @@
 import { z } from "zod";
 
 // Keep in sync with `enum QuestionType` in apps/api/prisma/schema.prisma.
-// M5 implements all four. M6 adds the "select_indicators" type.
+// M5 implements multi_choice, short_answer, long_answer, confidence.
+// M6 adds select_indicators.
 export const QuestionType = z.enum([
   "multi_choice",
   "short_answer",
   "long_answer",
   "confidence",
+  "select_indicators",
 ]);
 export type QuestionType = z.infer<typeof QuestionType>;
 
@@ -21,6 +23,12 @@ export const MAX_DEBRIEF_MD_CHARS = 10_000;
 export const MAX_MC_OPTIONS = 20;
 export const MAX_MC_OPTION_LABEL_CHARS = 200;
 export const MAX_QUESTIONS_PER_SCENARIO = 50;
+// M6 — indicator sets. Set size cap matches the MC cap rationale:
+// "small enough to scan, large enough for real scenarios."
+export const MAX_INDICATOR_ITEMS = 40;
+export const MAX_INDICATOR_LABEL_CHARS = 400;
+export const MAX_INDICATOR_SET_NAME_CHARS = 120;
+export const MAX_INDICATOR_SET_SLUG_CHARS = 120;
 
 // ─── multi_choice ────────────────────────────────────────────────
 // options[].id is an opaque short string assigned at authoring time;
@@ -53,6 +61,35 @@ export const LongAnswerResponse = z.object({
 });
 export type LongAnswerResponse = z.infer<typeof LongAnswerResponse>;
 
+// ─── select_indicators ───────────────────────────────────────────
+// An indicator set is authored separately from the question and is
+// referenced by a select_indicators question. The same set can back
+// multiple questions (e.g. "which indicators support BEC?" and
+// "which indicators overclaim?"). Items carry no correctness flag —
+// the answer key lives in the AnswerKey row, same isolation as MC.
+export const IndicatorItem = z.object({
+  id: z.string().min(1).max(60),
+  label: z.string().min(1).max(MAX_INDICATOR_LABEL_CHARS),
+  // Optional free-form pointer back to the source artifact line/row.
+  // Not validated against the artifact — purely UI hint.
+  evidenceRef: z.string().max(200).nullable().optional(),
+});
+export type IndicatorItem = z.infer<typeof IndicatorItem>;
+
+export const IndicatorSetPayload = z.object({
+  id: z.string().uuid(),
+  slug: z.string().min(1).max(MAX_INDICATOR_SET_SLUG_CHARS),
+  displayName: z.string().min(1).max(MAX_INDICATOR_SET_NAME_CHARS),
+  sourceArtifactId: z.string().uuid().nullable(),
+  items: z.array(IndicatorItem).min(2).max(MAX_INDICATOR_ITEMS),
+});
+export type IndicatorSetPayload = z.infer<typeof IndicatorSetPayload>;
+
+export const SelectIndicatorsResponse = z.object({
+  selectedIds: z.array(z.string().min(1).max(60)).max(MAX_INDICATOR_ITEMS),
+});
+export type SelectIndicatorsResponse = z.infer<typeof SelectIndicatorsResponse>;
+
 // ─── confidence ──────────────────────────────────────────────────
 // Standard 1-5 scale. Auto-graded against an expected range; "calibration"
 // rather than "correctness" — matches the inference-discipline theme.
@@ -70,6 +107,7 @@ export const QuestionResponse = z.discriminatedUnion("type", [
   z.object({ type: z.literal("short_answer"), data: ShortAnswerResponse }),
   z.object({ type: z.literal("long_answer"), data: LongAnswerResponse }),
   z.object({ type: z.literal("confidence"), data: ConfidenceResponse }),
+  z.object({ type: z.literal("select_indicators"), data: SelectIndicatorsResponse }),
 ]);
 export type QuestionResponse = z.infer<typeof QuestionResponse>;
 
@@ -86,6 +124,9 @@ export const QuestionPayload = z.object({
   // key, which is only released at /debrief.
   options: z.array(McOption).nullable(),
   allowMultiple: z.boolean().nullable(),
+  // Only present for select_indicators. Same correctness-isolation
+  // discipline — the items list never reveals which are expected.
+  indicatorSet: IndicatorSetPayload.nullable(),
 });
 export type QuestionPayload = z.infer<typeof QuestionPayload>;
 
@@ -111,6 +152,7 @@ export const AnswerKeyPayload = z.object({
     z.object({ type: z.literal("short_answer"), rubricNote: z.string().nullable() }),
     z.object({ type: z.literal("long_answer"), rubricNote: z.string().nullable() }),
     z.object({ type: z.literal("confidence"), expectedRange: z.tuple([ConfidenceValue, ConfidenceValue]) }),
+    z.object({ type: z.literal("select_indicators"), correctIds: z.array(z.string()) }),
   ]),
   debriefMd: z.string().min(1).max(MAX_DEBRIEF_MD_CHARS),
 });

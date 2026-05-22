@@ -63,21 +63,34 @@ interface ArtifactSeed {
   bytes: Buffer;
 }
 
+interface IndicatorSetSeed {
+  slug: string;
+  displayName: string;
+  // Optional artifact slug (e.g. "suspect-email.eml"); the seed resolves
+  // this to an artifact id at write time. Null when the indicators are
+  // not tied to a single artifact.
+  sourceArtifactDisplayName?: string;
+  items: Array<{ id: string; label: string; evidenceRef?: string }>;
+}
+
 interface QuestionSeed {
   ordinal: number;
-  type: "multi_choice" | "short_answer" | "long_answer" | "confidence";
+  type: "multi_choice" | "short_answer" | "long_answer" | "confidence" | "select_indicators";
   promptMd: string;
   weight: number;
   // For multi_choice only. Other types leave this undefined.
   options?: Array<{ id: string; label: string }>;
   allowMultiple?: boolean;
+  // For select_indicators only — references an IndicatorSetSeed.slug.
+  indicatorSetSlug?: string;
   // Type-specific expected payload. See AnswerKeyPayload in
   // @ci-train/contracts for the exact shape per type.
   expected:
     | { type: "multi_choice"; correctIds: string[]; allowMultiple: boolean }
     | { type: "short_answer"; rubricNote: string | null }
     | { type: "long_answer"; rubricNote: string | null }
-    | { type: "confidence"; expectedRange: [number, number] };
+    | { type: "confidence"; expectedRange: [number, number] }
+    | { type: "select_indicators"; correctIds: string[] };
   debriefMd: string;
 }
 
@@ -93,6 +106,7 @@ interface ScenarioSeed {
   disclaimer?: string;
   artifacts: ArtifactSeed[];
   questions: QuestionSeed[];
+  indicatorSets?: IndicatorSetSeed[];
 }
 
 // A minimal but valid 1x1 transparent PNG. Tiny enough to embed inline;
@@ -322,6 +336,26 @@ Distinguish:
         bytes: buildTinyPdf(),
       },
     ],
+    indicatorSets: [
+      {
+        slug: "bec-header-indicators",
+        displayName: "BEC indicators present in the suspect email",
+        sourceArtifactDisplayName: "suspect-email.eml",
+        // Items written in the same compact form the EML viewer surfaces
+        // them — gives the trainee a visual mapping between the .eml
+        // artifact tab and this question.
+        items: [
+          { id: "from-display-spoof", label: "From display name claims `Jane Doe` of vendor.example", evidenceRef: "From: header" },
+          { id: "reply-to-divergent", label: "Reply-To address is `ceo.urgent@gmail.com` (different domain than From)", evidenceRef: "Reply-To: header" },
+          { id: "return-path-lookalike", label: "Return-Path is on `vendor-lookup-alike.com` (lookalike domain)", evidenceRef: "Return-Path: header" },
+          { id: "dkim-fail", label: "Authentication-Results reports `dkim=fail header.d=vendor.example`", evidenceRef: "Authentication-Results: header" },
+          { id: "dmarc-fail", label: "Authentication-Results reports `dmarc=fail policy.dmarc=reject`", evidenceRef: "Authentication-Results: header" },
+          { id: "spf-neutral", label: "Authentication-Results reports `spf=neutral`", evidenceRef: "Authentication-Results: header" },
+          { id: "urgency-language", label: 'Subject and body use "URGENT" + same-day pressure framing', evidenceRef: "Subject: header / body" },
+          { id: "received-from-lookalike", label: "Received: chain shows the message arrived from `mail.vendor-lookup-alike.com`", evidenceRef: "Received: header" },
+        ],
+      },
+    ],
     questions: [
       {
         ordinal: 1,
@@ -413,6 +447,45 @@ Distinguish:
           "- State confidence on a scale and *justify* it — not \"100% BEC\".",
           "",
           "This question is instructor-graded (M7); the rubric above describes the grading frame.",
+        ].join("\n"),
+      },
+      {
+        ordinal: 5,
+        type: "select_indicators",
+        weight: 2,
+        indicatorSetSlug: "bec-header-indicators",
+        promptMd:
+          "Open the **suspect-email.eml** tab and review the parsed header strip. Which of the listed indicators are **technical evidence** the message was not sent from the real vendor (vs. social-engineering markers)? Pick the ones that establish *spoofing* on the wire.",
+        expected: {
+          type: "select_indicators",
+          // Technical wire-level evidence — auth-mechanism failures and
+          // lookalike-domain routing. Excludes display-name spoofing and
+          // urgency framing, which are social-engineering markers, not
+          // wire-protocol proofs.
+          correctIds: [
+            "reply-to-divergent",
+            "return-path-lookalike",
+            "dkim-fail",
+            "dmarc-fail",
+            "received-from-lookalike",
+          ],
+        },
+        debriefMd: [
+          "**Technical evidence of spoofing on the wire:**",
+          "",
+          "- `Reply-To: ceo.urgent@gmail.com` — Reply-To divergence is a wire-protocol signal: the message's *machine-readable* reply destination is a free webmail account.",
+          "- `Return-Path` on a lookalike domain — wire-level routing the attacker controls.",
+          "- `dkim=fail header.d=vendor.example` — the cryptographic signature claim that this is from vendor.example was rejected.",
+          "- `dmarc=fail policy.dmarc=reject` — the receiving MTA's policy lookup against the vendor's published DMARC record rejected the message.",
+          "- `Received: from mail.vendor-lookup-alike.com` — the first-hop Received line records that the message was injected from an attacker-controlled MTA.",
+          "",
+          "**Not technical evidence (social-engineering markers, separate axis):**",
+          "",
+          "- The `From:` display name (`Jane Doe`) is trivially forgeable and proves nothing about wire authenticity.",
+          "- `spf=neutral` is *not a fail* — it asserts \"no published policy\" rather than \"this is spoofed.\"",
+          "- `URGENT` framing and same-day pressure are psychological manipulation, not technical proof.",
+          "",
+          "**Reasoning discipline reminder:** distinguishing wire-level proofs from social-engineering markers is what separates \"this looks suspicious\" from \"this *is* spoofed on the wire and here are the four headers that prove it.\" Both matter in the report; mixing them weakens the writeup.",
         ].join("\n"),
       },
     ],
@@ -710,18 +783,62 @@ async function upsertScenario(
     });
   }
 
-  // Replace any prior questions (cascades to AnswerKey rows). Existing
-  // Attempt rows for the scenario survive but lose answer-row links by
-  // FK cascade — re-running the seed on a database with live attempts
-  // is intentionally destructive of those attempts. Real authoring
-  // tooling (M7) will require a smarter migration path.
+  // Replace any prior questions (cascades to AnswerKey rows) AND any
+  // prior indicator sets (cascades through the questions FK). Order
+  // matters: questions hold an FK to indicator_sets with ON DELETE
+  // RESTRICT, so we delete questions first.
   await prisma.question.deleteMany({ where: { scenarioId: scenario.id } });
+  await prisma.indicatorSet.deleteMany({ where: { scenarioId: scenario.id } });
+
+  // Resolve artifact display names → ids once for indicator-set sourcing.
+  const artifactByName = new Map(
+    (await prisma.artifact.findMany({
+      where: { scenarioId: scenario.id },
+      select: { id: true, displayName: true },
+    })).map((a) => [a.displayName, a.id]),
+  );
+
+  // Create indicator sets first so questions can reference them by id.
+  const indicatorSetIdBySlug = new Map<string, string>();
+  for (const set of s.indicatorSets ?? []) {
+    const sourceArtifactId = set.sourceArtifactDisplayName
+      ? artifactByName.get(set.sourceArtifactDisplayName) ?? null
+      : null;
+    const row = await prisma.indicatorSet.create({
+      data: {
+        scenarioId: scenario.id,
+        slug: set.slug,
+        displayName: set.displayName,
+        sourceArtifactId,
+        // items_json stored as a bare array — the API/contract accept
+        // both bare-array and `{ items: [...] }` shapes for forward
+        // compatibility with the M8 importer.
+        itemsJson: set.items as never,
+      },
+    });
+    indicatorSetIdBySlug.set(set.slug, row.id);
+  }
 
   for (const q of s.questions) {
     const optionsJson =
       q.type === "multi_choice"
         ? { options: q.options ?? [], allowMultiple: q.allowMultiple ?? false }
         : null;
+    let indicatorSetId: string | null = null;
+    if (q.type === "select_indicators") {
+      if (!q.indicatorSetSlug) {
+        throw new Error(
+          `Question (ordinal ${q.ordinal}) is select_indicators but has no indicatorSetSlug.`,
+        );
+      }
+      const id = indicatorSetIdBySlug.get(q.indicatorSetSlug);
+      if (!id) {
+        throw new Error(
+          `Indicator set with slug ${q.indicatorSetSlug} not found in scenario ${scenario.slug}.`,
+        );
+      }
+      indicatorSetId = id;
+    }
     const question = await prisma.question.create({
       data: {
         scenarioId: scenario.id,
@@ -730,6 +847,7 @@ async function upsertScenario(
         promptMd: q.promptMd,
         weight: q.weight,
         optionsJson: optionsJson as never,
+        indicatorSetId,
       },
     });
     await prisma.answerKey.create({
