@@ -10,166 +10,94 @@ describe("GradingService", () => {
       allowMultiple: true,
     };
 
-    it("scores exact-match selection 1.0 + correct", () => {
+    it("exact match → correct=true, score=1", () => {
       const r = svc.grade({
         type: "multi_choice",
+        optionsJson: null,
         expectedJson: expected,
-        responseJson: {
-          type: "multi_choice",
-          data: { selectedIds: ["a", "c"] },
-        },
+        responseJson: { type: "multi_choice", data: { selectedIds: ["a", "c"] } },
       });
-      expect(r.score).toBe(1);
-      expect(r.outcome).toBe("correct");
+      expect(r).toEqual({ correct: true, score: 1 });
     });
 
-    it("scores order-insensitive", () => {
+    it("partial subset with no false positives → correct=false, fractional score", () => {
       const r = svc.grade({
         type: "multi_choice",
+        optionsJson: null,
         expectedJson: expected,
-        responseJson: {
-          type: "multi_choice",
-          data: { selectedIds: ["c", "a"] },
-        },
+        responseJson: { type: "multi_choice", data: { selectedIds: ["a"] } },
       });
-      expect(r.score).toBe(1);
-    });
-
-    it("partial credit for a subset of correct selections with no false positives", () => {
-      const r = svc.grade({
-        type: "multi_choice",
-        expectedJson: expected,
-        responseJson: {
-          type: "multi_choice",
-          data: { selectedIds: ["a"] },
-        },
-      });
+      expect(r.correct).toBe(false);
       expect(r.score).toBe(0.5);
-      expect(r.outcome).toBe("partial");
     });
 
-    it("zero credit if any false positive is picked", () => {
+    it("any false positive → correct=false, score=0", () => {
       const r = svc.grade({
         type: "multi_choice",
+        optionsJson: null,
         expectedJson: expected,
-        responseJson: {
-          type: "multi_choice",
-          data: { selectedIds: ["a", "b"] },
-        },
+        responseJson: { type: "multi_choice", data: { selectedIds: ["a", "b"] } },
       });
-      expect(r.score).toBe(0);
-      expect(r.outcome).toBe("incorrect");
+      expect(r).toEqual({ correct: false, score: 0 });
     });
 
-    it("no partial credit when allowMultiple is false", () => {
+    it("no partial on allowMultiple=false", () => {
       const r = svc.grade({
         type: "multi_choice",
-        expectedJson: {
-          type: "multi_choice",
-          correctIds: ["a", "c"],
-          allowMultiple: false,
-        },
+        optionsJson: null,
+        expectedJson: { ...expected, allowMultiple: false },
         responseJson: { type: "multi_choice", data: { selectedIds: ["a"] } },
       });
-      expect(r.score).toBe(0);
-      expect(r.outcome).toBe("incorrect");
-    });
-
-    it("returns 0 + incorrect for an unanswered question", () => {
-      const r = svc.grade({
-        type: "multi_choice",
-        expectedJson: expected,
-        responseJson: null,
-      });
-      expect(r.score).toBe(0);
-      expect(r.outcome).toBe("incorrect");
-    });
-
-    it("falls back to ungradable when the expected key is malformed", () => {
-      const r = svc.grade({
-        type: "multi_choice",
-        expectedJson: { not: "valid" },
-        responseJson: { type: "multi_choice", data: { selectedIds: ["a"] } },
-      });
-      expect(r.score).toBeNull();
-      expect(r.outcome).toBe("ungradable");
+      expect(r).toEqual({ correct: false, score: 0 });
     });
   });
 
   describe("confidence", () => {
-    const expected = { type: "confidence" as const, expectedRange: [3, 5] as [number, number] };
+    const expected = {
+      type: "confidence" as const,
+      expectedRange: [3, 5] as [number, number],
+    };
 
-    it("scores in-range as 1.0 + in_range", () => {
-      const r = svc.grade({
-        type: "confidence",
-        expectedJson: expected,
-        responseJson: { type: "confidence", data: { value: 4 } },
-      });
-      expect(r.score).toBe(1);
-      expect(r.outcome).toBe("in_range");
-    });
-
-    it("scores boundary values inclusively", () => {
+    it("in range → correct=true", () => {
       expect(
         svc.grade({
           type: "confidence",
+          optionsJson: null,
+          expectedJson: expected,
+          responseJson: { type: "confidence", data: { value: 4 } },
+        }),
+      ).toEqual({ correct: true, score: 1 });
+    });
+
+    it("boundary values are inclusive", () => {
+      expect(
+        svc.grade({
+          type: "confidence",
+          optionsJson: null,
           expectedJson: expected,
           responseJson: { type: "confidence", data: { value: 3 } },
-        }).outcome,
-      ).toBe("in_range");
+        }).correct,
+      ).toBe(true);
       expect(
         svc.grade({
           type: "confidence",
+          optionsJson: null,
           expectedJson: expected,
           responseJson: { type: "confidence", data: { value: 5 } },
-        }).outcome,
-      ).toBe("in_range");
+        }).correct,
+      ).toBe(true);
     });
 
-    it("scores out-of-range as 0 + out_of_range", () => {
-      const r = svc.grade({
-        type: "confidence",
-        expectedJson: expected,
-        responseJson: { type: "confidence", data: { value: 2 } },
-      });
-      expect(r.score).toBe(0);
-      expect(r.outcome).toBe("out_of_range");
+    it("out of range → correct=false", () => {
+      expect(
+        svc.grade({
+          type: "confidence",
+          optionsJson: null,
+          expectedJson: expected,
+          responseJson: { type: "confidence", data: { value: 2 } },
+        }),
+      ).toEqual({ correct: false, score: 0 });
     });
-
-    it("missing response → 0 + out_of_range", () => {
-      const r = svc.grade({
-        type: "confidence",
-        expectedJson: expected,
-        responseJson: null,
-      });
-      expect(r.score).toBe(0);
-      expect(r.outcome).toBe("out_of_range");
-    });
-
-    it("ungradable when expected range is malformed", () => {
-      const r = svc.grade({
-        type: "confidence",
-        expectedJson: { type: "confidence", expectedRange: [10, 99] },
-        responseJson: { type: "confidence", data: { value: 4 } },
-      });
-      expect(r.score).toBeNull();
-      expect(r.outcome).toBe("ungradable");
-    });
-  });
-
-  describe("narrative answers — never auto-graded", () => {
-    it.each(["short_answer", "long_answer"] as const)(
-      "%s returns ungradable",
-      (type) => {
-        const r = svc.grade({
-          type,
-          expectedJson: { type, rubricNote: null },
-          responseJson: { type, data: { text: "anything" } },
-        });
-        expect(r.score).toBeNull();
-        expect(r.outcome).toBe("ungradable");
-      },
-    );
   });
 
   describe("select_indicators", () => {
@@ -178,54 +106,204 @@ describe("GradingService", () => {
       correctIds: ["a", "b", "c"],
     };
 
-    it("exact match → 1.0 / correct", () => {
-      const r = svc.grade({
-        type: "select_indicators",
-        expectedJson: expected,
-        responseJson: { type: "select_indicators", data: { selectedIds: ["a", "b", "c"] } },
-      });
-      expect(r.score).toBe(1);
-      expect(r.outcome).toBe("correct");
+    it("exact match → correct=true", () => {
+      expect(
+        svc.grade({
+          type: "select_indicators",
+          optionsJson: null,
+          expectedJson: expected,
+          responseJson: {
+            type: "select_indicators",
+            data: { selectedIds: ["a", "b", "c"] },
+          },
+        }),
+      ).toEqual({ correct: true, score: 1 });
     });
 
-    it("subset with no false positives → partial credit", () => {
+    it("subset with no false positives → fractional score, correct=false", () => {
       const r = svc.grade({
         type: "select_indicators",
+        optionsJson: null,
         expectedJson: expected,
-        responseJson: { type: "select_indicators", data: { selectedIds: ["a", "b"] } },
+        responseJson: {
+          type: "select_indicators",
+          data: { selectedIds: ["a", "b"] },
+        },
       });
+      expect(r.correct).toBe(false);
       expect(r.score).toBeCloseTo(2 / 3);
-      expect(r.outcome).toBe("partial");
     });
 
-    it("any false positive → 0 / incorrect", () => {
-      const r = svc.grade({
-        type: "select_indicators",
-        expectedJson: expected,
-        responseJson: { type: "select_indicators", data: { selectedIds: ["a", "z"] } },
-      });
-      expect(r.score).toBe(0);
-      expect(r.outcome).toBe("incorrect");
+    it("false positive → 0", () => {
+      expect(
+        svc.grade({
+          type: "select_indicators",
+          optionsJson: null,
+          expectedJson: expected,
+          responseJson: {
+            type: "select_indicators",
+            data: { selectedIds: ["a", "z"] },
+          },
+        }),
+      ).toEqual({ correct: false, score: 0 });
+    });
+  });
+
+  describe("text_match — literal", () => {
+    const expected = {
+      type: "text_match" as const,
+      acceptableAnswers: ["vendor-lookup-alike.com", "VENDOR-LOOKUP-ALIKE.COM"],
+      regex: false,
+    };
+    const opts = {
+      acceptableAnswers: expected.acceptableAnswers,
+      caseSensitive: false,
+      normalizeWhitespace: true,
+      regex: false,
+      hintAfterTries: 3,
+    };
+
+    it("trims + lowercases by default → correct", () => {
+      expect(
+        svc.grade({
+          type: "text_match",
+          optionsJson: opts,
+          expectedJson: expected,
+          responseJson: {
+            type: "text_match",
+            data: { text: "  Vendor-Lookup-Alike.COM  " },
+          },
+        }),
+      ).toEqual({ correct: true, score: 1 });
     });
 
-    it("empty response → 0 / incorrect", () => {
-      const r = svc.grade({
-        type: "select_indicators",
-        expectedJson: expected,
-        responseJson: null,
+    it("collapses internal whitespace when normalizeWhitespace is on", () => {
+      const withWs = svc.grade({
+        type: "text_match",
+        optionsJson: {
+          ...opts,
+          acceptableAnswers: ["proven not inferred"],
+        },
+        expectedJson: {
+          type: "text_match",
+          acceptableAnswers: ["proven not inferred"],
+          regex: false,
+        },
+        responseJson: {
+          type: "text_match",
+          data: { text: "PROVEN     not\t\tinferred" },
+        },
       });
-      expect(r.score).toBe(0);
-      expect(r.outcome).toBe("incorrect");
+      expect(withWs).toEqual({ correct: true, score: 1 });
     });
 
-    it("malformed expected key → ungradable", () => {
+    it("rejects when wrong", () => {
+      expect(
+        svc.grade({
+          type: "text_match",
+          optionsJson: opts,
+          expectedJson: expected,
+          responseJson: {
+            type: "text_match",
+            data: { text: "wrong-domain.com" },
+          },
+        }),
+      ).toEqual({ correct: false, score: 0 });
+    });
+
+    it("respects caseSensitive=true", () => {
+      const caseOpts = { ...opts, caseSensitive: true };
+      expect(
+        svc.grade({
+          type: "text_match",
+          optionsJson: caseOpts,
+          expectedJson: expected,
+          responseJson: {
+            type: "text_match",
+            data: { text: "vendor-lookup-alike.com" },
+          },
+        }),
+      ).toEqual({ correct: true, score: 1 });
+      // Wrong case → no match against either acceptable string.
+      expect(
+        svc.grade({
+          type: "text_match",
+          optionsJson: caseOpts,
+          expectedJson: {
+            type: "text_match",
+            acceptableAnswers: ["lowercase-only"],
+            regex: false,
+          },
+          responseJson: {
+            type: "text_match",
+            data: { text: "LOWERCASE-ONLY" },
+          },
+        }).correct,
+      ).toBe(false);
+    });
+  });
+
+  describe("text_match — regex", () => {
+    it("treats acceptable strings as patterns when regex=true", () => {
       const r = svc.grade({
-        type: "select_indicators",
-        expectedJson: { not: "valid" },
-        responseJson: { type: "select_indicators", data: { selectedIds: ["a"] } },
+        type: "text_match",
+        optionsJson: {
+          acceptableAnswers: ["^10\\.0\\.0\\.\\d+$"],
+          caseSensitive: false,
+          normalizeWhitespace: true,
+          regex: true,
+          hintAfterTries: 3,
+        },
+        expectedJson: {
+          type: "text_match",
+          acceptableAnswers: ["^10\\.0\\.0\\.\\d+$"],
+          regex: true,
+        },
+        responseJson: { type: "text_match", data: { text: "10.0.0.42" } },
       });
-      expect(r.score).toBeNull();
-      expect(r.outcome).toBe("ungradable");
+      expect(r).toEqual({ correct: true, score: 1 });
+    });
+
+    it("malformed regex grades as miss, not crash", () => {
+      const r = svc.grade({
+        type: "text_match",
+        optionsJson: {
+          acceptableAnswers: ["[unterminated"],
+          caseSensitive: false,
+          normalizeWhitespace: true,
+          regex: true,
+          hintAfterTries: 3,
+        },
+        expectedJson: {
+          type: "text_match",
+          acceptableAnswers: ["[unterminated"],
+          regex: true,
+        },
+        responseJson: { type: "text_match", data: { text: "anything" } },
+      });
+      expect(r).toEqual({ correct: false, score: 0 });
+    });
+  });
+
+  describe("deprecated types + malformed inputs", () => {
+    it("short_answer always grades as miss (deprecated in M7)", () => {
+      const r = svc.grade({
+        type: "short_answer" as never,
+        optionsJson: null,
+        expectedJson: { type: "short_answer", rubricNote: null },
+        responseJson: { type: "short_answer", data: { text: "anything" } },
+      });
+      expect(r).toEqual({ correct: false, score: 0 });
+    });
+
+    it("malformed expected key → miss, not throw", () => {
+      const r = svc.grade({
+        type: "multi_choice",
+        optionsJson: null,
+        expectedJson: { wat: true },
+        responseJson: { type: "multi_choice", data: { selectedIds: ["a"] } },
+      });
+      expect(r).toEqual({ correct: false, score: 0 });
     });
   });
 });

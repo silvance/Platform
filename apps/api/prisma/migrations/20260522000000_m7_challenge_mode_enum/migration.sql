@@ -1,0 +1,12 @@
+-- M7 step 1/2 — challenge-mode pivot: extend the QuestionType enum.
+--
+-- `text_match` is the new auto-graded replacement for short_answer +
+-- long_answer. Those two values stay in the enum (Postgres can't
+-- drop enum values without recreating the type) but the API + Zod
+-- contract reject both — no new questions of those types will be
+-- written.
+--
+-- Postgres forbids using a newly-added enum value in the same
+-- transaction that added it, so the actual *use* (no new use in this
+-- case, but defense in depth) lives in the next migration.
+ALTER TYPE "QuestionType" ADD VALUE 'text_match';

@@ -1,34 +1,43 @@
 import { z } from "zod";
 
 // Keep in sync with `enum QuestionType` in apps/api/prisma/schema.prisma.
-// M5 implements multi_choice, short_answer, long_answer, confidence.
-// M6 adds select_indicators.
+//
+// M7 pivots the platform to challenge-based progression: every question
+// auto-grades, trainees retry until correct, no instructor in the loop.
+// As part of that pivot, short_answer and long_answer are dropped and
+// text_match is added — narrative writing is preserved in the scenario
+// brief but the *graded* question types are all objective.
+//
+// Note on the Postgres enum: the `short_answer` and `long_answer`
+// values remain in the database enum (Postgres can't easily drop enum
+// values), but no code path will accept or emit them. The contract
+// here is the source of truth for what's allowed across the wire.
 export const QuestionType = z.enum([
   "multi_choice",
-  "short_answer",
-  "long_answer",
   "confidence",
   "select_indicators",
+  "text_match",
 ]);
 export type QuestionType = z.infer<typeof QuestionType>;
 
 // Caps shared by API + web so a pathological response from a buggy
 // authoring path or a malicious trainee POST can't lock up the renderer
 // or DB. JS string length, matching Zod's `.max()`.
-export const MAX_SHORT_ANSWER_CHARS = 500;
-export const MAX_LONG_ANSWER_CHARS = 5_000;
-export const MAX_INSTRUCTOR_NOTES_CHARS = 5_000;
 export const MAX_PROMPT_MD_CHARS = 5_000;
 export const MAX_DEBRIEF_MD_CHARS = 10_000;
 export const MAX_MC_OPTIONS = 20;
 export const MAX_MC_OPTION_LABEL_CHARS = 200;
 export const MAX_QUESTIONS_PER_SCENARIO = 50;
-// M6 — indicator sets. Set size cap matches the MC cap rationale:
-// "small enough to scan, large enough for real scenarios."
+// Indicator sets — M6.
 export const MAX_INDICATOR_ITEMS = 40;
 export const MAX_INDICATOR_LABEL_CHARS = 400;
 export const MAX_INDICATOR_SET_NAME_CHARS = 120;
 export const MAX_INDICATOR_SET_SLUG_CHARS = 120;
+// Text-match — M7.
+export const MAX_TEXT_MATCH_CHARS = 500;
+export const MAX_TEXT_MATCH_ACCEPTABLE_ANSWERS = 20;
+// Hint shown to the trainee on incorrect attempts (optional, authored).
+export const MAX_HINT_CHARS = 400;
 
 // ─── multi_choice ────────────────────────────────────────────────
 // options[].id is an opaque short string assigned at authoring time;
@@ -50,28 +59,10 @@ export const McResponse = z.object({
 });
 export type McResponse = z.infer<typeof McResponse>;
 
-// ─── short_answer / long_answer ──────────────────────────────────
-export const ShortAnswerResponse = z.object({
-  text: z.string().max(MAX_SHORT_ANSWER_CHARS),
-});
-export type ShortAnswerResponse = z.infer<typeof ShortAnswerResponse>;
-
-export const LongAnswerResponse = z.object({
-  text: z.string().max(MAX_LONG_ANSWER_CHARS),
-});
-export type LongAnswerResponse = z.infer<typeof LongAnswerResponse>;
-
 // ─── select_indicators ───────────────────────────────────────────
-// An indicator set is authored separately from the question and is
-// referenced by a select_indicators question. The same set can back
-// multiple questions (e.g. "which indicators support BEC?" and
-// "which indicators overclaim?"). Items carry no correctness flag —
-// the answer key lives in the AnswerKey row, same isolation as MC.
 export const IndicatorItem = z.object({
   id: z.string().min(1).max(60),
   label: z.string().min(1).max(MAX_INDICATOR_LABEL_CHARS),
-  // Optional free-form pointer back to the source artifact line/row.
-  // Not validated against the artifact — purely UI hint.
   evidenceRef: z.string().max(200).nullable().optional(),
 });
 export type IndicatorItem = z.infer<typeof IndicatorItem>;
@@ -91,8 +82,8 @@ export const SelectIndicatorsResponse = z.object({
 export type SelectIndicatorsResponse = z.infer<typeof SelectIndicatorsResponse>;
 
 // ─── confidence ──────────────────────────────────────────────────
-// Standard 1-5 scale. Auto-graded against an expected range; "calibration"
-// rather than "correctness" — matches the inference-discipline theme.
+// 1-5 scale. Auto-graded against an expected range; framed as
+// "calibration" rather than correctness.
 export const ConfidenceValue = z.number().int().min(1).max(5);
 export type ConfidenceValue = z.infer<typeof ConfidenceValue>;
 
@@ -101,118 +92,184 @@ export const ConfidenceResponse = z.object({
 });
 export type ConfidenceResponse = z.infer<typeof ConfidenceResponse>;
 
+// ─── text_match ──────────────────────────────────────────────────
+// Free-text answer matched against an authored acceptable-answers list.
+// Covers the CTF-flag use case (single canonical answer, case-insensitive)
+// and short-answer prompts where the expected answer space is small.
+//
+// Normalization (applied before comparison):
+//   1. trim leading/trailing whitespace
+//   2. if normalizeWhitespace, collapse runs of internal whitespace to a single space
+//   3. if !caseSensitive, lowercase
+//
+// `regex: true` flips matching to test each acceptable string as a JS
+// regex (single-line, optionally case-insensitive per the flag). Used
+// for "match anything containing the IP address 10.0.0.5" patterns.
+export const TextMatchOptionsSpec = z.object({
+  acceptableAnswers: z
+    .array(z.string().min(1).max(MAX_TEXT_MATCH_CHARS))
+    .min(1)
+    .max(MAX_TEXT_MATCH_ACCEPTABLE_ANSWERS),
+  caseSensitive: z.boolean().default(false),
+  normalizeWhitespace: z.boolean().default(true),
+  regex: z.boolean().default(false),
+  // Optional hint shown when the trainee gets it wrong (not on first
+  // try — see the hintAfterTries field).
+  hint: z.string().max(MAX_HINT_CHARS).nullable().optional(),
+  hintAfterTries: z.number().int().min(1).max(10).default(3),
+});
+export type TextMatchOptionsSpec = z.infer<typeof TextMatchOptionsSpec>;
+
+export const TextMatchResponse = z.object({
+  text: z.string().max(MAX_TEXT_MATCH_CHARS),
+});
+export type TextMatchResponse = z.infer<typeof TextMatchResponse>;
+
 // Response discriminated union — the shape depends on the question's type.
 export const QuestionResponse = z.discriminatedUnion("type", [
   z.object({ type: z.literal("multi_choice"), data: McResponse }),
-  z.object({ type: z.literal("short_answer"), data: ShortAnswerResponse }),
-  z.object({ type: z.literal("long_answer"), data: LongAnswerResponse }),
   z.object({ type: z.literal("confidence"), data: ConfidenceResponse }),
   z.object({ type: z.literal("select_indicators"), data: SelectIndicatorsResponse }),
+  z.object({ type: z.literal("text_match"), data: TextMatchResponse }),
 ]);
 export type QuestionResponse = z.infer<typeof QuestionResponse>;
 
-// ─── question + answer-key payloads ──────────────────────────────
-// Trainee view: prompt + options (without correctness leak) + weight.
+// ─── question payload ────────────────────────────────────────────
+// Trainee view. Carries enough info to render the widget but nothing
+// that leaks correctness — that lives in the AnswerKey and is only
+// returned once the trainee has completed the question.
 export const QuestionPayload = z.object({
   id: z.string().uuid(),
   ordinal: z.number().int().nonnegative(),
   type: QuestionType,
   promptMd: z.string().min(1).max(MAX_PROMPT_MD_CHARS),
   weight: z.number().int().positive(),
-  // Only present for multi_choice; client uses it to render the option list.
-  // Critically: this never carries correctness — that lives in the answer
-  // key, which is only released at /debrief.
+  // multi_choice only.
   options: z.array(McOption).nullable(),
   allowMultiple: z.boolean().nullable(),
-  // Only present for select_indicators. Same correctness-isolation
-  // discipline — the items list never reveals which are expected.
+  // select_indicators only.
   indicatorSet: IndicatorSetPayload.nullable(),
+  // text_match only — the *parameters* (case-sensitive flag, normalize
+  // whitespace, char cap). The acceptable answers themselves are NOT
+  // exposed; they live in the AnswerKey.
+  textMatch: z
+    .object({
+      caseSensitive: z.boolean(),
+      normalizeWhitespace: z.boolean(),
+      regex: z.boolean(),
+      maxLength: z.number().int().positive(),
+    })
+    .nullable(),
 });
 export type QuestionPayload = z.infer<typeof QuestionPayload>;
 
-// Auto-grading verdicts.
-export const AutoScoreOutcome = z.enum([
-  "correct",
-  "incorrect",
-  "partial",
-  "in_range",
-  "out_of_range",
-  "ungradable",
-]);
-export type AutoScoreOutcome = z.infer<typeof AutoScoreOutcome>;
-
-// Answer-key payload returned ONLY at /debrief. Includes the expected
-// data shape per type and the markdown rubric/explanation.
+// Answer key, revealed only when the trainee has completed the question.
+// Discriminated by question type so the client can render the expected
+// answer next to the trainee's last response.
 export const AnswerKeyPayload = z.object({
-  // Same discriminated shape as the response, but with the *expected*
-  // value. For confidence we expose the acceptable range, not a single
-  // value — calibration framing.
   expected: z.discriminatedUnion("type", [
-    z.object({ type: z.literal("multi_choice"), correctIds: z.array(z.string()), allowMultiple: z.boolean() }),
-    z.object({ type: z.literal("short_answer"), rubricNote: z.string().nullable() }),
-    z.object({ type: z.literal("long_answer"), rubricNote: z.string().nullable() }),
-    z.object({ type: z.literal("confidence"), expectedRange: z.tuple([ConfidenceValue, ConfidenceValue]) }),
-    z.object({ type: z.literal("select_indicators"), correctIds: z.array(z.string()) }),
+    z.object({
+      type: z.literal("multi_choice"),
+      correctIds: z.array(z.string()),
+      allowMultiple: z.boolean(),
+    }),
+    z.object({
+      type: z.literal("confidence"),
+      expectedRange: z.tuple([ConfidenceValue, ConfidenceValue]),
+    }),
+    z.object({
+      type: z.literal("select_indicators"),
+      correctIds: z.array(z.string()),
+    }),
+    z.object({
+      type: z.literal("text_match"),
+      // The list of acceptable answers, revealed at debrief. Useful so
+      // the trainee can see "the canonical phrasing" even if their
+      // own correct phrasing was a synonym.
+      acceptableAnswers: z.array(z.string()),
+      regex: z.boolean(),
+    }),
   ]),
   debriefMd: z.string().min(1).max(MAX_DEBRIEF_MD_CHARS),
 });
 export type AnswerKeyPayload = z.infer<typeof AnswerKeyPayload>;
 
-// ─── attempt payloads ────────────────────────────────────────────
-export const AttemptStatus = z.enum(["in_progress", "submitted"]);
-export type AttemptStatus = z.infer<typeof AttemptStatus>;
+// ─── progress payloads (M7 challenge mode) ───────────────────────
 
-// Per-question state inside an in-progress attempt. responseJson is
-// whatever the trainee last autosaved (or null if untouched). Includes
-// metadata about whether the question is auto-gradable so the UI can
-// signal "manual review required" for narrative answers.
-export const AttemptAnswerPayload = z.object({
+// Per-question state for one trainee on one scenario.
+export const QuestionStatePayload = z.object({
   questionId: z.string().uuid(),
-  response: QuestionResponse.nullable(),
-  // Populated only after submit.
-  autoScore: z.number().min(0).max(1).nullable(),
-  autoOutcome: AutoScoreOutcome.nullable(),
-  manualScore: z.number().min(0).max(1).nullable(),
-  instructorNotesMd: z.string().max(MAX_INSTRUCTOR_NOTES_CHARS).nullable(),
+  attemptCount: z.number().int().nonnegative(),
+  completedAt: z.string().datetime().nullable(),
+  // The trainee's most-recently-submitted response. May be null if they
+  // haven't tried yet, or if the question type doesn't persist drafts
+  // (text_match always persists; MC/select_indicators/confidence
+  // persist the last submitted answer too so the widget can rehydrate).
+  lastResponse: QuestionResponse.nullable(),
+  // Revealed ONLY when completedAt is set. The whole-scenario progress
+  // endpoint returns nulls for these on incomplete questions; the
+  // submit endpoint returns them on the response that just completed.
+  answerKey: AnswerKeyPayload.nullable(),
 });
-export type AttemptAnswerPayload = z.infer<typeof AttemptAnswerPayload>;
+export type QuestionStatePayload = z.infer<typeof QuestionStatePayload>;
 
-export const AttemptPayload = z.object({
-  id: z.string().uuid(),
+// Whole-scenario progress for one trainee. Returned by
+// GET /v1/scenarios/:slug/progress.
+export const ScenarioProgressPayload = z.object({
   scenarioSlug: z.string(),
   scenarioTitle: z.string(),
-  startedAt: z.string().datetime(),
-  submittedAt: z.string().datetime().nullable(),
-  status: AttemptStatus,
-  totalScore: z.number().min(0).nullable(),
-  maxScore: z.number().positive(),
+  // null until the trainee submits their first answer.
+  startedAt: z.string().datetime().nullable(),
+  // Set when completedQuestions === totalQuestions.
+  completedAt: z.string().datetime().nullable(),
+  completedQuestions: z.number().int().nonnegative(),
+  totalQuestions: z.number().int().nonnegative(),
   questions: z.array(QuestionPayload),
-  answers: z.array(AttemptAnswerPayload),
+  responses: z.array(QuestionStatePayload),
 });
-export type AttemptPayload = z.infer<typeof AttemptPayload>;
+export type ScenarioProgressPayload = z.infer<typeof ScenarioProgressPayload>;
 
-// Debrief response — only available once submitted. Includes the
-// AnswerKeyPayload alongside the trainee's response.
-export const DebriefAnswerPayload = AttemptAnswerPayload.extend({
-  question: QuestionPayload,
-  answerKey: AnswerKeyPayload,
-});
-export type DebriefAnswerPayload = z.infer<typeof DebriefAnswerPayload>;
-
-export const DebriefPayload = z.object({
-  attemptId: z.string().uuid(),
-  scenarioSlug: z.string(),
-  scenarioTitle: z.string(),
-  submittedAt: z.string().datetime(),
-  totalScore: z.number().min(0),
-  maxScore: z.number().positive(),
-  answers: z.array(DebriefAnswerPayload),
-});
-export type DebriefPayload = z.infer<typeof DebriefPayload>;
-
-// ─── PATCH body ──────────────────────────────────────────────────
-// Trainee autosave: one question's response at a time.
-export const SaveAnswerRequest = z.object({
+// POST /v1/scenarios/:slug/questions/:id/submit
+export const SubmitAnswerRequest = z.object({
   response: QuestionResponse,
 });
-export type SaveAnswerRequest = z.infer<typeof SaveAnswerRequest>;
+export type SubmitAnswerRequest = z.infer<typeof SubmitAnswerRequest>;
+
+// Response to a submit. `completedJustNow` distinguishes "you got it
+// right on this submission" from "you'd already completed it before";
+// the UI uses that to play the celebration animation only once.
+export const SubmitAnswerResponse = z.object({
+  correct: z.boolean(),
+  completedJustNow: z.boolean(),
+  attemptCount: z.number().int().positive(),
+  // Set when correct. Includes the answer key + debrief markdown so
+  // the UI can reveal them in-place after the trainee gets it right.
+  answerKey: AnswerKeyPayload.nullable(),
+  // Optional hint, shown when incorrect *and* attemptCount has crossed
+  // the authored hintAfterTries threshold (text_match only in M7).
+  hint: z.string().max(MAX_HINT_CHARS).nullable(),
+});
+export type SubmitAnswerResponse = z.infer<typeof SubmitAnswerResponse>;
+
+// ─── cohort progress (instructor view) ───────────────────────────
+// Same shape as the trainee-side ScenarioProgressPayload's summary,
+// but one row per trainee. No question-by-question details — that's
+// what /attempts (later) will surface if we add a per-trainee deep
+// dive in M8.
+export const CohortProgressRow = z.object({
+  traineeId: z.string().uuid(),
+  traineeDisplayName: z.string(),
+  traineeEmail: z.string().email(),
+  startedAt: z.string().datetime().nullable(),
+  completedAt: z.string().datetime().nullable(),
+  completedQuestions: z.number().int().nonnegative(),
+  totalQuestions: z.number().int().nonnegative(),
+});
+export type CohortProgressRow = z.infer<typeof CohortProgressRow>;
+
+export const CohortProgressResponse = z.object({
+  scenarioSlug: z.string(),
+  scenarioTitle: z.string(),
+  trainees: z.array(CohortProgressRow),
+});
+export type CohortProgressResponse = z.infer<typeof CohortProgressResponse>;

@@ -1,11 +1,13 @@
 import { Module } from "@nestjs/common";
-import { AttemptsService } from "./attempts.service";
-import { AttemptsController } from "./attempts.controller";
+import { ProgressService } from "./progress.service";
+import { ProgressController } from "./progress.controller";
 import { GradingService } from "./grading.service";
 
+// Module name keeps "Attempts" historically but the M7 surface is
+// challenge-mode progress, not multi-question submitted attempts.
 @Module({
-  providers: [AttemptsService, GradingService],
-  controllers: [AttemptsController],
-  exports: [AttemptsService, GradingService],
+  providers: [ProgressService, GradingService],
+  controllers: [ProgressController],
+  exports: [ProgressService, GradingService],
 })
 export class AttemptsModule {}

@@ -75,22 +75,31 @@ interface IndicatorSetSeed {
 
 interface QuestionSeed {
   ordinal: number;
-  type: "multi_choice" | "short_answer" | "long_answer" | "confidence" | "select_indicators";
+  type: "multi_choice" | "confidence" | "select_indicators" | "text_match";
   promptMd: string;
   weight: number;
-  // For multi_choice only. Other types leave this undefined.
+  // For multi_choice only.
   options?: Array<{ id: string; label: string }>;
   allowMultiple?: boolean;
   // For select_indicators only — references an IndicatorSetSeed.slug.
   indicatorSetSlug?: string;
+  // For text_match only — defaults: caseSensitive=false,
+  // normalizeWhitespace=true, regex=false, hintAfterTries=3.
+  textMatch?: {
+    acceptableAnswers: string[];
+    caseSensitive?: boolean;
+    normalizeWhitespace?: boolean;
+    regex?: boolean;
+    hint?: string;
+    hintAfterTries?: number;
+  };
   // Type-specific expected payload. See AnswerKeyPayload in
   // @ci-train/contracts for the exact shape per type.
   expected:
     | { type: "multi_choice"; correctIds: string[]; allowMultiple: boolean }
-    | { type: "short_answer"; rubricNote: string | null }
-    | { type: "long_answer"; rubricNote: string | null }
     | { type: "confidence"; expectedRange: [number, number] }
-    | { type: "select_indicators"; correctIds: string[] };
+    | { type: "select_indicators"; correctIds: string[] }
+    | { type: "text_match"; acceptableAnswers: string[]; regex: boolean };
   debriefMd: string;
 }
 
@@ -408,49 +417,34 @@ Distinguish:
       },
       {
         ordinal: 3,
-        type: "short_answer",
+        type: "text_match",
         weight: 1,
-        promptMd:
-          "Name one investigative step you would take next and explain *why* in one sentence.",
+        promptMd: [
+          "Open the **suspect-email.eml** tab and look at the parsed",
+          "headers. **What is the lookalike domain** the Return-Path",
+          "uses?",
+          "",
+          "(Type just the bare domain. Case doesn't matter; extra",
+          "whitespace is ignored.)",
+        ].join("\n"),
+        textMatch: {
+          acceptableAnswers: ["vendor-lookup-alike.com"],
+          hint: "Look at the `Return-Path:` header in the EML viewer, between the angle brackets.",
+          hintAfterTries: 2,
+        },
         expected: {
-          type: "short_answer",
-          rubricNote:
-            "Acceptable: pivoting on the Return-Path domain (whois / passive DNS), pulling proxy-log activity around 14:07 local for the suspect domain, contacting the vendor via a known-good channel to corroborate, or pulling the broader Received chain via the raw .eml. The 'why' should connect the step to closing a specific evidentiary gap (proving inbound auth failure vs. confirming the alternate account is attacker-controlled).",
+          type: "text_match",
+          acceptableAnswers: ["vendor-lookup-alike.com"],
+          regex: false,
         },
         debriefMd: [
-          "Several defensible answers; the rubric grades the *connection to evidence*, not the specific step:",
+          "The Return-Path is `noreply@vendor-lookup-alike.com` — the bounce-handling domain the message claims to come from. It's a one-character variant of the real vendor domain (`vendor.example`) that the attacker has registered specifically to receive replies + bounces without ever touching the real vendor's mail flow.",
           "",
-          "- *Out-of-band contact with the vendor* closes the \"is this account compromised at the source?\" gap.",
-          "- *Pivot on the lookalike domain* (whois, passive DNS, infrastructure overlap) — closes the attribution gap.",
-          "- *Pull the proxy-log slice* around 14:07 local — confirms the trainee/controller did not click through the Reply-To address.",
-          "",
-          "An answer like \"escalate to leadership\" without a specific evidentiary purpose does not satisfy the rubric.",
+          "Lookalike domains are a wire-level fact, not an inference: whois on the registered domain, passive-DNS pivots, and infrastructure overlap with other known phishing campaigns can all be checked against this one string.",
         ].join("\n"),
       },
       {
         ordinal: 4,
-        type: "long_answer",
-        weight: 3,
-        promptMd:
-          "Draft a one-paragraph escalation note for the SAC. Distinguish what you can *prove* from what you can only *infer*. Include a recommended containment action and your confidence level.",
-        expected: {
-          type: "long_answer",
-          rubricNote:
-            "Must (a) clearly separate proven (DKIM/DMARC fail, lookalike Return-Path, Reply-To divergence) from inferred (vendor account compromise, attacker identity, scope); (b) state a containment action (block the lookalike domain, hold the wire, notify the vendor via known-good channel); (c) include a calibrated confidence statement, not 'definitely a BEC' or 'we don't know'.",
-        },
-        debriefMd: [
-          "Strong write-ups will:",
-          "",
-          "- Open with the **proven** facts in concrete terms — \"the message failed DKIM and DMARC\" rather than \"the email looks suspicious\".",
-          "- Mark inferences as inferences — \"the lookalike domain registration *suggests* deliberate targeting\".",
-          "- Include a containment action: hold the pending wire, block the lookalike domain at the proxy, notify the vendor via a known-good channel.",
-          "- State confidence on a scale and *justify* it — not \"100% BEC\".",
-          "",
-          "This question is instructor-graded (M7); the rubric above describes the grading frame.",
-        ].join("\n"),
-      },
-      {
-        ordinal: 5,
         type: "select_indicators",
         weight: 2,
         indicatorSetSlug: "bec-header-indicators",
@@ -658,24 +652,50 @@ that distinction.
       },
       {
         ordinal: 3,
-        type: "long_answer",
+        type: "text_match",
         weight: 2,
-        promptMd:
-          "Rewrite the conclusion in language that does not overstate. Include the threshold at which you would escalate to qualified TSCM personnel and why.",
+        promptMd: [
+          "The draft report concludes by declaring the room **safe**.",
+          "Open the **observation-log.json** tab. **Which two",
+          "observation-window properties** make that declaration",
+          "unsupportable?",
+          "",
+          "Answer with the property names from the JSON, comma-separated",
+          "(any order, case-insensitive, extra spaces fine).",
+        ].join("\n"),
+        textMatch: {
+          // Either order; spelled either as the JSON key or the field's
+          // narrative name. normalizeWhitespace + caseSensitive=false
+          // collapses minor variation.
+          acceptableAnswers: [
+            "band, duration",
+            "duration, band",
+            "band coverage, duration",
+            "duration, band coverage",
+            "band, time window",
+            "time window, band",
+          ],
+          hint: "The JSON's `equipment` and `start_local`/`end_local` fields bound the observation. Name the *kinds* of bound, not specific values.",
+          hintAfterTries: 2,
+        },
         expected: {
-          type: "long_answer",
-          rubricNote:
-            "Acceptable rewrite uses bounded language (e.g., \"no signals of interest observed within the swept bands during the 90-minute observation window\"); names the observation limits (band coverage, time window); states a specific escalation threshold (anomalous transient observation, mission criticality, requirement for a finding, presence-of-evidence questions outside CI cyber's scope) tied to qualified TSCM personnel; avoids declaring the room safe.",
+          type: "text_match",
+          acceptableAnswers: [
+            "band, duration",
+            "duration, band",
+            "band coverage, duration",
+            "duration, band coverage",
+            "band, time window",
+            "time window, band",
+          ],
+          regex: false,
         },
         debriefMd: [
-          "Strong rewrites will:",
+          "The observation was **band-limited** (25 MHz–6 GHz — anything outside that window is invisible to this equipment) and **time-limited** (90 minutes — a duty-cycled emitter that doesn't transmit during the window doesn't appear).",
           "",
-          "- Replace \"clean\" with *bounded* language: \"no signals of interest observed within the swept bands during the 90-minute window.\"",
-          "- Acknowledge the observation limits explicitly.",
-          "- State an escalation threshold that ties to qualified TSCM personnel (not to CI cyber).",
-          "- Not declare the room \"safe\" — that's a judgment outside the observation's reach.",
+          "Either alone would make a \"clean sweep\" declaration unsupportable; together they amount to *bounded observation, not absence*. A rewrite that names both bounds and ties escalation to \"presence-of-evidence questions outside the observation window\" would land the right framing.",
           "",
-          "This question is instructor-graded (M7); the rubric describes the grading frame.",
+          "**Reasoning discipline reminder**: this is an awareness module. The exercise is **language calibration**, not TSCM training.",
         ].join("\n"),
       },
     ],
@@ -820,10 +840,27 @@ async function upsertScenario(
   }
 
   for (const q of s.questions) {
-    const optionsJson =
-      q.type === "multi_choice"
-        ? { options: q.options ?? [], allowMultiple: q.allowMultiple ?? false }
-        : null;
+    let optionsJson: unknown = null;
+    if (q.type === "multi_choice") {
+      optionsJson = {
+        options: q.options ?? [],
+        allowMultiple: q.allowMultiple ?? false,
+      };
+    } else if (q.type === "text_match") {
+      if (!q.textMatch) {
+        throw new Error(
+          `Question (ordinal ${q.ordinal}) is text_match but has no textMatch config.`,
+        );
+      }
+      optionsJson = {
+        acceptableAnswers: q.textMatch.acceptableAnswers,
+        caseSensitive: q.textMatch.caseSensitive ?? false,
+        normalizeWhitespace: q.textMatch.normalizeWhitespace ?? true,
+        regex: q.textMatch.regex ?? false,
+        hint: q.textMatch.hint ?? null,
+        hintAfterTries: q.textMatch.hintAfterTries ?? 3,
+      };
+    }
     let indicatorSetId: string | null = null;
     if (q.type === "select_indicators") {
       if (!q.indicatorSetSlug) {

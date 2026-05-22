@@ -1,18 +1,18 @@
 import { z, ZodError } from "zod";
 import {
-  AttemptAnswerPayload,
-  AttemptPayload,
-  DebriefPayload,
+  CohortProgressResponse,
   HelloResponse,
   HealthResponse,
   LoginRequest,
   LoginResponse,
   MeResponse,
   ParsedEmlPayload,
-  SaveAnswerRequest,
   ScenarioDetail,
   ScenarioListQuery,
   ScenarioListResponse,
+  ScenarioProgressPayload,
+  SubmitAnswerRequest,
+  SubmitAnswerResponse,
 } from "@ci-train/contracts";
 
 const API_INTERNAL_URL =
@@ -125,45 +125,29 @@ export const api = {
         ),
       ),
   },
-  attempts: {
-    start: async (token: string, slug: string): Promise<AttemptPayload> =>
+  progress: {
+    get: async (token: string, slug: string): Promise<ScenarioProgressPayload> =>
       parse(
-        AttemptPayload,
-        await request(`/scenarios/${encodeURIComponent(slug)}/attempts`, {
-          method: "POST",
-          token,
-        }),
+        ScenarioProgressPayload,
+        await request(`/scenarios/${encodeURIComponent(slug)}/progress`, { token }),
       ),
-    get: async (token: string, attemptId: string): Promise<AttemptPayload> =>
-      parse(
-        AttemptPayload,
-        await request(`/attempts/${encodeURIComponent(attemptId)}`, { token }),
-      ),
-    saveAnswer: async (
+    submit: async (
       token: string,
-      attemptId: string,
+      slug: string,
       questionId: string,
-      body: SaveAnswerRequest,
-    ): Promise<AttemptAnswerPayload> =>
+      body: SubmitAnswerRequest,
+    ): Promise<SubmitAnswerResponse> =>
       parse(
-        AttemptAnswerPayload,
+        SubmitAnswerResponse,
         await request(
-          `/attempts/${encodeURIComponent(attemptId)}/answers/${encodeURIComponent(questionId)}`,
-          { method: "PATCH", body, token },
+          `/scenarios/${encodeURIComponent(slug)}/questions/${encodeURIComponent(questionId)}/submit`,
+          { method: "POST", body, token },
         ),
       ),
-    submit: async (token: string, attemptId: string): Promise<AttemptPayload> =>
+    cohort: async (token: string, slug: string): Promise<CohortProgressResponse> =>
       parse(
-        AttemptPayload,
-        await request(`/attempts/${encodeURIComponent(attemptId)}/submit`, {
-          method: "POST",
-          token,
-        }),
-      ),
-    debrief: async (token: string, attemptId: string): Promise<DebriefPayload> =>
-      parse(
-        DebriefPayload,
-        await request(`/attempts/${encodeURIComponent(attemptId)}/debrief`, { token }),
+        CohortProgressResponse,
+        await request(`/scenarios/${encodeURIComponent(slug)}/cohort-progress`, { token }),
       ),
   },
 };
