@@ -35,39 +35,23 @@ sees rendered markdown only after saving and viewing as a user (or via
 the workspace once published). For a beta cohort this is fine — for
 content authoring at volume it's a tax.
 
-## Terminology
-
-### Internal role enum still says `instructor` / `trainee`
-
-The product framing shipped in M7 — "challenge lab", "user solves
-challenges" — but the underlying `Role` enum, the
-`scenario_progress.trainee_user_id` column, and a few service-layer
-comments still use the older `instructor` / `trainee` words. The
-user-facing UI says **admin / user** + **challenge / solved**; the
-internals will catch up in a future polish pass.
-
-This is cosmetic. The role *check* works the same either way (
-"instructor" maps to admin, "trainee" maps to user).
-
 ## Deletion / data lifecycle
 
-### Scenario delete cascades, including artifact bytes (M9 onward)
+### Scenario delete cascades, including artifact bytes (M12 onward)
 
 `DELETE /admin/challenges/:slug`:
 
 - DB cascades remove brief, questions, answer keys, indicator sets,
   scenario_progress rows, question_responses, and the artifact
-  **metadata rows**.
-- Individual `DELETE /admin/challenges/:slug/artifacts/:id` calls also
-  remove the bytes from disk.
-- **However**: a whole-scenario delete does *not* currently sweep the
-  scenario's artifact directory. Stranded bytes live at
-  `/var/lib/citrain/artifacts/scenarios/<old-scenario-id>/` until a
-  separate cleanup pass removes them.
-
-For a beta install this is a small disk leak. A periodic
-"orphan-bytes" janitor is the right long-term fix; for the beta, a
-manual `find ... -type d -empty -delete` after big purges is fine.
+  metadata rows.
+- M12 added a follow-up sweep that unlinks every artifact's bytes
+  through the storage layer after the DB cascade succeeds.
+  Individual `DELETE /admin/challenges/:slug/artifacts/:id` calls
+  already removed bytes inline; whole-scenario delete now does too.
+- Empty `scenarios/<scenarioId>/` directories may linger on disk
+  until the next storage cleanup pass; the bytes themselves are
+  gone. A periodic "orphan-bytes" janitor is still a sensible
+  long-term operational piece.
 
 ### Artifact rows survive seed re-runs only by ordinal
 

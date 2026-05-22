@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  Inject,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
@@ -24,6 +25,8 @@ import {
 } from "@ci-train/contracts";
 import { z } from "zod";
 import { PrismaService } from "../database/prisma.service";
+import { ARTIFACT_STORAGE } from "../artifacts/storage/storage.module";
+import type { ArtifactStorage } from "../artifacts/storage/artifact-storage";
 
 // Question types the authoring surface can produce. M9 added
 // select_indicators (and the indicator-set CRUD it needs). The
@@ -39,7 +42,10 @@ type AuthorableType = (typeof AUTHORABLE_TYPES)[number];
 
 @Injectable()
 export class AuthoringService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(ARTIFACT_STORAGE) private readonly storage: ArtifactStorage,
+  ) {}
 
   async list(): Promise<AdminScenarioSummary[]> {
     const rows = await this.prisma.scenario.findMany({
@@ -207,12 +213,26 @@ export class AuthoringService {
     });
     if (!scenario) throw new NotFoundException("Scenario not found.");
 
-    // Cascades handle brief, artifacts, questions (and their answer
-    // keys), indicator sets, scenario progress, and question responses
-    // — every FK to Scenario is ON DELETE CASCADE. Artifact bytes on
-    // disk are NOT cleaned up here; the storage cleanup pass lives in
-    // a separate maintenance job. Beta-only: it's fine to leave them.
+    // Collect the artifact paths BEFORE the cascade nukes the rows.
+    // The DB cascade removes brief, artifacts (metadata), questions,
+    // answer keys, indicator sets, scenario_progress, and
+    // question_responses — every FK to Scenario is ON DELETE CASCADE.
+    // Bytes on disk used to be left stranded; we now sweep them
+    // through the storage layer after the cascade succeeds.
+    const artifactPaths = await this.prisma.artifact.findMany({
+      where: { scenarioId: scenario.id },
+      select: { relativePath: true },
+    });
+
     await this.prisma.scenario.delete({ where: { id: scenario.id } });
+
+    // Best-effort unlink after the DB cascade. Storage.remove is
+    // idempotent on ENOENT and logs (rather than throws) on other
+    // failures — a stranded blob is cheaper than a 500 on a delete
+    // that already removed the metadata row.
+    for (const a of artifactPaths) {
+      await this.storage.remove(a.relativePath);
+    }
   }
 
   async addQuestion(

@@ -59,12 +59,12 @@ interface UploadedMulterFile {
   buffer: Buffer;
 }
 
-// Admin/maintainer-only surface. All routes guarded at the controller
-// level by `@Roles("instructor")` — the project's role rename to
-// admin/maintainer is a separate scope, so we still use the existing
-// enum value here.
+// Admin-only surface. All routes guarded at the controller level by
+// `@Roles("admin")`. M12 brought the Role enum into agreement with
+// the user-facing framing; the old "instructor"/"trainee" names live
+// only in deployed env files for backwards compat.
 @Controller("admin/challenges")
-@Roles("instructor")
+@Roles("admin")
 export class AuthoringController {
   constructor(
     private readonly authoring: AuthoringService,

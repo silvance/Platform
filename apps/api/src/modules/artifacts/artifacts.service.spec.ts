@@ -56,7 +56,7 @@ describe("ArtifactsService — canonical MIME (audit #1)", () => {
       makeFakeStorage(),
   makeFakeEmlParse(),
     );
-    const r = await svc.streamArtifact("trainee", "my-scenario", BASE_ARTIFACT.id);
+    const r = await svc.streamArtifact("user", "my-scenario", BASE_ARTIFACT.id);
     expect(r!.mimeType).toBe("text/plain; charset=utf-8");
     expect(r!.contentDisposition).toBe("attachment");
     // The DB-recorded MIME is still surfaced for audit but never used as Content-Type.
@@ -71,7 +71,7 @@ describe("ArtifactsService — canonical MIME (audit #1)", () => {
       makeFakeStorage(),
   makeFakeEmlParse(),
     );
-    const r = await svc.streamArtifact("trainee", "my-scenario", BASE_ARTIFACT.id);
+    const r = await svc.streamArtifact("user", "my-scenario", BASE_ARTIFACT.id);
     expect(r!.mimeType).toBe("application/json; charset=utf-8");
     expect(r!.contentDisposition).toBe("attachment");
   });
@@ -84,7 +84,7 @@ describe("ArtifactsService — canonical MIME (audit #1)", () => {
       makeFakeStorage(),
   makeFakeEmlParse(),
     );
-    const r = await svc.streamArtifact("trainee", "my-scenario", BASE_ARTIFACT.id);
+    const r = await svc.streamArtifact("user", "my-scenario", BASE_ARTIFACT.id);
     expect(r!.mimeType).toBe("application/pdf");
     expect(r!.contentDisposition).toBe("inline");
   });
@@ -97,7 +97,7 @@ describe("ArtifactsService — canonical MIME (audit #1)", () => {
       makeFakeStorage(),
   makeFakeEmlParse(),
     );
-    const r = await svc.streamArtifact("trainee", "my-scenario", BASE_ARTIFACT.id);
+    const r = await svc.streamArtifact("user", "my-scenario", BASE_ARTIFACT.id);
     expect(r!.mimeType).toBe("image/png");
     expect(r!.contentDisposition).toBe("inline");
   });
@@ -110,7 +110,7 @@ describe("ArtifactsService — canonical MIME (audit #1)", () => {
       makeFakeStorage(),
   makeFakeEmlParse(),
     );
-    const r = await svc.streamArtifact("trainee", "my-scenario", BASE_ARTIFACT.id);
+    const r = await svc.streamArtifact("user", "my-scenario", BASE_ARTIFACT.id);
     expect(r!.mimeType).toBe("application/octet-stream");
     expect(r!.contentDisposition).toBe("attachment");
   });
@@ -123,7 +123,7 @@ describe("ArtifactsService — canonical MIME (audit #1)", () => {
       makeFakeStorage(),
   makeFakeEmlParse(),
     );
-    const r = await svc.streamArtifact("trainee", "my-scenario", BASE_ARTIFACT.id);
+    const r = await svc.streamArtifact("user", "my-scenario", BASE_ARTIFACT.id);
     expect(r!.mimeType).toBe("image/jpeg");
     expect(r!.contentDisposition).toBe("inline");
   });
@@ -136,7 +136,7 @@ describe("ArtifactsService (unit)", () => {
       makeFakeStorage(),
   makeFakeEmlParse(),
     );
-    const r = await svc.streamArtifact("trainee", "my-scenario", BASE_ARTIFACT.id);
+    const r = await svc.streamArtifact("user", "my-scenario", BASE_ARTIFACT.id);
     expect(r).not.toBeNull();
     expect(r!.mimeType).toBe("text/csv; charset=utf-8");
     expect(r!.contentDisposition).toBe("attachment");
@@ -149,7 +149,7 @@ describe("ArtifactsService (unit)", () => {
       makeFakeStorage(),
   makeFakeEmlParse(),
     );
-    const r1 = await svcPdf.streamArtifact("trainee", "my-scenario", BASE_ARTIFACT.id);
+    const r1 = await svcPdf.streamArtifact("user", "my-scenario", BASE_ARTIFACT.id);
     expect(r1!.contentDisposition).toBe("inline");
 
     const svcImg = new ArtifactsService(
@@ -157,7 +157,7 @@ describe("ArtifactsService (unit)", () => {
       makeFakeStorage(),
   makeFakeEmlParse(),
     );
-    const r2 = await svcImg.streamArtifact("trainee", "my-scenario", BASE_ARTIFACT.id);
+    const r2 = await svcImg.streamArtifact("user", "my-scenario", BASE_ARTIFACT.id);
     expect(r2!.contentDisposition).toBe("inline");
   });
 
@@ -167,7 +167,7 @@ describe("ArtifactsService (unit)", () => {
       makeFakeStorage(),
   makeFakeEmlParse(),
     );
-    const r = await svc.streamArtifact("trainee", "wrong-scenario", BASE_ARTIFACT.id);
+    const r = await svc.streamArtifact("user", "wrong-scenario", BASE_ARTIFACT.id);
     expect(r).toBeNull();
   });
 
@@ -179,7 +179,7 @@ describe("ArtifactsService (unit)", () => {
       makeFakeStorage(),
   makeFakeEmlParse(),
     );
-    const r = await svc.streamArtifact("trainee", "my-scenario", BASE_ARTIFACT.id);
+    const r = await svc.streamArtifact("user", "my-scenario", BASE_ARTIFACT.id);
     expect(r).toBeNull();
   });
 
@@ -191,14 +191,14 @@ describe("ArtifactsService (unit)", () => {
       makeFakeStorage(),
   makeFakeEmlParse(),
     );
-    const r = await svc.streamArtifact("instructor", "my-scenario", BASE_ARTIFACT.id);
+    const r = await svc.streamArtifact("admin", "my-scenario", BASE_ARTIFACT.id);
     expect(r).not.toBeNull();
   });
 
   it("returns null for an unknown artifact id", async () => {
     const svc = new ArtifactsService(makeFakePrisma([]), makeFakeStorage(), makeFakeEmlParse());
     const r = await svc.streamArtifact(
-      "instructor",
+      "admin",
       "my-scenario",
       "00000000-0000-0000-0000-000000000000",
     );
@@ -222,7 +222,7 @@ describe("ArtifactsService.parseEml — size cap (audit #1)", () => {
       makeFakeEmlParse(),
     );
     await expect(
-      svc.parseEml("trainee", "my-scenario", BASE_ARTIFACT.id),
+      svc.parseEml("user", "my-scenario", BASE_ARTIFACT.id),
     ).rejects.toMatchObject({ status: 413 });
   });
 
@@ -246,7 +246,7 @@ describe("ArtifactsService.parseEml — size cap (audit #1)", () => {
       })),
     } as unknown as import("./eml-parse.service").EmlParseService;
     const svc = new ArtifactsService(makeFakePrisma([onLimit]), storage, emlStub);
-    const r = await svc.parseEml("trainee", "my-scenario", BASE_ARTIFACT.id);
+    const r = await svc.parseEml("user", "my-scenario", BASE_ARTIFACT.id);
     expect(r).not.toBeNull();
     expect(emlStub.parse).toHaveBeenCalledTimes(1);
   });
@@ -258,7 +258,7 @@ describe("ArtifactsService.parseEml — size cap (audit #1)", () => {
       makeFakeStorage(),
       makeFakeEmlParse(),
     );
-    const r = await svc.parseEml("trainee", "wrong-scenario", BASE_ARTIFACT.id);
+    const r = await svc.parseEml("user", "wrong-scenario", BASE_ARTIFACT.id);
     expect(r).toBeNull();
   });
 });

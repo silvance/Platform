@@ -79,7 +79,7 @@ describe("ScenariosService (unit)", () => {
         { ...BASE_ROW, slug: "arch", status: "archived" },
       ]);
       const svc = new ScenariosService(prisma);
-      const res = await svc.list("trainee", { status: "draft" });
+      const res = await svc.list("user", { status: "draft" });
       expect(res.scenarios.map((s) => s.slug)).toEqual(["pub"]);
       expect((captured.findManyArgs as { where: { status: string } }).where.status).toBe(
         "published",
@@ -93,7 +93,7 @@ describe("ScenariosService (unit)", () => {
         { ...BASE_ROW, slug: "arch", status: "archived" },
       ]);
       const svc = new ScenariosService(prisma);
-      const res = await svc.list("instructor", {});
+      const res = await svc.list("admin", {});
       expect(res.scenarios.map((s) => s.slug).sort()).toEqual(["drft", "pub"]);
     });
 
@@ -103,7 +103,7 @@ describe("ScenariosService (unit)", () => {
         { ...BASE_ROW, slug: "arch", status: "archived" },
       ]);
       const svc = new ScenariosService(prisma);
-      const res = await svc.list("instructor", { status: "archived" });
+      const res = await svc.list("admin", { status: "archived" });
       expect(res.scenarios.map((s) => s.slug)).toEqual(["arch"]);
     });
   });
@@ -115,7 +115,7 @@ describe("ScenariosService (unit)", () => {
         { ...BASE_ROW, slug: "b", skillAreas: ["rf_awareness"] },
       ]);
       const svc = new ScenariosService(prisma);
-      const res = await svc.list("trainee", { skillArea: "rf_awareness" });
+      const res = await svc.list("user", { skillArea: "rf_awareness" });
       expect(res.scenarios.map((s) => s.slug)).toEqual(["b"]);
     });
 
@@ -125,7 +125,7 @@ describe("ScenariosService (unit)", () => {
         { ...BASE_ROW, slug: "b", tags: ["rf"] },
       ]);
       const svc = new ScenariosService(prisma);
-      const res = await svc.list("trainee", { tag: "rf" });
+      const res = await svc.list("user", { tag: "rf" });
       expect(res.scenarios.map((s) => s.slug)).toEqual(["b"]);
     });
 
@@ -135,7 +135,7 @@ describe("ScenariosService (unit)", () => {
         { ...BASE_ROW, slug: "b", difficulty: 4 },
       ]);
       const svc = new ScenariosService(prisma);
-      const res = await svc.list("trainee", { difficulty: 4 });
+      const res = await svc.list("user", { difficulty: 4 });
       expect(res.scenarios.map((s) => s.slug)).toEqual(["b"]);
     });
   });
@@ -146,7 +146,7 @@ describe("ScenariosService (unit)", () => {
         { ...BASE_ROW, slug: "secret-draft", status: "draft", brief: null },
       ]);
       const svc = new ScenariosService(prisma);
-      await expect(svc.getBySlug("trainee", "secret-draft")).rejects.toBeInstanceOf(
+      await expect(svc.getBySlug("user", "secret-draft")).rejects.toBeInstanceOf(
         NotFoundException,
       );
     });
@@ -161,7 +161,7 @@ describe("ScenariosService (unit)", () => {
         },
       ]);
       const svc = new ScenariosService(prisma);
-      const res = await svc.getBySlug("instructor", "secret-draft");
+      const res = await svc.getBySlug("admin", "secret-draft");
       expect(res.slug).toBe("secret-draft");
       expect(res.brief?.markdownBody).toBe("# hi");
     });
@@ -169,7 +169,7 @@ describe("ScenariosService (unit)", () => {
     it("404 for an unknown slug regardless of role", async () => {
       const { prisma } = makeFakePrisma([]);
       const svc = new ScenariosService(prisma);
-      await expect(svc.getBySlug("instructor", "nope")).rejects.toBeInstanceOf(
+      await expect(svc.getBySlug("admin", "nope")).rejects.toBeInstanceOf(
         NotFoundException,
       );
     });
@@ -183,7 +183,7 @@ describe("ScenariosService (unit)", () => {
         },
       ]);
       const svc = new ScenariosService(prisma);
-      const res = await svc.getBySlug("trainee", "rf");
+      const res = await svc.getBySlug("user", "rf");
       expect(res.brief?.disclaimerMd).toBe("> awareness only");
     });
   });

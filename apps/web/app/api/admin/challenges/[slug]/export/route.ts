@@ -11,7 +11,7 @@ export async function GET(
   { params }: { params: Promise<{ slug: string }> },
 ): Promise<Response> {
   const user = await getCurrentUser();
-  if (!user || user.role !== "instructor") {
+  if (!user || user.role !== "admin") {
     return new NextResponse("Forbidden", { status: 403 });
   }
   const token = await readToken();

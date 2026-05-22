@@ -113,7 +113,7 @@ export class ArtifactsService {
     });
     if (!artifact) return null;
     if (artifact.scenario.slug !== scenarioSlug) return null;
-    if (role === "trainee" && artifact.scenario.status !== "published") {
+    if (role === "user" && artifact.scenario.status !== "published") {
       return null;
     }
     return artifact;

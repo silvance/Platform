@@ -1,6 +1,10 @@
 import { z } from "zod";
 
-export const Role = z.enum(["instructor", "trainee"]);
+// Role naming aligns with the M7 challenge-lab framing the UI shipped:
+// `admin` authors + manages content, `user` solves challenges. M12
+// migrated the DB enum to match; the contract is the source of truth
+// for what crosses the wire.
+export const Role = z.enum(["admin", "user"]);
 export type Role = z.infer<typeof Role>;
 
 // Email + password come from a login form. Keep the requirements minimal at

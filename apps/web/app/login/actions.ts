@@ -44,5 +44,5 @@ export async function loginAction(
     path: "/",
   });
 
-  redirect(res.user.role === "instructor" ? "/admin" : "/scenarios");
+  redirect(res.user.role === "admin" ? "/admin" : "/scenarios");
 }

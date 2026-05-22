@@ -54,7 +54,7 @@ const ExpectedAny = z.discriminatedUnion("type", [
 interface LockedProgressRow {
   id: string;
   scenario_id: string;
-  trainee_user_id: string;
+  user_id: string;
   completed_at: Date | null;
   completed_questions: number;
   total_questions: number;
@@ -100,10 +100,10 @@ export class ProgressService {
       },
     });
     if (!scenario) throw new NotFoundException("Scenario not found.");
-    // Draft scenarios stay invisible to non-admin roles. Once an admin
-    // surface lands in a later milestone we'll widen this; for now
-    // "trainee" is the only published-only role.
-    if (role !== "instructor" && scenario.status !== "published") {
+    // Draft scenarios stay invisible to non-admin roles — admins can
+    // preview their own drafts via the authoring surface; users only
+    // see published content.
+    if (role !== "admin" && scenario.status !== "published") {
       throw new NotFoundException("Scenario not found.");
     }
 
@@ -117,9 +117,9 @@ export class ProgressService {
 
     const progress = await this.prisma.scenarioProgress.findUnique({
       where: {
-        scenarioId_traineeUserId: {
+        scenarioId_userId: {
           scenarioId: scenario.id,
-          traineeUserId: actorUserId,
+          userId: actorUserId,
         },
       },
       include: {
@@ -275,15 +275,15 @@ export class ProgressService {
 
       const progressUpsert = await tx.scenarioProgress.upsert({
         where: {
-          scenarioId_traineeUserId: {
+          scenarioId_userId: {
             scenarioId: scenario.id,
-            traineeUserId: actorUserId,
+            userId: actorUserId,
           },
         },
         update: {},
         create: {
           scenarioId: scenario.id,
-          traineeUserId: actorUserId,
+          userId: actorUserId,
           totalQuestions,
         },
       });
@@ -291,7 +291,7 @@ export class ProgressService {
       // SELECT ... FOR UPDATE on the now-existing row so concurrent
       // submits to other questions on this scenario serialize.
       const rows = await tx.$queryRaw<LockedProgressRow[]>`
-        SELECT id, scenario_id, trainee_user_id, completed_at, completed_questions, total_questions
+        SELECT id, scenario_id, user_id, completed_at, completed_questions, total_questions
         FROM "scenario_progress"
         WHERE id = ${progressUpsert.id}::uuid
         FOR UPDATE
