@@ -64,8 +64,8 @@ model User {
   lastLoginAt  DateTime? @map("last_login_at")
 
   sessions          Session[]
-  authoredScenarios Scenario[] @relation("ScenarioAuthor")
-  attempts          Attempt[]
+  authoredScenarios Scenario[]         @relation("ScenarioAuthor")
+  progress          ScenarioProgress[]
 
   @@map("users")
 }
@@ -112,9 +112,9 @@ model Scenario {
   brief         ScenarioBrief?
   artifacts     Artifact[]
   questions     Question[]
-  attempts      Attempt[]
+  progress      ScenarioProgress[]
   indicatorSets IndicatorSet[]
-  author        User?         @relation("ScenarioAuthor", fields: [authorUserId], references: [id], onDelete: SetNull)
+  author        User?              @relation("ScenarioAuthor", fields: [authorUserId], references: [id], onDelete: SetNull)
 
   @@index([status])
   @@index([skillAreas], type: Gin)
@@ -167,21 +167,18 @@ model Artifact {
 }
 
 // Keep in sync with QuestionType in packages/contracts/src/questions.ts.
+//
+// `short_answer` and `long_answer` remain in the enum because Postgres
+// can't easily drop values, but the API/contract reject both — they
+// were removed when M7 pivoted the platform to challenge-based
+// progression. `text_match` is the auto-graded replacement.
 enum QuestionType {
   multi_choice
   short_answer
   long_answer
   confidence
   select_indicators
-}
-
-enum AutoScoreOutcome {
-  correct
-  incorrect
-  partial
-  in_range
-  out_of_range
-  ungradable
+  text_match
 }
 
 // Authored question. `optionsJson` carries the type-specific payload:
@@ -203,10 +200,10 @@ model Question {
   createdAt       DateTime     @default(now()) @map("created_at")
   updatedAt       DateTime     @updatedAt @map("updated_at")
 
-  scenario     Scenario        @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
-  indicatorSet IndicatorSet?   @relation(fields: [indicatorSetId], references: [id], onDelete: Restrict)
+  scenario     Scenario           @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  indicatorSet IndicatorSet?      @relation(fields: [indicatorSetId], references: [id], onDelete: Restrict)
   answerKey    AnswerKey?
-  answers      AttemptAnswer[]
+  responses    QuestionResponse[]
 
   @@unique([scenarioId, ordinal])
   @@index([scenarioId])
@@ -253,42 +250,56 @@ model AnswerKey {
   @@map("answer_keys")
 }
 
-model Attempt {
-  id            String   @id @default(uuid()) @db.Uuid
-  scenarioId    String   @map("scenario_id") @db.Uuid
-  traineeUserId String   @map("trainee_user_id") @db.Uuid
-  startedAt     DateTime @default(now()) @map("started_at")
-  submittedAt   DateTime? @map("submitted_at")
-  locked        Boolean  @default(false)
-  totalScore    Float?   @map("total_score")
-  maxScore      Float    @map("max_score")
+// M7 challenge-mode: one row per (trainee, scenario). Tracks aggregate
+// completion only. Replaces the M5 Attempt model.
+model ScenarioProgress {
+  id                 String    @id @default(uuid()) @db.Uuid
+  scenarioId         String    @map("scenario_id") @db.Uuid
+  traineeUserId      String    @map("trainee_user_id") @db.Uuid
+  startedAt          DateTime  @default(now()) @map("started_at")
+  // Set when all questions in the scenario have a non-null completedAt
+  // on their corresponding QuestionResponse row. Cleared if questions
+  // are added to the scenario after completion (defensive against
+  // authoring drift; M8 import is the trigger).
+  completedAt        DateTime? @map("completed_at")
+  // Denormalized counters so the cohort-progress endpoint can render
+  // the table without per-row aggregation. Recomputed in the same
+  // transaction as any question completion.
+  completedQuestions Int       @default(0) @map("completed_questions")
+  totalQuestions     Int       @map("total_questions")
 
-  scenario Scenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
-  trainee  User     @relation(fields: [traineeUserId], references: [id], onDelete: Cascade)
-  answers  AttemptAnswer[]
+  scenario  Scenario           @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  trainee   User               @relation(fields: [traineeUserId], references: [id], onDelete: Cascade)
+  responses QuestionResponse[]
 
-  // One attempt per (scenario, trainee) in M5. Re-attempts get a UX
-  // and a separate row in a later milestone.
   @@unique([scenarioId, traineeUserId])
   @@index([traineeUserId])
-  @@map("attempts")
+  @@map("scenario_progress")
 }
 
-model AttemptAnswer {
-  id                String   @id @default(uuid()) @db.Uuid
-  attemptId         String   @map("attempt_id") @db.Uuid
-  questionId        String   @map("question_id") @db.Uuid
-  responseJson      Json?    @map("response_json")
-  autoScore         Float?   @map("auto_score")
-  autoOutcome       AutoScoreOutcome? @map("auto_outcome")
-  manualScore       Float?   @map("manual_score")
-  instructorNotesMd String?  @map("instructor_notes_md")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+// M7 challenge-mode: one row per (progress, question). Stores the
+// trainee's latest submitted response, completion timestamp (set on
+// the first correct answer), and how many times they've tried.
+// Replaces the M5 AttemptAnswer model.
+model QuestionResponse {
+  id           String    @id @default(uuid()) @db.Uuid
+  progressId   String    @map("progress_id") @db.Uuid
+  questionId   String    @map("question_id") @db.Uuid
+  // Latest submitted response (for widget rehydration). Persisted on
+  // every submit, including incorrect ones.
+  responseJson Json?     @map("response_json")
+  // Set the first time the trainee submitted a correct answer. Never
+  // cleared — re-grading does not "uncomplete" a question.
+  completedAt  DateTime? @map("completed_at")
+  // Total submissions to date. Used by the UI to "got it on try N"
+  // and to trigger authored hints (text_match.hintAfterTries).
+  attemptCount Int       @default(0) @map("attempt_count")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
 
-  attempt  Attempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
-  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  progress ScenarioProgress @relation(fields: [progressId], references: [id], onDelete: Cascade)
+  question Question         @relation(fields: [questionId], references: [id], onDelete: Cascade)
 
-  @@unique([attemptId, questionId])
-  @@index([attemptId])
-  @@map("attempt_answers")
+  @@unique([progressId, questionId])
+  @@index([progressId])
+  @@map("question_responses")
 }

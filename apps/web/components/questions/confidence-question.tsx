@@ -1,15 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import type { ConfidenceValue, QuestionPayload, QuestionResponse } from "@ci-train/contracts";
-import { saveAnswerAction } from "@/app/(authenticated)/attempts/[id]/actions";
-
-interface Props {
-  attemptId: string;
-  question: QuestionPayload;
-  initialValue: ConfidenceValue | null;
-  locked: boolean;
-}
+import type {
+  ConfidenceValue,
+  QuestionPayload,
+  QuestionResponse,
+} from "@ci-train/contracts";
 
 const LABELS: Record<ConfidenceValue, string> = {
   1: "Not confident",
@@ -19,20 +15,21 @@ const LABELS: Record<ConfidenceValue, string> = {
   5: "Certain",
 };
 
-export function ConfidenceQuestion({ attemptId, question, initialValue, locked }: Props) {
-  const [value, setValue] = useState<ConfidenceValue | null>(initialValue);
-  const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
-  const [_pending, start] = useTransition();
+interface Props {
+  question: QuestionPayload;
+  initialValue: ConfidenceValue | null;
+  disabled: boolean;
+  onSubmit: (response: QuestionResponse) => void | Promise<void>;
+}
 
-  function pick(v: ConfidenceValue) {
-    if (locked) return;
-    setValue(v);
-    setStatus("saving");
-    const body: QuestionResponse = { type: "confidence", data: { value: v } };
-    start(async () => {
-      const r = await saveAnswerAction(attemptId, question.id, body);
-      setStatus(r.ok ? "saved" : "error");
-    });
+export function ConfidenceForm({ question, initialValue, disabled, onSubmit }: Props) {
+  const [value, setValue] = useState<ConfidenceValue | null>(initialValue);
+  const [pending, start] = useTransition();
+
+  function submit() {
+    if (disabled || pending || value === null) return;
+    const body: QuestionResponse = { type: "confidence", data: { value } };
+    start(() => Promise.resolve(onSubmit(body)));
   }
 
   return (
@@ -42,8 +39,8 @@ export function ConfidenceQuestion({ attemptId, question, initialValue, locked }
           <button
             key={v}
             type="button"
-            onClick={() => pick(v)}
-            disabled={locked}
+            onClick={() => !disabled && setValue(v)}
+            disabled={disabled}
             className={`confidence-pill ${value === v ? "confidence-active" : ""}`}
           >
             <span style={{ fontWeight: 600 }}>{v}</span>
@@ -51,14 +48,15 @@ export function ConfidenceQuestion({ attemptId, question, initialValue, locked }
           </button>
         ))}
       </div>
-      <SaveBadge status={status} />
+      <button
+        type="button"
+        disabled={disabled || pending || value === null}
+        onClick={submit}
+        className="q-submit"
+        style={{ marginTop: ".5rem" }}
+      >
+        {pending ? "Submitting…" : disabled ? "Submitted" : "Submit"}
+      </button>
     </div>
   );
-}
-
-function SaveBadge({ status }: { status: "idle" | "saving" | "saved" | "error" }) {
-  if (status === "idle") return null;
-  if (status === "saving") return <span className="save-badge save-saving">saving…</span>;
-  if (status === "saved") return <span className="save-badge save-saved">saved</span>;
-  return <span className="save-badge save-error">save failed</span>;
 }

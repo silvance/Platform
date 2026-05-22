@@ -2,28 +2,39 @@ import { Injectable } from "@nestjs/common";
 import { z } from "zod";
 import type { QuestionType } from "@prisma/client";
 import {
-  AutoScoreOutcome,
   ConfidenceResponse,
   McResponse,
   SelectIndicatorsResponse,
+  TextMatchOptionsSpec,
+  TextMatchResponse,
 } from "@ci-train/contracts";
 
 export interface GradingInput {
   type: QuestionType;
-  expectedJson: unknown; // raw from the AnswerKey row
-  responseJson: unknown; // raw trainee response (or null if untouched)
+  // Raw value of question.optionsJson (multi_choice options /
+  // text_match parameters). Ignored for other types.
+  optionsJson: unknown;
+  // Raw value of answer_key.expectedJson.
+  expectedJson: unknown;
+  // Raw value of the trainee's submitted response (already unwrapped
+  // by the caller is fine; the grader is tolerant either way).
+  responseJson: unknown;
 }
 
+// In challenge-mode there are only two outcomes per submission:
+// "correct" → the question completes; or "incorrect" → keep trying.
+// Partial credit on MC / select_indicators is preserved as a *score*
+// for the UI ("you got 2/3"), but it does not complete the question.
 export interface GradingResult {
-  // null when the question type is not auto-gradable (short/long answer).
-  score: number | null;
-  outcome: AutoScoreOutcome;
+  correct: boolean;
+  // 0.0–1.0. Always set for the four supported question types.
+  score: number;
 }
 
-// Local schemas describing the expected_json shape *as stored in the
-// AnswerKey row*. Kept out of @ci-train/contracts on purpose — the
-// shared contracts package describes the API payloads, not the DB row
-// shapes that the API consumes internally.
+// Local schemas for the expected_json shapes stored on answer_keys.
+// These mirror the discriminated union exposed by AnswerKeyPayload but
+// live alongside the service that consumes them — the API contract
+// describes what crosses the wire, these describe what's in the DB.
 const ExpectedMc = z.object({
   type: z.literal("multi_choice"),
   correctIds: z.array(z.string()).min(1),
@@ -40,12 +51,17 @@ const ExpectedSelectIndicators = z.object({
   type: z.literal("select_indicators"),
   correctIds: z.array(z.string()).min(1),
 });
+const ExpectedTextMatch = z.object({
+  type: z.literal("text_match"),
+  acceptableAnswers: z.array(z.string()).min(1),
+  regex: z.boolean().default(false),
+});
 
 @Injectable()
 export class GradingService {
-  // Returns the trainee's auto-grade for a single question. Never throws
-  // on malformed data — falls back to outcome="ungradable" so a single
-  // bad row can't break the whole debrief.
+  // Returns {correct, score} for a single submission. Never throws on
+  // malformed data — falls back to {correct: false, score: 0} so a
+  // single bad row can't poison the question's submission flow.
   grade(input: GradingInput): GradingResult {
     try {
       switch (input.type) {
@@ -55,98 +71,122 @@ export class GradingService {
           return this.gradeConfidence(input);
         case "select_indicators":
           return this.gradeSelectIndicators(input);
-        case "short_answer":
-        case "long_answer":
-          // Narrative answers need instructor review (M7).
-          return { score: null, outcome: "ungradable" };
+        case "text_match":
+          return this.gradeTextMatch(input);
+        // The short_answer / long_answer enum values survive in the DB
+        // for back-compat but the API refuses to create such questions;
+        // anything that slips through grades as incorrect.
         default:
-          return { score: null, outcome: "ungradable" };
+          return { correct: false, score: 0 };
       }
     } catch {
-      return { score: null, outcome: "ungradable" };
+      return { correct: false, score: 0 };
     }
   }
 
   private gradeMultiChoice(input: GradingInput): GradingResult {
     const expected = ExpectedMc.safeParse(input.expectedJson);
-    if (!expected.success) return { score: null, outcome: "ungradable" };
-    if (input.responseJson === null || input.responseJson === undefined) {
-      return { score: 0, outcome: "incorrect" };
-    }
-    const response = McResponse.safeParse(
-      unwrapData("multi_choice", input.responseJson),
-    );
-    if (!response.success) return { score: 0, outcome: "incorrect" };
+    if (!expected.success) return { correct: false, score: 0 };
+    const response = McResponse.safeParse(unwrapData("multi_choice", input.responseJson));
+    if (!response.success) return { correct: false, score: 0 };
 
     const correct = new Set(expected.data.correctIds);
     const picked = new Set(response.data.selectedIds);
     const exactMatch =
       correct.size === picked.size &&
       [...correct].every((id) => picked.has(id));
-    if (exactMatch) {
-      return { score: 1, outcome: "correct" };
-    }
-    // Partial credit when multi-select and the trainee picked a subset
-    // of the correct set with no false positives. Otherwise 0.
+    if (exactMatch) return { correct: true, score: 1 };
+
+    // Partial credit (subset with no false positives) is *reported* as
+    // a score so the UI can show "you got 2/3" — but it does not
+    // complete the question.
     if (expected.data.allowMultiple && picked.size > 0) {
       const allCorrect = [...picked].every((id) => correct.has(id));
       if (allCorrect && picked.size < correct.size) {
-        return {
-          score: picked.size / correct.size,
-          outcome: "partial",
-        };
+        return { correct: false, score: picked.size / correct.size };
       }
     }
-    return { score: 0, outcome: "incorrect" };
-  }
-
-  // Same logic as multi_choice but tied to indicator sets. Partial
-  // credit always available (indicator selection is implicitly
-  // multi-select). False positives → 0/incorrect.
-  private gradeSelectIndicators(input: GradingInput): GradingResult {
-    const expected = ExpectedSelectIndicators.safeParse(input.expectedJson);
-    if (!expected.success) return { score: null, outcome: "ungradable" };
-    if (input.responseJson === null || input.responseJson === undefined) {
-      return { score: 0, outcome: "incorrect" };
-    }
-    const response = SelectIndicatorsResponse.safeParse(
-      unwrapData("select_indicators", input.responseJson),
-    );
-    if (!response.success) return { score: 0, outcome: "incorrect" };
-
-    const correct = new Set(expected.data.correctIds);
-    const picked = new Set(response.data.selectedIds);
-    const exactMatch =
-      correct.size === picked.size &&
-      [...correct].every((id) => picked.has(id));
-    if (exactMatch) {
-      return { score: 1, outcome: "correct" };
-    }
-    if (picked.size > 0) {
-      const allCorrect = [...picked].every((id) => correct.has(id));
-      if (allCorrect && picked.size < correct.size) {
-        return { score: picked.size / correct.size, outcome: "partial" };
-      }
-    }
-    return { score: 0, outcome: "incorrect" };
+    return { correct: false, score: 0 };
   }
 
   private gradeConfidence(input: GradingInput): GradingResult {
     const expected = ExpectedConfidence.safeParse(input.expectedJson);
-    if (!expected.success) return { score: null, outcome: "ungradable" };
-    if (input.responseJson === null || input.responseJson === undefined) {
-      return { score: 0, outcome: "out_of_range" };
-    }
-    const response = ConfidenceResponse.safeParse(
-      unwrapData("confidence", input.responseJson),
-    );
-    if (!response.success) return { score: 0, outcome: "out_of_range" };
+    if (!expected.success) return { correct: false, score: 0 };
+    const response = ConfidenceResponse.safeParse(unwrapData("confidence", input.responseJson));
+    if (!response.success) return { correct: false, score: 0 };
 
     const [lo, hi] = expected.data.expectedRange;
     const v = response.data.value;
     return v >= lo && v <= hi
-      ? { score: 1, outcome: "in_range" }
-      : { score: 0, outcome: "out_of_range" };
+      ? { correct: true, score: 1 }
+      : { correct: false, score: 0 };
+  }
+
+  private gradeSelectIndicators(input: GradingInput): GradingResult {
+    const expected = ExpectedSelectIndicators.safeParse(input.expectedJson);
+    if (!expected.success) return { correct: false, score: 0 };
+    const response = SelectIndicatorsResponse.safeParse(
+      unwrapData("select_indicators", input.responseJson),
+    );
+    if (!response.success) return { correct: false, score: 0 };
+
+    const correct = new Set(expected.data.correctIds);
+    const picked = new Set(response.data.selectedIds);
+    const exactMatch =
+      correct.size === picked.size &&
+      [...correct].every((id) => picked.has(id));
+    if (exactMatch) return { correct: true, score: 1 };
+
+    if (picked.size > 0) {
+      const allCorrect = [...picked].every((id) => correct.has(id));
+      if (allCorrect && picked.size < correct.size) {
+        return { correct: false, score: picked.size / correct.size };
+      }
+    }
+    return { correct: false, score: 0 };
+  }
+
+  private gradeTextMatch(input: GradingInput): GradingResult {
+    const expected = ExpectedTextMatch.safeParse(input.expectedJson);
+    if (!expected.success) return { correct: false, score: 0 };
+    const opts = TextMatchOptionsSpec.safeParse(input.optionsJson);
+    if (!opts.success) return { correct: false, score: 0 };
+    const response = TextMatchResponse.safeParse(
+      unwrapData("text_match", input.responseJson),
+    );
+    if (!response.success) return { correct: false, score: 0 };
+
+    const submitted = normalizeText(response.data.text, opts.data);
+
+    if (expected.data.regex) {
+      // Each acceptable answer is treated as a regex. We compile here
+      // (not at module load) because acceptable answers come from
+      // authored content and we want fresh regexes per call. Flags:
+      //   case-insensitive when !caseSensitive
+      //   no `g` — we use .test() which is stateless.
+      const flags = opts.data.caseSensitive ? "" : "i";
+      for (const pattern of expected.data.acceptableAnswers) {
+        try {
+          const re = new RegExp(pattern, flags);
+          if (re.test(submitted)) return { correct: true, score: 1 };
+        } catch {
+          // Malformed regex authored in the answer key. Treat as a
+          // grading miss; the author is responsible for valid regex.
+          continue;
+        }
+      }
+      return { correct: false, score: 0 };
+    }
+
+    // Literal match. Normalize the acceptable answers the same way we
+    // normalized the submission so trim/case/whitespace flags act
+    // symmetrically.
+    for (const accept of expected.data.acceptableAnswers) {
+      if (normalizeText(accept, opts.data) === submitted) {
+        return { correct: true, score: 1 };
+      }
+    }
+    return { correct: false, score: 0 };
   }
 }
 
@@ -163,4 +203,14 @@ function unwrapData(expectedType: string, raw: unknown): unknown {
     return (raw as { data: unknown }).data;
   }
   return raw;
+}
+
+function normalizeText(
+  s: string,
+  opts: { caseSensitive: boolean; normalizeWhitespace: boolean },
+): string {
+  let out = s.trim();
+  if (opts.normalizeWhitespace) out = out.replace(/\s+/g, " ");
+  if (!opts.caseSensitive) out = out.toLowerCase();
+  return out;
 }

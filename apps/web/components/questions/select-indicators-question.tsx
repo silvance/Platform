@@ -2,25 +2,41 @@
 
 import { useState, useTransition } from "react";
 import type { QuestionPayload, QuestionResponse } from "@ci-train/contracts";
-import { saveAnswerAction } from "@/app/(authenticated)/attempts/[id]/actions";
 
 interface Props {
-  attemptId: string;
   question: QuestionPayload;
   initialSelectedIds: string[];
-  locked: boolean;
+  disabled: boolean;
+  onSubmit: (response: QuestionResponse) => void | Promise<void>;
 }
 
-export function SelectIndicatorsQuestion({
-  attemptId,
+export function SelectIndicatorsForm({
   question,
   initialSelectedIds,
-  locked,
+  disabled,
+  onSubmit,
 }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set(initialSelectedIds));
-  const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
-  const [_pending, start] = useTransition();
+  const [pending, start] = useTransition();
   const set = question.indicatorSet;
+
+  function toggle(id: string) {
+    if (disabled) return;
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  function submit() {
+    if (disabled || pending) return;
+    const body: QuestionResponse = {
+      type: "select_indicators",
+      data: { selectedIds: [...selected] },
+    };
+    start(() => Promise.resolve(onSubmit(body)));
+  }
 
   if (!set) {
     return (
@@ -30,28 +46,6 @@ export function SelectIndicatorsQuestion({
         </p>
       </div>
     );
-  }
-
-  function toggle(id: string) {
-    if (locked) return;
-    setSelected((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      persist(next);
-      return next;
-    });
-  }
-
-  function persist(next: Set<string>) {
-    setStatus("saving");
-    const body: QuestionResponse = {
-      type: "select_indicators",
-      data: { selectedIds: [...next] },
-    };
-    start(async () => {
-      const r = await saveAnswerAction(attemptId, question.id, body);
-      setStatus(r.ok ? "saved" : "error");
-    });
   }
 
   return (
@@ -69,14 +63,14 @@ export function SelectIndicatorsQuestion({
                   display: "flex",
                   alignItems: "flex-start",
                   gap: ".5rem",
-                  cursor: locked ? "default" : "pointer",
+                  cursor: disabled ? "default" : "pointer",
                 }}
               >
                 <input
                   type="checkbox"
                   checked={checked}
                   onChange={() => toggle(item.id)}
-                  disabled={locked}
+                  disabled={disabled}
                 />
                 <span>
                   {item.label}
@@ -91,14 +85,14 @@ export function SelectIndicatorsQuestion({
           );
         })}
       </ul>
-      <SaveBadge status={status} />
+      <button
+        type="button"
+        disabled={disabled || pending || selected.size === 0}
+        onClick={submit}
+        className="q-submit"
+      >
+        {pending ? "Submitting…" : disabled ? "Submitted" : "Submit"}
+      </button>
     </div>
   );
-}
-
-function SaveBadge({ status }: { status: "idle" | "saving" | "saved" | "error" }) {
-  if (status === "idle") return null;
-  if (status === "saving") return <span className="save-badge save-saving">saving…</span>;
-  if (status === "saved") return <span className="save-badge save-saved">saved</span>;
-  return <span className="save-badge save-error">save failed</span>;
 }

@@ -8,9 +8,10 @@ This repo has shipped milestones **M0** (repo skeleton + end-to-end
 wiring), **M1** (local accounts, sessions, role guards, seed), **M2**
 (scenario catalog + brief browse), **M3** (artifact storage + tabbed
 workspace viewers), **M4** (EML viewer with header / auth-result
-parsing), **M5** (questions, attempts, debrief), and **M6**
-(indicator-selection question type). Instructor authoring + review
-lands in M7.
+parsing), **M5** (questions, attempts, debrief), **M6**
+(indicator-selection question type), and **M7** (challenge-based
+progression — per-question submit + retry until correct, four
+auto-graded question types, no instructor in the grading loop).
 
 ## Stack
 
@@ -29,14 +30,15 @@ api never serves a UI; the web never talks to the db directly.
 ```
 apps/
   web/          Next.js 15 app (server-renders the home page, fetches API)
-  api/          NestJS API (auth, scenarios, artifacts, attempts, health + Prisma migrations)
+  api/          NestJS API (auth, scenarios, artifacts, progress, health + Prisma migrations)
                 /v1/healthz, /v1/readyz, /v1/hello,
                 /v1/auth/login, /v1/auth/logout, /v1/auth/me,
                 /v1/scenarios, /v1/scenarios/:slug,
                 /v1/scenarios/:slug/artifacts/:id/content (streams bytes),
                 /v1/scenarios/:slug/artifacts/:id/parsed (kind=eml only),
-                /v1/scenarios/:slug/attempts (POST: start/get),
-                /v1/attempts/:id (GET; PATCH/answers/:qid; POST /submit; GET /debrief)
+                /v1/scenarios/:slug/progress (trainee's per-question state),
+                /v1/scenarios/:slug/questions/:id/submit (challenge-mode submit),
+                /v1/scenarios/:slug/cohort-progress (instructor-only)
 packages/
   contracts/    Shared Zod schemas + inferred TS types
 deploy/
