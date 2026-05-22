@@ -46,6 +46,10 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: production
+      # API_HOST is the bind address *inside* the container — must be
+      # 0.0.0.0 so docker-proxy can forward the published port. The
+      # `ports:` mapping below pins the *host-side* bind to loopback,
+      # which is what actually keeps the API off the public internet.
       API_HOST: 0.0.0.0
       API_PORT: 4000
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}

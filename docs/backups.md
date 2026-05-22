@@ -78,8 +78,8 @@ COMPOSE="docker compose --env-file $ENV_FILE -f $COMPOSE_FILE"
 mkdir -p "$BACKUP_DIR/postgres" "$BACKUP_DIR/artifacts"
 
 # ─── Postgres ─────────────────────────────────────────────────
-DB_USER="$(grep ^POSTGRES_USER "$ENV_FILE" | cut -d= -f2)"
-DB_NAME="$(grep ^POSTGRES_DB   "$ENV_FILE" | cut -d= -f2)"
+DB_USER="$(grep ^POSTGRES_USER "$ENV_FILE" | cut -d= -f2-)"
+DB_NAME="$(grep ^POSTGRES_DB   "$ENV_FILE" | cut -d= -f2-)"
 DUMP="$BACKUP_DIR/postgres/citrain-$TS.dump"
 
 $COMPOSE exec -T db pg_dump \
@@ -141,8 +141,8 @@ COMPOSE="docker compose --env-file $ENV_FILE -f $COMPOSE_FILE"
 
 mkdir -p "$BACKUP_DIR/postgres" "$BACKUP_DIR/artifacts"
 
-DB_USER="$(grep ^POSTGRES_USER "$ENV_FILE" | cut -d= -f2)"
-DB_NAME="$(grep ^POSTGRES_DB   "$ENV_FILE" | cut -d= -f2)"
+DB_USER="$(grep ^POSTGRES_USER "$ENV_FILE" | cut -d= -f2-)"
+DB_NAME="$(grep ^POSTGRES_DB   "$ENV_FILE" | cut -d= -f2-)"
 DUMP="$BACKUP_DIR/postgres/citrain-$TS.dump"
 
 $COMPOSE exec -T db pg_dump \
@@ -153,12 +153,17 @@ pg_restore --list "$DUMP" > /dev/null
 # Tar the artifacts volume by attaching a throwaway container that
 # can see it. Volume name = <compose-project>_artifacts (compose-
 # project defaults to the directory name of the compose file's
-# parent, here `deploy`).
+# parent, here `deploy`). Confirm at any time with:
+#   docker volume ls | grep artifacts
+#
+# Alpine's busybox tar doesn't speak --zstd; we install GNU tar +
+# zstd in the throwaway container so the output is interchangeable
+# with the VPS-mode tarballs.
 TAR="$BACKUP_DIR/artifacts/artifacts-$TS.tar.zst"
 docker run --rm \
   -v deploy_artifacts:/in:ro \
   -v "$BACKUP_DIR/artifacts":/out \
-  alpine sh -c "tar --zstd -cf /out/artifacts-$TS.tar.zst -C / in"
+  alpine sh -c "apk add --no-cache tar zstd && tar --zstd -cf /out/artifacts-$TS.tar.zst -C / in"
 
 ls -1t "$BACKUP_DIR"/postgres/citrain-*.dump 2>/dev/null \
   | tail -n +15 | xargs -r rm -f
@@ -252,6 +257,19 @@ Idempotent — safe to re-run.
 
 **Test this end-to-end at least once before you need it.**
 
+> **Critical order-of-operations:**
+> 1. Bring up Postgres **only** (step 3).
+> 2. `pg_restore` the dump into it (step 4).
+> 3. Extract the artifact tarball (step 5).
+> 4. **Only then** start the API (step 7).
+>
+> The api container's entrypoint runs `prisma migrate deploy`. If you
+> start it against an empty database, it initializes a fresh schema —
+> and then `pg_restore --clean --if-exists` on top of it works, but
+> any migrations introduced after the dump was taken will have to be
+> re-applied manually because the migrations table now disagrees with
+> the schema. **Always restore first; start the API afterward.**
+
 #### 1. Provision a fresh VPS
 
 Walk through `docs/deployment.md` mode 3 steps 1–4 (base packages,
@@ -276,6 +294,12 @@ cd /opt/citrain
 cp deploy/env/vps.env.example deploy/env/vps.env
 $EDITOR deploy/env/vps.env       # use a known password; see note below
 chmod 600 deploy/env/vps.env
+
+# Export the DB credentials into the current shell so the rest of
+# this section's `pg_restore` / `psql` commands can reference
+# $POSTGRES_USER / $POSTGRES_DB without further parsing. `set -a`
+# auto-exports every variable defined by the sourced file.
+set -a; . deploy/env/vps.env; set +a
 
 docker compose --env-file deploy/env/vps.env \
                -f deploy/docker-compose.vps.yml up -d db
@@ -375,8 +399,30 @@ Mostly the same as mode 3, with two substitutions:
   docker run --rm \
     -v deploy_artifacts:/out \
     -v /var/lib/citrain/backups/artifacts:/in:ro \
-    alpine sh -c "rm -rf /out/* && tar --zstd -xf /in/artifacts-<ts>.tar.zst -C /tmp && cp -a /tmp/artifacts/. /out/"
+    alpine sh -c "apk add --no-cache tar zstd && rm -rf /out/* && tar --zstd -xf /in/artifacts-<ts>.tar.zst -C /tmp && cp -a /tmp/artifacts/. /out/"
   ```
+
+## Log rotation
+
+Both cron jobs append to `/var/log/`. Without rotation they grow
+without bound. Drop a small logrotate config:
+
+`/etc/logrotate.d/citrain`:
+
+```
+/var/log/citrain-backup.log /var/log/citrain-replicate.log {
+    weekly
+    rotate 12
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+}
+```
+
+`logrotate` runs from `cron.daily` on stock Ubuntu/Debian, so no
+extra schedule is needed.
 
 ## Monthly restore drill
 

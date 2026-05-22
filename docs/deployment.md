@@ -243,7 +243,13 @@ request and the ACME challenge needs the record live.
 
 ```bash
 apt update
-apt install -y ca-certificates curl gnupg ufw fail2ban
+apt install -y ca-certificates curl gnupg ufw fail2ban \
+               postgresql-client zstd
+
+# `postgresql-client` and `zstd` are needed by the backup/restore
+# tooling in docs/backups.md — the backup script runs `pg_dump` inside
+# the db container but uses host-side `pg_restore --list` to verify the
+# dump opens, and the artifact tarball is `tar --zstd`.
 
 # Docker engine + compose plugin.
 install -m 0755 -d /etc/apt/keyrings
