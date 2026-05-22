@@ -136,4 +136,22 @@ describe("PackManifest", () => {
     };
     expect(PackManifest.safeParse(bad).success).toBe(false);
   });
+
+  // The schema permits these but the import path enforces them
+  // separately (uniqueness + canonical archivePath + size caps). The
+  // service-layer checks are exercised end-to-end against a real
+  // Postgres; these schema-level specs only cover what Zod can see.
+  it("schema accepts duplicate packIds (uniqueness is enforced at import time)", () => {
+    const dup = {
+      ...VALID_MANIFEST,
+      scenario: {
+        ...VALID_MANIFEST.scenario,
+        artifacts: [
+          VALID_MANIFEST.scenario.artifacts[0],
+          { ...VALID_MANIFEST.scenario.artifacts[0], ordinal: 2 },
+        ],
+      },
+    };
+    expect(PackManifest.safeParse(dup).success).toBe(true);
+  });
 });

@@ -12,6 +12,7 @@ import { Prisma } from "@prisma/client";
 import type { ArtifactKind } from "@prisma/client";
 import {
   ImportPackResponse,
+  MAX_ARTIFACT_BYTES,
   MAX_PACK_BYTES,
   PackArtifact,
   PackManifest,
@@ -23,6 +24,13 @@ import {
   ARTIFACT_STORAGE,
 } from "../artifacts/storage/storage.module";
 import type { ArtifactStorage } from "../artifacts/storage/artifact-storage";
+
+// Manifest size cap. Generous (2 MiB) so any legitimate scenario fits;
+// guards against a maliciously huge manifest.json pushing the Zod
+// parser through gigabytes of JSON before the structural checks reject
+// it. Not part of the wire contract — packs that exceed this never
+// reach the JSON parser.
+const MAX_MANIFEST_BYTES = 2 * 1024 * 1024;
 
 // File extension picked by `kind`. Keeps the on-disk extension off the
 // admin-typed displayName the same way the upload path does (PR #16).
@@ -192,6 +200,16 @@ export class PacksService {
     if (!manifestEntry) {
       throw new BadRequestException("Pack is missing manifest.json.");
     }
+    // Manifest size cap. Defensive — a maliciously huge manifest.json
+    // could push gigabytes of JSON through the Zod parser before the
+    // structural checks kicked in. 2 MiB is enormously generous for
+    // the metadata we expect; tighten later if real packs come in
+    // smaller.
+    if (manifestEntry.header.size > MAX_MANIFEST_BYTES) {
+      throw new BadRequestException(
+        `manifest.json is too large (${manifestEntry.header.size} bytes, max ${MAX_MANIFEST_BYTES}).`,
+      );
+    }
     let manifestRaw: unknown;
     try {
       manifestRaw = JSON.parse(manifestEntry.getData().toString("utf-8"));
@@ -214,29 +232,124 @@ export class PacksService {
       );
     }
 
+    // Manifest preflight. We treat the manifest as untrusted JSON
+    // until every internal consistency check has passed. Each loop
+    // below populates a deduped set + enforces uniqueness so a
+    // malformed pack can't slip past with two artifacts sharing a
+    // packId, ordinal, or path.
+    //
+    // archivePath is checked for *exact equality* with the canonical
+    // server-computed path (`artifacts/<packId><extForKind(kind)>`).
+    // Heuristic traversal checks are easy to get subtly wrong; an
+    // equality check on a value the server itself constructs has no
+    // slack for an attacker to exploit.
+    const expectedArchivePaths = new Set<string>();
+    const seenPackIds = new Set<string>();
+    const seenOrdinals = new Set<number>();
+    let totalDeclaredBytes = 0;
+    for (const a of m.scenario.artifacts) {
+      if (seenPackIds.has(a.packId)) {
+        throw new BadRequestException(
+          `Duplicate artifact packId in manifest: ${a.packId}.`,
+        );
+      }
+      seenPackIds.add(a.packId);
+      if (seenOrdinals.has(a.ordinal)) {
+        throw new BadRequestException(
+          `Duplicate artifact ordinal in manifest: ${a.ordinal}.`,
+        );
+      }
+      seenOrdinals.add(a.ordinal);
+
+      const expected = `artifacts/${a.packId}${extForKind(a.kind)}`;
+      if (a.archivePath !== expected) {
+        throw new BadRequestException({
+          message: `Artifact ${a.packId}: archivePath does not match the path computed from packId+kind.`,
+          expected,
+          got: a.archivePath,
+        });
+      }
+      if (expectedArchivePaths.has(expected)) {
+        throw new BadRequestException(
+          `Duplicate artifact archivePath in manifest: ${expected}.`,
+        );
+      }
+      expectedArchivePaths.add(expected);
+
+      // Per-artifact size cap. The single-artifact cap from the upload
+      // path also applies here — packs shouldn't be able to smuggle
+      // larger files in than the live upload UI accepts.
+      if (a.sizeBytes > MAX_ARTIFACT_BYTES) {
+        throw new BadRequestException(
+          `Artifact ${a.packId}: declared sizeBytes ${a.sizeBytes} exceeds the per-artifact cap (${MAX_ARTIFACT_BYTES}).`,
+        );
+      }
+      totalDeclaredBytes += a.sizeBytes;
+    }
+    // Total declared uncompressed cap. The pack cap above
+    // (MAX_PACK_BYTES) limits the compressed upload; this cap limits
+    // expansion. A pack of mostly-zero artifacts could compress small
+    // and inflate huge; matching both caps to MAX_PACK_BYTES means an
+    // adversarial pack can't decompression-bomb us past the size we
+    // already accept on the wire.
+    if (totalDeclaredBytes > MAX_PACK_BYTES) {
+      throw new BadRequestException(
+        `Total declared artifact bytes (${totalDeclaredBytes}) exceeds the pack cap (${MAX_PACK_BYTES}).`,
+      );
+    }
+
+    // Enumerate every entry in the ZIP and refuse anything that isn't
+    // `manifest.json` or one of the canonical artifact paths. A pack
+    // that smuggles a `.bash_history` or a `LICENSE` next to the
+    // declared artifacts is malformed; failing loudly here lets us
+    // treat the archive contents as a closed set from this point on.
+    const allowedEntries = new Set<string>([
+      "manifest.json",
+      ...expectedArchivePaths,
+    ]);
+    for (const entry of zip.getEntries()) {
+      if (entry.isDirectory) continue;
+      if (!allowedEntries.has(entry.entryName)) {
+        throw new BadRequestException(
+          `Pack contains unexpected entry "${entry.entryName}". Only manifest.json and the declared artifact paths are allowed.`,
+        );
+      }
+    }
+
     // Cross-reference checks. Done up front so we never start writing
     // and then discover the pack is internally inconsistent.
-    const packArtifactIds = new Set(
-      m.scenario.artifacts.map((a) => a.packId),
-    );
+    const seenSetSlugs = new Set<string>();
     for (const s of m.scenario.indicatorSets) {
+      if (seenSetSlugs.has(s.slug)) {
+        throw new BadRequestException(
+          `Duplicate indicator set slug in manifest: ${s.slug}.`,
+        );
+      }
+      seenSetSlugs.add(s.slug);
       if (
         s.sourcePackArtifactId &&
-        !packArtifactIds.has(s.sourcePackArtifactId)
+        !seenPackIds.has(s.sourcePackArtifactId)
       ) {
         throw new BadRequestException(
           `Indicator set "${s.slug}" references an unknown sourcePackArtifactId.`,
         );
       }
-      const ids = new Set(s.items.map((i) => i.id));
-      if (ids.size !== s.items.length) {
+      const itemIds = new Set(s.items.map((i) => i.id));
+      if (itemIds.size !== s.items.length) {
         throw new BadRequestException(
           `Indicator set "${s.slug}" has duplicate item ids.`,
         );
       }
     }
     const setSlugs = new Set(m.scenario.indicatorSets.map((s) => s.slug));
+    const seenQuestionOrdinals = new Set<number>();
     for (const q of m.scenario.questions) {
+      if (seenQuestionOrdinals.has(q.ordinal)) {
+        throw new BadRequestException(
+          `Duplicate question ordinal in manifest: ${q.ordinal}.`,
+        );
+      }
+      seenQuestionOrdinals.add(q.ordinal);
       if (q.type === "select_indicators") {
         if (!setSlugs.has(q.indicatorSetSlug)) {
           throw new BadRequestException(
@@ -267,31 +380,44 @@ export class PacksService {
       }
     }
 
-    // Pre-flight per-artifact: archive path is inside `artifacts/`,
-    // entry exists, sha256 matches.
+    // Per-artifact inflation. Before calling getData() (which inflates
+    // the entry into memory) we compare the entry's *declared*
+    // uncompressed size against the manifest's sizeBytes. If they
+    // disagree the entry's lying about its expanded size — refuse
+    // before we allocate the buffer. This is the decompression-bomb
+    // guardrail: even though MAX_ARTIFACT_BYTES caps each declared
+    // sizeBytes upstream, a maliciously crafted entry could claim
+    // small in the manifest and expand to gigabytes once inflated.
+    // Catching the mismatch before inflation closes that gap.
     const artifactBytesByPackId = new Map<string, Buffer>();
     for (const a of m.scenario.artifacts) {
-      if (!a.archivePath.startsWith("artifacts/") || a.archivePath.includes("..")) {
-        throw new BadRequestException(
-          `Artifact ${a.packId}: archivePath must be under "artifacts/" and contain no parent-traversal segments.`,
-        );
-      }
       const entry = zip.getEntry(a.archivePath);
       if (!entry) {
         throw new BadRequestException(
           `Pack is missing artifact bytes for ${a.packId} (${a.archivePath}).`,
         );
       }
+      const declaredUncompressed = entry.header.size;
+      if (declaredUncompressed !== a.sizeBytes) {
+        throw new BadRequestException(
+          `Artifact ${a.packId}: ZIP entry declared uncompressed size ${declaredUncompressed} does not match manifest sizeBytes ${a.sizeBytes}.`,
+        );
+      }
       const bytes = entry.getData();
+      // Defense in depth: even after the header check, verify the
+      // actual inflated length. A non-stored compression method might
+      // overrun if the entry's header lied; we cap by aborting here
+      // if so. (adm-zip itself enforces no upper bound during
+      // inflate.)
+      if (bytes.length !== a.sizeBytes) {
+        throw new BadRequestException(
+          `Artifact ${a.packId}: inflated size ${bytes.length} does not match declared sizeBytes ${a.sizeBytes}.`,
+        );
+      }
       const observedSha = createHash("sha256").update(bytes).digest("hex");
       if (observedSha !== a.sha256) {
         throw new BadRequestException(
           `Artifact ${a.packId}: sha256 mismatch (declared ${a.sha256.slice(0, 12)}…, observed ${observedSha.slice(0, 12)}…).`,
-        );
-      }
-      if (bytes.length !== a.sizeBytes) {
-        throw new BadRequestException(
-          `Artifact ${a.packId}: sizeBytes mismatch (declared ${a.sizeBytes}, observed ${bytes.length}).`,
         );
       }
       artifactBytesByPackId.set(a.packId, bytes);
