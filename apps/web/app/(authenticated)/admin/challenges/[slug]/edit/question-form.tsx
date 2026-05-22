@@ -1,16 +1,19 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import type { AuthoredQuestion } from "@ci-train/contracts";
+import { useActionState, useMemo, useState } from "react";
+import type { AuthoredIndicatorSet, AuthoredQuestion } from "@ci-train/contracts";
 import type { ActionResult } from "./actions";
 
-type QuestionType = "multi_choice" | "confidence" | "text_match";
+type QuestionType = "multi_choice" | "confidence" | "text_match" | "select_indicators";
 
 interface Props {
   initial?: Extract<
     AuthoredQuestion,
-    { type: "multi_choice" | "confidence" | "text_match" }
+    { type: "multi_choice" | "confidence" | "text_match" | "select_indicators" }
   >;
+  // Indicator sets on the parent scenario, used to render the
+  // select_indicators picker. Empty list disables the type option.
+  indicatorSets: AuthoredIndicatorSet[];
   // Server action that takes (prevState, formData) — bound to the
   // scenario slug (+ question id, for edit) by the caller.
   action: (
@@ -24,16 +27,46 @@ const TYPES: { value: QuestionType; label: string }[] = [
   { value: "multi_choice", label: "Multiple choice" },
   { value: "confidence", label: "Confidence (1–5)" },
   { value: "text_match", label: "Text match" },
+  { value: "select_indicators", label: "Select indicators" },
 ];
 
 const DEFAULT_MC_OPTIONS = ["", "", "", ""];
 
-export function QuestionForm({ initial, action, submitLabel }: Props) {
+export function QuestionForm({
+  initial,
+  indicatorSets,
+  action,
+  submitLabel,
+}: Props) {
   const [state, formAction, pending] = useActionState<
     ActionResult | undefined,
     FormData
   >(action, undefined);
   const [type, setType] = useState<QuestionType>(initial?.type ?? "multi_choice");
+
+  // For select_indicators: which set, and which item ids are correct.
+  // Default to the question's stored set, otherwise the first available.
+  const [siSetId, setSiSetId] = useState<string>(
+    initial?.type === "select_indicators"
+      ? initial.indicatorSetId
+      : indicatorSets[0]?.id ?? "",
+  );
+  const initialSiCorrect =
+    initial?.type === "select_indicators" ? new Set(initial.correctIds) : new Set<string>();
+  const [siCorrectIds, setSiCorrectIds] = useState<Set<string>>(initialSiCorrect);
+  const siActiveSet = useMemo(
+    () => indicatorSets.find((s) => s.id === siSetId) ?? null,
+    [indicatorSets, siSetId],
+  );
+
+  function toggleSiCorrect(id: string) {
+    setSiCorrectIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   // MC option editor lives in local state so the admin can add/remove
   // rows without round-tripping. Server action reads `optionLabel[]` +
@@ -77,8 +110,15 @@ export function QuestionForm({ initial, action, submitLabel }: Props) {
           disabled={Boolean(initial)}
         >
           {TYPES.map((t) => (
-            <option key={t.value} value={t.value}>
+            <option
+              key={t.value}
+              value={t.value}
+              disabled={t.value === "select_indicators" && indicatorSets.length === 0}
+            >
               {t.label}
+              {t.value === "select_indicators" && indicatorSets.length === 0
+                ? " (create an indicator set first)"
+                : ""}
             </option>
           ))}
         </select>
@@ -253,6 +293,79 @@ export function QuestionForm({ initial, action, submitLabel }: Props) {
             />
           </label>
         </>
+      ) : null}
+
+      {type === "select_indicators" ? (
+        <fieldset
+          style={{
+            border: "1px solid #1f2845",
+            borderRadius: 6,
+            padding: ".55rem .85rem",
+          }}
+        >
+          <legend style={{ color: "var(--muted)", fontSize: ".85rem" }}>
+            Indicator set + correct items
+          </legend>
+          <label>
+            Indicator set
+            <select
+              name="indicatorSetId"
+              value={siSetId}
+              onChange={(e) => {
+                setSiSetId(e.target.value);
+                // Clear correct ids when switching sets — they live in
+                // different namespaces.
+                setSiCorrectIds(new Set());
+              }}
+              required
+            >
+              {indicatorSets.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.displayName}
+                </option>
+              ))}
+            </select>
+          </label>
+          {siActiveSet ? (
+            <div
+              style={{
+                marginTop: ".5rem",
+                display: "flex",
+                flexDirection: "column",
+                gap: ".25rem",
+              }}
+            >
+              <div style={{ color: "var(--muted)", fontSize: ".85rem" }}>
+                Check every item that's a correct selection.
+              </div>
+              {siActiveSet.items.map((item) => (
+                <label
+                  key={item.id}
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "flex-start",
+                    gap: ".4rem",
+                    color: "var(--fg)",
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    name="siCorrectId"
+                    value={item.id}
+                    checked={siCorrectIds.has(item.id)}
+                    onChange={() => toggleSiCorrect(item.id)}
+                  />
+                  <span>
+                    <code style={{ fontSize: ".8rem", color: "var(--muted)" }}>
+                      {item.id}
+                    </code>{" "}
+                    {item.label}
+                  </span>
+                </label>
+              ))}
+            </div>
+          ) : null}
+        </fieldset>
       ) : null}
 
       <label>

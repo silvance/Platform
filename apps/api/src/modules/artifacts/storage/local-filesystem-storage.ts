@@ -72,4 +72,21 @@ export class LocalFileSystemStorage implements ArtifactStorage {
     await fs.mkdir(dirname(abs), { recursive: true });
     await fs.writeFile(abs, data);
   }
+
+  async remove(relativePath: string): Promise<void> {
+    try {
+      const abs = this.resolveSafe(relativePath);
+      await fs.unlink(abs);
+    } catch (err) {
+      const e = err as NodeJS.ErrnoException;
+      // ENOENT means the file's already gone; remove is idempotent.
+      // Anything else gets logged and swallowed — a stranded blob is
+      // cheaper than failing a DB op that already removed its metadata.
+      if (e?.code !== "ENOENT") {
+        this.logger.warn(
+          `unlink failed for ${relativePath}: ${e?.message ?? String(err)}`,
+        );
+      }
+    }
+  }
 }

@@ -10,6 +10,7 @@ function makeFakeStorage(): ArtifactStorage {
     exists: jest.fn(async () => true),
     size: jest.fn(async () => 1),
     write: jest.fn(async () => undefined),
+    remove: jest.fn(async () => undefined),
   };
 }
 

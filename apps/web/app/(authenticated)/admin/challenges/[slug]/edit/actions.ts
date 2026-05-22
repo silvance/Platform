@@ -6,10 +6,13 @@ import { ZodError } from "zod";
 import { api, ApiError } from "@/lib/api";
 import { readToken } from "@/lib/session";
 import {
+  CreateIndicatorSetRequest,
   CreateQuestionRequest,
+  IndicatorItem,
   ScenarioBriefDraft,
   ScenarioStatus,
   SkillArea,
+  UpdateIndicatorSetRequest,
   UpdateScenarioRequest,
 } from "@ci-train/contracts";
 
@@ -173,6 +176,20 @@ function parseQuestionForm(formData: FormData) {
       hintAfterTries: Number(formData.get("hintAfterTries") || 3),
     });
   }
+  if (type === "select_indicators") {
+    const indicatorSetId = getString(formData, "indicatorSetId");
+    const correctIds = formData
+      .getAll("siCorrectId")
+      .filter((v): v is string => typeof v === "string")
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+    return CreateQuestionRequest.parse({
+      type: "select_indicators",
+      ...base,
+      indicatorSetId,
+      correctIds,
+    });
+  }
   throw new Error(`Unsupported question type: ${type}`);
 }
 
@@ -220,5 +237,131 @@ export async function deleteQuestionAction(
   const token = await readToken();
   if (!token) redirect("/login");
   await api.authoring.removeQuestion(token, slug, questionId);
+  revalidatePath(`/admin/challenges/${slug}/edit`);
+}
+
+// ─── indicator-set CRUD ──────────────────────────────────────────
+
+function parseIndicatorSetItems(formData: FormData) {
+  const ids = formData
+    .getAll("itemId")
+    .filter((v): v is string => typeof v === "string")
+    .map((s) => s.trim());
+  const labels = formData
+    .getAll("itemLabel")
+    .filter((v): v is string => typeof v === "string")
+    .map((s) => s.trim());
+  const evidenceRefs = formData
+    .getAll("itemEvidenceRef")
+    .filter((v): v is string => typeof v === "string")
+    .map((s) => s.trim());
+  const len = Math.max(ids.length, labels.length, evidenceRefs.length);
+  const items: ReadonlyArray<ReturnType<typeof IndicatorItem.parse>> = Array.from(
+    { length: len },
+    (_, i) => {
+      const id = ids[i] ?? "";
+      const label = labels[i] ?? "";
+      const evidenceRef = evidenceRefs[i] ?? "";
+      if (id.length === 0 || label.length === 0) return null;
+      return IndicatorItem.parse({
+        id,
+        label,
+        evidenceRef: evidenceRef.length > 0 ? evidenceRef : null,
+      });
+    },
+  ).filter(
+    (x): x is ReturnType<typeof IndicatorItem.parse> => x !== null,
+  );
+  return items;
+}
+
+export async function addIndicatorSetAction(
+  slug: string,
+  _prev: ActionResult | undefined,
+  formData: FormData,
+): Promise<ActionResult> {
+  const token = await readToken();
+  if (!token) return { ok: false, error: "Not signed in." };
+
+  try {
+    const items = parseIndicatorSetItems(formData);
+    const sourceArtifactId = getString(formData, "sourceArtifactId").trim();
+    const body = CreateIndicatorSetRequest.parse({
+      slug: getString(formData, "slug").trim(),
+      displayName: getString(formData, "displayName").trim(),
+      sourceArtifactId: sourceArtifactId.length > 0 ? sourceArtifactId : null,
+      items,
+    });
+    await api.authoring.addIndicatorSet(token, slug, body);
+  } catch (err) {
+    return fail(err, "Failed to add indicator set.");
+  }
+  revalidatePath(`/admin/challenges/${slug}/edit`);
+  return { ok: true };
+}
+
+export async function updateIndicatorSetAction(
+  slug: string,
+  setId: string,
+  _prev: ActionResult | undefined,
+  formData: FormData,
+): Promise<ActionResult> {
+  const token = await readToken();
+  if (!token) return { ok: false, error: "Not signed in." };
+
+  try {
+    const items = parseIndicatorSetItems(formData);
+    const sourceArtifactId = getString(formData, "sourceArtifactId").trim();
+    const body = UpdateIndicatorSetRequest.parse({
+      displayName: getString(formData, "displayName").trim(),
+      sourceArtifactId: sourceArtifactId.length > 0 ? sourceArtifactId : null,
+      items,
+    });
+    await api.authoring.updateIndicatorSet(token, slug, setId, body);
+  } catch (err) {
+    return fail(err, "Failed to save indicator set.");
+  }
+  revalidatePath(`/admin/challenges/${slug}/edit`);
+  return { ok: true };
+}
+
+export async function deleteIndicatorSetAction(
+  slug: string,
+  setId: string,
+): Promise<void> {
+  const token = await readToken();
+  if (!token) redirect("/login");
+  await api.authoring.removeIndicatorSet(token, slug, setId);
+  revalidatePath(`/admin/challenges/${slug}/edit`);
+}
+
+// ─── artifact CRUD ───────────────────────────────────────────────
+
+export async function uploadArtifactAction(
+  slug: string,
+  _prev: ActionResult | undefined,
+  formData: FormData,
+): Promise<ActionResult> {
+  const token = await readToken();
+  if (!token) return { ok: false, error: "Not signed in." };
+
+  // Hand the multipart payload straight through. The API validates the
+  // file size + kind + displayName; we forward as-is.
+  try {
+    await api.authoring.addArtifact(token, slug, formData);
+  } catch (err) {
+    return fail(err, "Failed to upload artifact.");
+  }
+  revalidatePath(`/admin/challenges/${slug}/edit`);
+  return { ok: true };
+}
+
+export async function deleteArtifactAction(
+  slug: string,
+  artifactId: string,
+): Promise<void> {
+  const token = await readToken();
+  if (!token) redirect("/login");
+  await api.authoring.removeArtifact(token, slug, artifactId);
   revalidatePath(`/admin/challenges/${slug}/edit`);
 }

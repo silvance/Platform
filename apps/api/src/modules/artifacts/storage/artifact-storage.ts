@@ -11,6 +11,9 @@ export interface ArtifactStorage {
   exists(relativePath: string): Promise<boolean>;
   size(relativePath: string): Promise<number>;
   write(relativePath: string, data: Buffer): Promise<void>;
+  // Best-effort delete. Implementations MUST treat a missing file as
+  // a no-op (idempotent) rather than throwing.
+  remove(relativePath: string): Promise<void>;
 }
 
 export class ArtifactPathError extends Error {
