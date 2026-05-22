@@ -38,6 +38,6 @@ export async function requireUser(): Promise<PublicUser> {
 
 export async function requireInstructor(): Promise<PublicUser> {
   const user = await requireUser();
-  if (user.role !== "instructor") redirect("/scenarios");
+  if (user.role !== "admin") redirect("/scenarios");
   return user;
 }

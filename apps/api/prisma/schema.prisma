@@ -12,9 +12,12 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// M12: renamed from {instructor, trainee} to align with the M7
+// challenge-lab framing. UI already said admin/user; internals now
+// agree.
 enum Role {
-  instructor
-  trainee
+  admin
+  user
 }
 
 // Keep in sync with SkillArea in packages/contracts/src/scenarios.ts.
@@ -248,30 +251,31 @@ model AnswerKey {
   @@map("answer_keys")
 }
 
-// M7 challenge-mode: one row per (trainee, scenario). Tracks aggregate
-// completion only. Replaces the M5 Attempt model.
+// M7 challenge-mode: one row per (user, scenario). Tracks aggregate
+// completion only. Replaces the M5 Attempt model. Column renamed
+// from trainee_user_id → user_id in M12.
 model ScenarioProgress {
   id                 String    @id @default(uuid()) @db.Uuid
   scenarioId         String    @map("scenario_id") @db.Uuid
-  traineeUserId      String    @map("trainee_user_id") @db.Uuid
+  userId             String    @map("user_id") @db.Uuid
   startedAt          DateTime  @default(now()) @map("started_at")
   // Set when all questions in the scenario have a non-null completedAt
   // on their corresponding QuestionResponse row. Cleared if questions
   // are added to the scenario after completion (defensive against
-  // authoring drift; M8 import is the trigger).
+  // authoring drift; pack import is the trigger).
   completedAt        DateTime? @map("completed_at")
-  // Denormalized counters so the cohort-progress endpoint can render
-  // the table without per-row aggregation. Recomputed in the same
+  // Denormalized counters so the trainee workspace can render
+  // progress without per-row aggregation. Recomputed in the same
   // transaction as any question completion.
   completedQuestions Int       @default(0) @map("completed_questions")
   totalQuestions     Int       @map("total_questions")
 
   scenario  Scenario           @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
-  trainee   User               @relation(fields: [traineeUserId], references: [id], onDelete: Cascade)
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   responses QuestionResponse[]
 
-  @@unique([scenarioId, traineeUserId])
-  @@index([traineeUserId])
+  @@unique([scenarioId, userId])
+  @@index([userId])
   @@map("scenario_progress")
 }
 

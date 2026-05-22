@@ -1,7 +1,7 @@
 # Post-M9 deployment smoke test
 
 A 10-minute end-to-end check that the four authoring surfaces (M8–M9) +
-the trainee workspace all work against a freshly migrated DB. Run this
+the user workspace all work against a freshly migrated DB. Run this
 on every install of a new build before sending users at it.
 
 > **Scope.** This is a release smoke test, not a load test or a
@@ -14,7 +14,7 @@ on every install of a new build before sending users at it.
   mode-3 VPS: `deploy/env/vps.env`).
 - API + web built or images pulled.
 - A second browser profile (or curl + a saved cookie) so you can run
-  the admin and trainee threads in parallel without logging in and out.
+  the admin and user threads in parallel without logging in and out.
 
 ## Checklist
 
@@ -37,7 +37,7 @@ docker compose --env-file deploy/env/local.env \
 ```
 
 Expect: every migration prints `applied`, the seed prints two passwords
-and a scenario list. **Copy the instructor + trainee passwords now** —
+and a scenario list. **Copy the admin + user passwords now** —
 they are not stored anywhere else.
 
 ### 2. Seed sanity
@@ -49,7 +49,7 @@ curl -sS http://localhost:4000/v1/readyz  | jq          # [200] ready:true
 
 ### 3. Admin login
 
-In a browser, hit `/login` and sign in with the **instructor** seed
+In a browser, hit `/login` and sign in with the **admin** seed
 account. Confirm you land on `/scenarios`. The header should show
 `displayName · admin`.
 
@@ -109,7 +109,7 @@ save. The status chip should re-render `published`.
 
 ### 9. User solves the challenge
 
-In the second browser profile, sign in as the **trainee** seed
+In the second browser profile, sign in as the **user** seed
 account. Open `/scenarios/smoke-test-001`. The progress strip should
 read `Solved: 0 of 4`.
 
@@ -130,7 +130,7 @@ solve loop.)
 
 ### 10. Artifact delete removes bytes
 
-Back in the instructor session, delete the artifact from step 5. The
+Back in the admin session, delete the artifact from step 5. The
 row vanishes from the Artifacts table. Then run the same `find`
 command from step 5 — the file is gone from disk.
 
@@ -183,7 +183,7 @@ the seed writes to.
 | ---- | ---------------------------------------------------------------------------------------- |
 | 1    | Migration error → read the failing migration's filename. M7/M8 dropped attempts/enum values, that needs to run before authoring tables exist. |
 | 2    | `readyz: ready:false` → the API container can't reach Postgres. Check `docker compose logs db`. |
-| 3    | 307 to `/scenarios` for the instructor → wrong seed account. Re-run seed and copy the **instructor** password (top block). |
+| 3    | 307 to `/scenarios` for the admin → wrong seed account. Re-run seed and copy the **admin** password (top block). |
 | 4    | 409 on create → slug already in use. Pick a different slug or wipe the DB. |
 | 5    | 413 on upload → file over 25 MiB. Use a smaller file. |
 | 5    | 400 on upload → `kind` is wrong for what you uploaded (e.g. a binary as `text`). Pick the right kind. |

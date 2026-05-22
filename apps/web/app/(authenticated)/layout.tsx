@@ -25,7 +25,7 @@ export default async function AuthenticatedLayout({ children }: { children: Reac
             <Link href="/scenarios" style={{ color: "var(--accent)" }}>
               Challenges
             </Link>
-            {user.role === "instructor" ? (
+            {user.role === "admin" ? (
               <Link href="/admin" style={{ color: "var(--accent)" }}>
                 Admin
               </Link>
@@ -35,7 +35,7 @@ export default async function AuthenticatedLayout({ children }: { children: Reac
         <div style={{ display: "flex", gap: ".75rem", alignItems: "center" }}>
           <span style={{ color: "var(--muted)", fontSize: ".9rem" }}>
             {user.displayName}
-            {user.role === "instructor" ? (
+            {user.role === "admin" ? (
               <>
                 {" "}·{" "}
                 <span className="tag-ok">admin</span>

@@ -9,12 +9,11 @@ import type {
   ScenarioBriefPayload,
 } from "@ci-train/contracts";
 
-// Trainees see only `published` scenarios. Instructors see everything
-// (including drafts and archived) — used once the M5 authoring UI lands;
-// in M2 instructors and trainees see the same catalog since everything
-// is seeded as `published`.
-function isTrainee(role: Role): boolean {
-  return role === "trainee";
+// Non-admin users see only `published` scenarios. Admins see
+// everything (including drafts and archived). Same catalog endpoint
+// serves both — role just narrows the where-clause.
+function isNonAdmin(role: Role): boolean {
+  return role === "user";
 }
 
 @Injectable()
@@ -27,12 +26,12 @@ export class ScenariosService {
   ): Promise<{ scenarios: ScenarioListItem[]; total: number }> {
     const where: Record<string, unknown> = {};
 
-    if (isTrainee(role)) {
+    if (isNonAdmin(role)) {
       where["status"] = "published";
     } else if (query.status) {
       where["status"] = query.status;
     } else {
-      // Default for instructors: hide archived.
+      // Default for admins: hide archived.
       where["status"] = { in: ["draft", "published"] };
     }
 
@@ -70,9 +69,9 @@ export class ScenariosService {
     });
     if (!row) throw new NotFoundException("Scenario not found.");
 
-    // Trainees can only access published scenarios — return 404 (not 403)
-    // so the existence of drafts isn't leaked to non-instructor accounts.
-    if (isTrainee(role) && row.status !== "published") {
+    // Non-admin users can only access published scenarios — return 404
+    // (not 403) so the existence of drafts isn't leaked.
+    if (isNonAdmin(role) && row.status !== "published") {
       throw new NotFoundException("Scenario not found.");
     }
 

@@ -5,9 +5,13 @@ import { dirname, join, resolve } from "node:path";
 import { PrismaClient, type Role, type ArtifactKind } from "@prisma/client";
 import { hash, Algorithm } from "@node-rs/argon2";
 
-// Standalone seed runner. Creates one instructor and one trainee with
+// Standalone seed runner. Creates one admin and one user with
 // freshly-generated passwords, upserts the two demonstration scenarios,
 // and writes their artifact bytes into the storage root.
+//
+// Env var names (SEED_INSTRUCTOR_EMAIL / SEED_TRAINEE_EMAIL) survive
+// from the pre-M12 schema for backwards compatibility with deployed
+// .env files. The roles they create are now `admin` and `user`.
 //
 // Usage (host):  pnpm --filter @ci-train/api seed
 // Usage (docker): docker compose run --rm api node dist/scripts/seed.js
@@ -907,32 +911,32 @@ async function main(): Promise<void> {
   try {
     await fs.mkdir(STORAGE_ROOT, { recursive: true });
 
-    const instructor = await upsertUser(
+    const admin = await upsertUser(
       prisma,
       SEED_INSTRUCTOR_EMAIL,
-      "Seed Instructor",
-      "instructor",
+      "Seed Admin",
+      "admin",
     );
-    const trainee = await upsertUser(
+    const user = await upsertUser(
       prisma,
       SEED_TRAINEE_EMAIL,
-      "Seed Trainee",
-      "trainee",
+      "Seed User",
+      "user",
     );
 
     for (const s of SCENARIOS) {
-      await upsertScenario(prisma, instructor.id, s);
+      await upsertScenario(prisma, admin.id, s);
     }
 
     // eslint-disable-next-line no-console
     console.log("\n────────────────────────────────────────");
     console.log("  ci-train seed users created/updated");
     console.log("────────────────────────────────────────");
-    console.log(`  instructor: ${SEED_INSTRUCTOR_EMAIL}`);
-    console.log(`  password  : ${instructor.password}`);
+    console.log(`  admin: ${SEED_INSTRUCTOR_EMAIL}`);
+    console.log(`  password : ${admin.password}`);
     console.log("────────────────────────────────────────");
-    console.log(`  trainee   : ${SEED_TRAINEE_EMAIL}`);
-    console.log(`  password  : ${trainee.password}`);
+    console.log(`  user : ${SEED_TRAINEE_EMAIL}`);
+    console.log(`  password : ${user.password}`);
     console.log("────────────────────────────────────────");
     console.log(`  scenarios upserted: ${SCENARIOS.length}`);
     for (const s of SCENARIOS) {
