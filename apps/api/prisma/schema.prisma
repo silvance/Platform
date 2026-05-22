@@ -168,14 +168,12 @@ model Artifact {
 
 // Keep in sync with QuestionType in packages/contracts/src/questions.ts.
 //
-// `short_answer` and `long_answer` remain in the enum because Postgres
-// can't easily drop values, but the API/contract reject both — they
-// were removed when M7 pivoted the platform to challenge-based
-// progression. `text_match` is the auto-graded replacement.
+// M7 dropped narrative grading; M8 removed `short_answer` / `long_answer`
+// from the Postgres enum entirely (recreate-the-type migration). The
+// four values below are the only ones the API + UI know how to render
+// or grade.
 enum QuestionType {
   multi_choice
-  short_answer
-  long_answer
   confidence
   select_indicators
   text_match

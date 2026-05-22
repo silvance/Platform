@@ -713,8 +713,9 @@ async function writeArtifactBytes(
   bytes: Buffer,
 ): Promise<string> {
   // Relative path is stored verbatim in the DB so future moves don't
-  // require schema changes. The path is set by trusted code (this seed
-  // and the M8 importer) — never derived from user input.
+  // require schema changes. The path is set by trusted code (this
+  // seed; a future content-pack importer would do the same) — never
+  // derived from user input.
   const rel = join("scenarios", scenarioId, `${artifactId}${ext}`);
   const abs = resolve(STORAGE_ROOT, rel);
   await fs.mkdir(dirname(abs), { recursive: true });
@@ -832,7 +833,7 @@ async function upsertScenario(
         sourceArtifactId,
         // items_json stored as a bare array — the API/contract accept
         // both bare-array and `{ items: [...] }` shapes for forward
-        // compatibility with the M8 importer.
+        // compatibility with a future content-pack importer.
         itemsJson: set.items as never,
       },
     });
@@ -852,8 +853,10 @@ async function upsertScenario(
           `Question (ordinal ${q.ordinal}) is text_match but has no textMatch config.`,
         );
       }
+      // Correctness (the acceptableAnswers list) lives on the AnswerKey,
+      // not optionsJson — see TextMatchOptionsSpec in @ci-train/contracts.
+      // Keeps a Question row free of answer-key data.
       optionsJson = {
-        acceptableAnswers: q.textMatch.acceptableAnswers,
         caseSensitive: q.textMatch.caseSensitive ?? false,
         normalizeWhitespace: q.textMatch.normalizeWhitespace ?? true,
         regex: q.textMatch.regex ?? false,

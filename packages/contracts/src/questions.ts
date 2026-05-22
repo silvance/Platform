@@ -2,16 +2,10 @@ import { z } from "zod";
 
 // Keep in sync with `enum QuestionType` in apps/api/prisma/schema.prisma.
 //
-// M7 pivots the platform to challenge-based progression: every question
-// auto-grades, trainees retry until correct, no instructor in the loop.
-// As part of that pivot, short_answer and long_answer are dropped and
-// text_match is added — narrative writing is preserved in the scenario
-// brief but the *graded* question types are all objective.
-//
-// Note on the Postgres enum: the `short_answer` and `long_answer`
-// values remain in the database enum (Postgres can't easily drop enum
-// values), but no code path will accept or emit them. The contract
-// here is the source of truth for what's allowed across the wire.
+// Challenge-mode question types: every question auto-grades and the
+// user retries until correct. M7 introduced this set and dropped the
+// instructor-graded short_answer / long_answer; M8 removed those from
+// the Postgres enum entirely.
 export const QuestionType = z.enum([
   "multi_choice",
   "confidence",
@@ -105,11 +99,12 @@ export type ConfidenceResponse = z.infer<typeof ConfidenceResponse>;
 // `regex: true` flips matching to test each acceptable string as a JS
 // regex (single-line, optionally case-insensitive per the flag). Used
 // for "match anything containing the IP address 10.0.0.5" patterns.
+//
+// `TextMatchOptionsSpec` is the parameters-only payload stored at
+// `Question.optionsJson` — **no answer strings**. The acceptable answers
+// themselves live exclusively on `AnswerKey.expectedJson` so a leaked
+// Question row never carries correctness data.
 export const TextMatchOptionsSpec = z.object({
-  acceptableAnswers: z
-    .array(z.string().min(1).max(MAX_TEXT_MATCH_CHARS))
-    .min(1)
-    .max(MAX_TEXT_MATCH_ACCEPTABLE_ANSWERS),
   caseSensitive: z.boolean().default(false),
   normalizeWhitespace: z.boolean().default(true),
   regex: z.boolean().default(false),

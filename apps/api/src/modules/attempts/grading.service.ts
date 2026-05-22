@@ -73,15 +73,15 @@ export class GradingService {
           return this.gradeSelectIndicators(input);
         case "text_match":
           return this.gradeTextMatch(input);
-        // The short_answer / long_answer enum values survive in the DB
-        // for back-compat but the API refuses to create such questions;
-        // anything that slips through grades as incorrect.
-        default:
-          return { correct: false, score: 0 };
       }
     } catch {
       return { correct: false, score: 0 };
     }
+    // The switch above is exhaustive over the current QuestionType
+    // enum. This fallback exists only for defense in depth — if a
+    // future enum value reaches the grader before its case lands,
+    // mark it incorrect instead of silently returning undefined.
+    return { correct: false, score: 0 };
   }
 
   private gradeMultiChoice(input: GradingInput): GradingResult {

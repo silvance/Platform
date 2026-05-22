@@ -285,13 +285,13 @@ describe("GradingService", () => {
     });
   });
 
-  describe("deprecated types + malformed inputs", () => {
-    it("short_answer always grades as miss (deprecated in M7)", () => {
+  describe("unknown types + malformed inputs", () => {
+    it("unknown question type → miss, not throw (defense in depth)", () => {
       const r = svc.grade({
-        type: "short_answer" as never,
+        type: "some_future_type" as never,
         optionsJson: null,
-        expectedJson: { type: "short_answer", rubricNote: null },
-        responseJson: { type: "short_answer", data: { text: "anything" } },
+        expectedJson: { type: "some_future_type" },
+        responseJson: { type: "some_future_type", data: {} },
       });
       expect(r).toEqual({ correct: false, score: 0 });
     });
