@@ -440,10 +440,11 @@ function bodyToDbShape(body: CreateQuestionRequest): {
       debriefMd: body.debriefMd,
     };
   }
-  // text_match
+  // text_match — keep correctness off optionsJson. acceptableAnswers
+  // lives only on expectedJson so leaking a Question row never leaks
+  // the answer key.
   return {
     optionsJson: {
-      acceptableAnswers: body.acceptableAnswers,
       caseSensitive: body.caseSensitive,
       normalizeWhitespace: body.normalizeWhitespace,
       regex: body.regex,
@@ -557,16 +558,22 @@ function toAuthoredQuestion(q: RawQuestion): AuthoredQuestion {
       expectedRange: [lo, hi],
     };
   }
-  // text_match
+  // text_match. The acceptable-answers list lives ONLY on expectedJson;
+  // optionsJson carries the matching parameters. Reading correctness
+  // through expectedJson keeps a single source of truth and makes a
+  // future leak via optionsJson impossible (it has nothing to leak).
   const opts = q.optionsJson as
     | {
-        acceptableAnswers?: unknown;
         caseSensitive?: unknown;
         normalizeWhitespace?: unknown;
         regex?: unknown;
         hint?: unknown;
         hintAfterTries?: unknown;
       }
+    | null
+    | undefined;
+  const exp = q.expectedJson as
+    | { acceptableAnswers?: unknown }
     | null
     | undefined;
   return {
@@ -576,8 +583,8 @@ function toAuthoredQuestion(q: RawQuestion): AuthoredQuestion {
     promptMd: q.promptMd,
     weight: q.weight,
     debriefMd: debrief,
-    acceptableAnswers: Array.isArray(opts?.acceptableAnswers)
-      ? (opts!.acceptableAnswers as string[])
+    acceptableAnswers: Array.isArray(exp?.acceptableAnswers)
+      ? (exp!.acceptableAnswers as string[])
       : [],
     caseSensitive: Boolean(opts?.caseSensitive),
     normalizeWhitespace: opts?.normalizeWhitespace !== false,

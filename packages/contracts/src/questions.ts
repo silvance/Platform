@@ -99,11 +99,12 @@ export type ConfidenceResponse = z.infer<typeof ConfidenceResponse>;
 // `regex: true` flips matching to test each acceptable string as a JS
 // regex (single-line, optionally case-insensitive per the flag). Used
 // for "match anything containing the IP address 10.0.0.5" patterns.
+//
+// `TextMatchOptionsSpec` is the parameters-only payload stored at
+// `Question.optionsJson` — **no answer strings**. The acceptable answers
+// themselves live exclusively on `AnswerKey.expectedJson` so a leaked
+// Question row never carries correctness data.
 export const TextMatchOptionsSpec = z.object({
-  acceptableAnswers: z
-    .array(z.string().min(1).max(MAX_TEXT_MATCH_CHARS))
-    .min(1)
-    .max(MAX_TEXT_MATCH_ACCEPTABLE_ANSWERS),
   caseSensitive: z.boolean().default(false),
   normalizeWhitespace: z.boolean().default(true),
   regex: z.boolean().default(false),

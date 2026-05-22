@@ -853,8 +853,10 @@ async function upsertScenario(
           `Question (ordinal ${q.ordinal}) is text_match but has no textMatch config.`,
         );
       }
+      // Correctness (the acceptableAnswers list) lives on the AnswerKey,
+      // not optionsJson — see TextMatchOptionsSpec in @ci-train/contracts.
+      // Keeps a Question row free of answer-key data.
       optionsJson = {
-        acceptableAnswers: q.textMatch.acceptableAnswers,
         caseSensitive: q.textMatch.caseSensitive ?? false,
         normalizeWhitespace: q.textMatch.normalizeWhitespace ?? true,
         regex: q.textMatch.regex ?? false,
