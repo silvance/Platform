@@ -13,14 +13,20 @@ backups — wipe with `docker compose down -v` whenever.
 
 | Source                                    | Captures                                                                                       |
 | ----------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Postgres (`pg_dump --format=custom`)       | users, sessions, scenarios, briefs, artifact metadata, questions, answer keys, attempts, attempt answers, indicator sets |
-| `/var/lib/citrain/artifacts/` (VPS) or the named `artifacts` volume (LAN) | the actual artifact bytes referenced by the DB |
+| Postgres (`pg_dump --format=custom`)       | users, sessions, scenarios, briefs, artifact metadata, questions, answer keys, indicator sets, scenario progress, question responses |
+| `/var/lib/citrain/artifacts/` (VPS) or the named `artifacts` volume (LAN) | the actual artifact bytes referenced by the DB                                  |
 | `deploy/env/vps.env` (VPS) or `deploy/env/local.env` (LAN) | DB credentials, seed config, `TRUST_PROXY`                                          |
 | `/etc/caddy/Caddyfile` (mode 3, optional mode 2) | reverse-proxy config; trivial to recreate                                                |
 
 The first two are the irreplaceable pair — a Postgres dump without
 the artifact directory leaves every `artifacts.sha256` value
 referencing a file that's no longer on disk.
+
+> **M9 reminder.** Admin-uploaded artifacts (added via the
+> `/admin/challenges/:slug/edit` UI from M9 onward) live in the same
+> `scenarios/<scenarioId>/<uuid><ext>` tree the seed writes to.
+> Backing up the `artifacts` directory captures **both** seeded and
+> admin-authored content; no separate workflow is needed.
 
 ## What NOT to back up
 
@@ -467,4 +473,6 @@ good pair.
 ## See also
 
 - `docs/deployment.md` — full deploy procedure for all three modes.
+- `docs/smoke-test.md` — post-deploy end-to-end checklist; section 11 covers backup/restore of admin-uploaded artifacts.
+- `docs/known-limitations.md` — what the beta doesn't do yet, including the artifact-byte cleanup edge case on whole-scenario delete.
 - Root `README.md` — auth model, architecture overview.
