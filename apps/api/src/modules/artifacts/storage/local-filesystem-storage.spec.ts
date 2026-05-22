@@ -70,3 +70,35 @@ describe("LocalFileSystemStorage — path safety", () => {
     ).rejects.toBeInstanceOf(ArtifactPathError);
   });
 });
+
+describe("LocalFileSystemStorage — remove (M9)", () => {
+  // The remove() method is what authoring's artifact DELETE relies on
+  // to keep DB + disk in sync. It must (a) actually unlink the bytes,
+  // (b) be idempotent on a missing file, and (c) enforce the same
+  // path-safety guarantees as read/write.
+
+  it("removes a previously-written file", async () => {
+    await storage.write("scenarios/abc/file.txt", Buffer.from("payload"));
+    expect(await storage.exists("scenarios/abc/file.txt")).toBe(true);
+    await storage.remove("scenarios/abc/file.txt");
+    expect(await storage.exists("scenarios/abc/file.txt")).toBe(false);
+  });
+
+  it("is idempotent on a missing file (no throw)", async () => {
+    await expect(
+      storage.remove("scenarios/never-existed.txt"),
+    ).resolves.toBeUndefined();
+  });
+
+  it("rejects path traversal on remove (matches read/write surface)", async () => {
+    await expect(storage.remove("../escape.txt")).rejects.toBeInstanceOf(
+      ArtifactPathError,
+    );
+  });
+
+  it("rejects absolute paths on remove", async () => {
+    await expect(storage.remove("/etc/passwd")).rejects.toBeInstanceOf(
+      ArtifactPathError,
+    );
+  });
+});

@@ -74,14 +74,17 @@ export class LocalFileSystemStorage implements ArtifactStorage {
   }
 
   async remove(relativePath: string): Promise<void> {
+    // resolveSafe runs OUTSIDE the catch so path-safety violations
+    // propagate as ArtifactPathError. Idempotent removes only swallow
+    // ENOENT (the file's already gone) and other unlink failures —
+    // a stranded blob is cheaper than failing the DB op that already
+    // removed its metadata. Traversal escapes are a programming bug,
+    // not a normal idempotent case.
+    const abs = this.resolveSafe(relativePath);
     try {
-      const abs = this.resolveSafe(relativePath);
       await fs.unlink(abs);
     } catch (err) {
       const e = err as NodeJS.ErrnoException;
-      // ENOENT means the file's already gone; remove is idempotent.
-      // Anything else gets logged and swallowed — a stranded blob is
-      // cheaper than failing a DB op that already removed its metadata.
       if (e?.code !== "ENOENT") {
         this.logger.warn(
           `unlink failed for ${relativePath}: ${e?.message ?? String(err)}`,
