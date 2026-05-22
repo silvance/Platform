@@ -259,6 +259,29 @@ the user's HttpOnly session cookie, forwards the bearer token to the
 API server-side, and streams the response. The raw API token never
 reaches the browser.
 
+**Content-Type is canonicalized server-side**, not echoed from the DB
+`mime_type` column. The API derives the served MIME from
+`ArtifactKind`: `text/plain` for `text`, `text/csv` for `csv`,
+`application/json` for `json`, `application/pdf` for `pdf`. For
+`image`, only the explicit allowlist —
+`image/png`, `image/jpeg`, `image/gif`, `image/webp` — is served
+inline.
+
+**SVG (`image/svg+xml`) is intentionally excluded** from the image
+allowlist. SVG documents can carry JavaScript and other active
+content; combined with `Content-Disposition: inline` they would
+create an XSS surface even with a strict CSP and the `sandbox`
+directive. Any image artifact whose stored MIME is outside the
+allowlist (SVG, BMP, TIFF, or anything else) is downgraded to
+`application/octet-stream` and served as `Content-Disposition:
+attachment` so the browser downloads it rather than attempts to
+render it.
+
+The slug route parameter is validated by the shared `ScenarioSlug`
+schema before any DB lookup: lowercase alphanumeric and hyphens
+only, no leading/trailing hyphen, max 120 chars (matching the DB
+column). The same pipe is applied to `/v1/scenarios/:slug` and
+`/v1/scenarios/:slug/artifacts/:id/content`.
 ## EML viewer (M4)
 
 The first investigative viewer. `kind=eml` artifacts get a dedicated
