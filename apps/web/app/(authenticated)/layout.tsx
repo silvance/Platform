@@ -25,6 +25,9 @@ export default async function AuthenticatedLayout({ children }: { children: Reac
             <Link href="/scenarios" style={{ color: "var(--accent)" }}>
               Challenges
             </Link>
+            <Link href="/me/progress" style={{ color: "var(--accent)" }}>
+              My progress
+            </Link>
             {user.role === "admin" ? (
               <Link href="/admin" style={{ color: "var(--accent)" }}>
                 Admin

@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { requireInstructor } from "@/lib/session";
+import { requireAdmin } from "@/lib/session";
 import { SkillArea } from "@ci-train/contracts";
 import { CreateScenarioForm } from "./form";
 
 export const dynamic = "force-dynamic";
 
 export default async function NewChallengePage() {
-  await requireInstructor();
+  await requireAdmin();
   const skillAreas = SkillArea.options;
 
   return (

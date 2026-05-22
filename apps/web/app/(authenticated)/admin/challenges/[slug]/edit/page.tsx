@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { readToken, requireInstructor } from "@/lib/session";
+import { readToken, requireAdmin } from "@/lib/session";
 import { api, ApiError } from "@/lib/api";
 import {
   ArtifactKind,
@@ -35,7 +35,7 @@ interface Props {
 }
 
 export default async function EditChallengePage({ params }: Props) {
-  await requireInstructor();
+  await requireAdmin();
   const { slug } = await params;
   const token = await readToken();
 

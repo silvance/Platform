@@ -16,6 +16,12 @@ import { AuthoringModule } from "./modules/authoring/authoring.module";
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    // Single throttler tier: 60 req/min/IP. Routes that need a
+    // tighter limit (notably /auth/login at 5 / 5 min) apply
+    // `@Throttle({ default: { limit, ttl } })` as a per-route
+    // override. The submit path also stays inside this 60 / min
+    // budget — it's a reasonable upper bound on hand-driven
+    // answer submissions.
     ThrottlerModule.forRoot([
       { name: "default", limit: 60, ttl: 60_000 },
     ]),

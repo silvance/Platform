@@ -14,6 +14,7 @@ import {
   ImportPackResponse,
   LoginRequest,
   LoginResponse,
+  MeProgressResponse,
   MeResponse,
   ParsedEmlPayload,
   ScenarioDetail,
@@ -335,6 +336,8 @@ export const api = {
           { method: "POST", body, token },
         ),
       ),
+    me: async (token: string): Promise<MeProgressResponse> =>
+      parse(MeProgressResponse, await request("/me/progress", { token })),
   },
 };
 

@@ -11,6 +11,8 @@ import {
   AnswerKeyPayload,
   IndicatorItem,
   McOptionsSpec,
+  MeProgressResponse,
+  MeProgressRow,
   QuestionPayload,
   QuestionResponse,
   QuestionStatePayload,
@@ -157,6 +159,44 @@ export class ProgressService {
       totalQuestions: visibleQuestions.length,
       questions: questionPayloads,
       responses,
+    });
+  }
+
+  // GET /v1/me/progress
+  //
+  // The signed-in user's per-scenario summary. One row per scenario
+  // they've touched; admins see their own rows too (no role gate
+  // beyond auth). Draft/archived scenarios are returned for whoever
+  // has progress against them — the user already has a row, so
+  // listing it just reflects state they put there.
+  async listMyProgress(actorUserId: string): Promise<MeProgressResponse> {
+    const rows = await this.prisma.scenarioProgress.findMany({
+      where: { userId: actorUserId },
+      include: {
+        scenario: {
+          select: { id: true, slug: true, title: true, status: true },
+        },
+      },
+      orderBy: [{ completedAt: { sort: "desc", nulls: "last" } }, { startedAt: "desc" }],
+    });
+
+    const items: MeProgressRow[] = rows.map((r) => ({
+      scenarioId: r.scenario.id,
+      scenarioSlug: r.scenario.slug,
+      scenarioTitle: r.scenario.title,
+      scenarioStatus: r.scenario.status as never,
+      startedAt: r.startedAt.toISOString(),
+      completedAt: r.completedAt ? r.completedAt.toISOString() : null,
+      completedQuestions: r.completedQuestions,
+      totalQuestions: r.totalQuestions,
+    }));
+
+    return MeProgressResponse.parse({
+      rows: items,
+      totals: {
+        scenariosTouched: items.length,
+        scenariosCompleted: items.filter((i) => i.completedAt !== null).length,
+      },
     });
   }
 

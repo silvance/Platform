@@ -10,6 +10,7 @@ import {
   UnauthorizedException,
 } from "@nestjs/common";
 import {
+  MeProgressResponse,
   ScenarioProgressPayload,
   SubmitAnswerRequest,
   SubmitAnswerResponse,
@@ -23,6 +24,15 @@ import type { SessionContext } from "../auth/auth.service";
 @Controller()
 export class ProgressController {
   constructor(private readonly progress: ProgressService) {}
+
+  // GET /v1/me/progress — caller's per-scenario summary.
+  @Get("me/progress")
+  async listMyProgress(
+    @CurrentSession() session: SessionContext | undefined,
+  ): Promise<MeProgressResponse> {
+    if (!session) throw new UnauthorizedException();
+    return this.progress.listMyProgress(session.user.id);
+  }
 
   // GET /v1/scenarios/:slug/progress — caller's per-question state.
   @Get("scenarios/:slug/progress")
