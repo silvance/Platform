@@ -210,7 +210,14 @@ export class AuthoringController {
     // sync.
     const scenarioId = await this.authoring.resolveScenarioId(slug);
     const artifactUuid = randomUUID();
-    const ext = extForDisplayName(displayName, kindParsed.data);
+    // Storage extension is derived from `kind` (a closed enum), never
+    // from displayName. The DB row's displayName carries whatever the
+    // admin typed; the on-disk filename uses the canonical extension
+    // so the storage path can't inherit attacker-influenced semantics.
+    // Serving behavior is unchanged: the streaming endpoint sets the
+    // response Content-Type via safeServeMimeFor(kind, storedMime) and
+    // ignores the extension entirely.
+    const ext = extForKind(kindParsed.data);
     const relativePath = join(
       "scenarios",
       scenarioId,
@@ -277,15 +284,16 @@ function defaultMimeFor(kind: ArtifactKind): string {
   }
 }
 
-function extForDisplayName(displayName: string, kind: ArtifactKind): string {
-  const dot = displayName.lastIndexOf(".");
-  if (dot >= 0) return displayName.slice(dot);
+function extForKind(kind: ArtifactKind): string {
   switch (kind) {
     case "text": return ".txt";
     case "csv":  return ".csv";
     case "json": return ".json";
     case "pdf":  return ".pdf";
-    case "image": return ".png";
+    // kind=image is a class, not a format. The displayed name and the
+    // stored mime carry the real format; the disk file gets a generic
+    // .img extension so the path doesn't claim a specific encoding.
+    case "image": return ".img";
     case "eml":  return ".eml";
   }
 }
