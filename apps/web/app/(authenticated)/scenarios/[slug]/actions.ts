@@ -40,10 +40,7 @@ export async function submitAnswerAction(
       return { ok: false, error: ebody?.message ?? err.message };
     }
     if (err instanceof ApiError && err.status === 403) {
-      return {
-        ok: false,
-        error: "Instructors can preview scenarios but not submit answers.",
-      };
+      return { ok: false, error: "Not allowed." };
     }
     return {
       ok: false,

@@ -10,7 +10,6 @@ import {
   UnauthorizedException,
 } from "@nestjs/common";
 import {
-  CohortProgressResponse,
   ScenarioProgressPayload,
   SubmitAnswerRequest,
   SubmitAnswerResponse,
@@ -25,8 +24,7 @@ import type { SessionContext } from "../auth/auth.service";
 export class ProgressController {
   constructor(private readonly progress: ProgressService) {}
 
-  // GET /v1/scenarios/:slug/progress — trainee's own state (instructor
-  // gets a preview).
+  // GET /v1/scenarios/:slug/progress — caller's per-question state.
   @Get("scenarios/:slug/progress")
   async get(
     @CurrentSession() session: SessionContext | undefined,
@@ -53,15 +51,5 @@ export class ProgressController {
       questionId,
       body,
     );
-  }
-
-  // GET /v1/scenarios/:slug/cohort-progress — instructor-only.
-  @Get("scenarios/:slug/cohort-progress")
-  async cohort(
-    @CurrentSession() session: SessionContext | undefined,
-    @Param("slug", ScenarioSlugPipe) slug: string,
-  ): Promise<CohortProgressResponse> {
-    if (!session) throw new UnauthorizedException();
-    return this.progress.cohortProgress(session.user.role, slug);
   }
 }

@@ -59,10 +59,10 @@ export default async function ScenariosPage({ searchParams }: Props) {
 
   return (
     <main>
-      <h1>Scenarios</h1>
+      <h1>Challenges</h1>
       <p style={{ color: "var(--muted)", marginTop: 0 }}>
-        Welcome, {user.displayName}. Pick a scenario to read the brief.
-        Artifacts and questions land in upcoming milestones (M3, M5).
+        Welcome, {user.displayName}. Pick a challenge to inspect its
+        artifacts, answer questions, and retry until correct.
       </p>
 
       {invalidFilterFields.length > 0 ? (

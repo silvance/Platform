@@ -20,15 +20,14 @@ function readSingle(v: string | string[] | undefined): string | undefined {
 }
 
 export default async function ScenarioWorkspacePage({ params, searchParams }: Props) {
-  const user = await requireUser();
+  await requireUser();
   const token = await readToken();
   const { slug } = await params;
   const sp = await searchParams;
   const focusedArtifactId = readSingle(sp["artifact"]);
 
-  // Pull the scenario detail (brief + artifacts) and the trainee's
-  // progress in parallel. For instructor previews the progress payload
-  // comes back as a zero-state, which is what we want.
+  // Pull the scenario detail (brief + artifacts) and the caller's
+  // progress in parallel.
   let scenario, progress;
   try {
     [scenario, progress] = await Promise.all([
@@ -53,7 +52,6 @@ export default async function ScenarioWorkspacePage({ params, searchParams }: Pr
     ? scenario.artifacts.find((a) => a.id === activeArtifactId) ?? null
     : null;
 
-  const isTrainee = user.role === "trainee";
   const completedAll =
     progress.completedAt !== null && progress.totalQuestions > 0;
 
@@ -89,50 +87,38 @@ export default async function ScenarioWorkspacePage({ params, searchParams }: Pr
 
       {disclaimer ? <Markdown source={disclaimer} variant="callout" /> : null}
 
-      {/* Progress strip */}
-      {isTrainee ? (
-        <div className="card" style={{ marginBottom: "1rem" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" }}>
-            <div>
-              <strong>Progress:</strong> {progress.completedQuestions} /{" "}
-              {progress.totalQuestions}{" "}
-              {completedAll ? (
-                <span className="chip chip-ok">scenario complete</span>
-              ) : null}
-            </div>
-            <div style={{ flex: "1 1 200px", maxWidth: "300px", marginLeft: "auto" }}>
+      {/* Progress strip — solved / total */}
+      <div className="card" style={{ marginBottom: "1rem" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" }}>
+          <div>
+            <strong>Solved:</strong> {progress.completedQuestions} /{" "}
+            {progress.totalQuestions}{" "}
+            {completedAll ? (
+              <span className="chip chip-ok">challenge complete</span>
+            ) : null}
+          </div>
+          <div style={{ flex: "1 1 200px", maxWidth: "300px", marginLeft: "auto" }}>
+            <div
+              style={{
+                background: "#0b1020",
+                border: "1px solid #1f2845",
+                borderRadius: 999,
+                overflow: "hidden",
+                height: "8px",
+              }}
+            >
               <div
                 style={{
-                  background: "#0b1020",
-                  border: "1px solid #1f2845",
-                  borderRadius: 999,
-                  overflow: "hidden",
-                  height: "8px",
+                  width: `${(progress.completedQuestions / Math.max(1, progress.totalQuestions)) * 100}%`,
+                  background: "var(--ok)",
+                  height: "100%",
+                  transition: "width 200ms ease-out",
                 }}
-              >
-                <div
-                  style={{
-                    width: `${(progress.completedQuestions / Math.max(1, progress.totalQuestions)) * 100}%`,
-                    background: "var(--ok)",
-                    height: "100%",
-                    transition: "width 200ms ease-out",
-                  }}
-                />
-              </div>
+              />
             </div>
           </div>
         </div>
-      ) : (
-        <div className="card" style={{ marginBottom: "1rem" }}>
-          <p style={{ margin: 0, color: "var(--muted)" }}>
-            <strong>Instructor preview</strong> — questions render below but
-            answers can't be submitted from this role.{" "}
-            <Link href={`/scenarios/${slug}/cohort`} style={{ color: "var(--accent)" }}>
-              View cohort progress →
-            </Link>
-          </p>
-        </div>
-      )}
+      </div>
 
       {/* Brief (collapsible so it doesn't push questions off the screen) */}
       {scenario.brief ? (
@@ -176,7 +162,6 @@ export default async function ScenarioWorkspacePage({ params, searchParams }: Pr
               scenarioSlug={slug}
               question={q}
               initialState={state}
-              canSubmit={isTrainee}
             />
           );
         })}

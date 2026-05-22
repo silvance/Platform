@@ -250,26 +250,3 @@ export const SubmitAnswerResponse = z.object({
   hint: z.string().max(MAX_HINT_CHARS).nullable(),
 });
 export type SubmitAnswerResponse = z.infer<typeof SubmitAnswerResponse>;
-
-// ─── cohort progress (instructor view) ───────────────────────────
-// Same shape as the trainee-side ScenarioProgressPayload's summary,
-// but one row per trainee. No question-by-question details — that's
-// what /attempts (later) will surface if we add a per-trainee deep
-// dive in M8.
-export const CohortProgressRow = z.object({
-  traineeId: z.string().uuid(),
-  traineeDisplayName: z.string(),
-  traineeEmail: z.string().email(),
-  startedAt: z.string().datetime().nullable(),
-  completedAt: z.string().datetime().nullable(),
-  completedQuestions: z.number().int().nonnegative(),
-  totalQuestions: z.number().int().nonnegative(),
-});
-export type CohortProgressRow = z.infer<typeof CohortProgressRow>;
-
-export const CohortProgressResponse = z.object({
-  scenarioSlug: z.string(),
-  scenarioTitle: z.string(),
-  trainees: z.array(CohortProgressRow),
-});
-export type CohortProgressResponse = z.infer<typeof CohortProgressResponse>;

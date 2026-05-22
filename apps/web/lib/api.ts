@@ -1,6 +1,5 @@
 import { z, ZodError } from "zod";
 import {
-  CohortProgressResponse,
   HelloResponse,
   HealthResponse,
   LoginRequest,
@@ -143,11 +142,6 @@ export const api = {
           `/scenarios/${encodeURIComponent(slug)}/questions/${encodeURIComponent(questionId)}/submit`,
           { method: "POST", body, token },
         ),
-      ),
-    cohort: async (token: string, slug: string): Promise<CohortProgressResponse> =>
-      parse(
-        CohortProgressResponse,
-        await request(`/scenarios/${encodeURIComponent(slug)}/cohort-progress`, { token }),
       ),
   },
 };

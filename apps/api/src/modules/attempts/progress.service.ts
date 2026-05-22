@@ -1,7 +1,6 @@
 import {
   BadRequestException,
   ConflictException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
@@ -10,7 +9,6 @@ import type { Role } from "@prisma/client";
 import { z } from "zod";
 import {
   AnswerKeyPayload,
-  CohortProgressResponse,
   IndicatorItem,
   McOptionsSpec,
   QuestionPayload,
@@ -62,6 +60,18 @@ interface LockedProgressRow {
   total_questions: number;
 }
 
+// Supported question types in M7 challenge mode. The Postgres enum
+// still carries the deprecated short_answer / long_answer values but
+// the API + view layer hide them; completion counting filters on this
+// set too so a stale row of a hidden type can't block scenario
+// completion.
+const SUPPORTED_QUESTION_TYPES = [
+  "multi_choice",
+  "confidence",
+  "select_indicators",
+  "text_match",
+] as const;
+
 @Injectable()
 export class ProgressService {
   constructor(
@@ -71,11 +81,10 @@ export class ProgressService {
 
   // GET /v1/scenarios/:slug/progress
   //
-  // Returns the trainee's progress on this scenario. Does NOT create
-  // a progress row — submit-first is when the row is born. An
-  // instructor calling this endpoint gets a synthesized empty view
-  // (instructors can see the scenario's questions in preview mode
-  // without ever creating their own progress row).
+  // Returns the caller's progress on this scenario. Does NOT create a
+  // progress row — submit-first is when the row is born. The same
+  // surface serves everyone (challenge-lab model, not LMS); the only
+  // role check is the draft-leak gate on unpublished scenarios.
   async getProgress(
     role: Role,
     actorUserId: string,
@@ -91,8 +100,10 @@ export class ProgressService {
       },
     });
     if (!scenario) throw new NotFoundException("Scenario not found.");
-    // Trainees never see drafts. Instructors do.
-    if (role === "trainee" && scenario.status !== "published") {
+    // Draft scenarios stay invisible to non-admin roles. Once an admin
+    // surface lands in a later milestone we'll widen this; for now
+    // "trainee" is the only published-only role.
+    if (role !== "instructor" && scenario.status !== "published") {
       throw new NotFoundException("Scenario not found.");
     }
 
@@ -103,20 +114,6 @@ export class ProgressService {
       .filter(isContractType)
       .map((q) => q as unknown as QuestionRow);
     const questionPayloads = visibleQuestions.map(toQuestionPayload);
-
-    // Instructor preview: never touch ScenarioProgress.
-    if (role === "instructor") {
-      return ScenarioProgressPayload.parse({
-        scenarioSlug: scenario.slug,
-        scenarioTitle: scenario.title,
-        startedAt: null,
-        completedAt: null,
-        completedQuestions: 0,
-        totalQuestions: visibleQuestions.length,
-        questions: questionPayloads,
-        responses: [],
-      });
-    }
 
     const progress = await this.prisma.scenarioProgress.findUnique({
       where: {
@@ -179,11 +176,9 @@ export class ProgressService {
     questionId: string,
     body: SubmitAnswerRequest,
   ): Promise<SubmitAnswerResponse> {
-    if (role !== "trainee") {
-      throw new ForbiddenException(
-        "Only trainees may submit answers. Instructors can view scenarios in preview mode.",
-      );
-    }
+    // Anyone signed in may solve. The role variable stays for future
+    // admin-content-management surfaces but does not gate solving.
+    void role;
 
     return this.prisma.$transaction(async (tx) => {
       // Look up the scenario + question.
@@ -266,12 +261,16 @@ export class ProgressService {
         }
       }
 
-      // Find or create the scenario_progress row for this trainee.
-      // Total-question count is computed at row creation; if the
-      // author later adds/removes questions, the recompute below picks
-      // it up on the next submission.
+      // Find or create the scenario_progress row for this user.
+      // totalQuestions counts ONLY contract-supported types so a
+      // stale short_answer / long_answer row (hidden from the client
+      // by the filter in getProgress() / toQuestionPayload) can never
+      // hold the scenario's completedAt back forever.
       const totalQuestions = await tx.question.count({
-        where: { scenarioId: scenario.id },
+        where: {
+          scenarioId: scenario.id,
+          type: { in: [...SUPPORTED_QUESTION_TYPES] },
+        },
       });
 
       const progressUpsert = await tx.scenarioProgress.upsert({
@@ -392,41 +391,6 @@ export class ProgressService {
     });
   }
 
-  // GET /v1/scenarios/:slug/cohort-progress — instructor-only.
-  async cohortProgress(
-    role: Role,
-    slug: string,
-  ): Promise<CohortProgressResponse> {
-    if (role !== "instructor") {
-      throw new ForbiddenException("Instructor role required.");
-    }
-    const scenario = await this.prisma.scenario.findUnique({
-      where: { slug },
-      include: {
-        progress: {
-          include: {
-            trainee: { select: { id: true, displayName: true, email: true } },
-          },
-          orderBy: { startedAt: "desc" },
-        },
-      },
-    });
-    if (!scenario) throw new NotFoundException("Scenario not found.");
-
-    return CohortProgressResponse.parse({
-      scenarioSlug: scenario.slug,
-      scenarioTitle: scenario.title,
-      trainees: scenario.progress.map((p) => ({
-        traineeId: p.trainee.id,
-        traineeDisplayName: p.trainee.displayName,
-        traineeEmail: p.trainee.email,
-        startedAt: p.startedAt.toISOString(),
-        completedAt: p.completedAt ? p.completedAt.toISOString() : null,
-        completedQuestions: p.completedQuestions,
-        totalQuestions: p.totalQuestions,
-      })),
-    });
-  }
 }
 
 // Question rows whose type is in the contract enum (i.e. not the

@@ -19,17 +19,14 @@ interface Props {
   scenarioSlug: string;
   question: QuestionPayload;
   initialState: QuestionStatePayload | null;
-  // If the trainee role is missing (instructor preview), the form is
-  // disabled and shows "preview only".
-  canSubmit: boolean;
 }
 
 // One card per question. Holds local state across submissions —
-// when the trainee gets it right, the card flips to a completed
-// state that shows their answer + the answer key + the debrief.
-// Until then it allows unlimited retries, optionally showing a hint
-// when one's authored and the threshold's hit.
-export function QuestionCard({ scenarioSlug, question, initialState, canSubmit }: Props) {
+// when the user gets it right, the card flips to a completed state
+// that shows their answer + the answer key + the debrief. Until
+// then it allows unlimited retries, optionally showing a hint when
+// one's authored and the threshold's hit.
+export function QuestionCard({ scenarioSlug, question, initialState }: Props) {
   const [completedAt, setCompletedAt] = useState<string | null>(
     initialState?.completedAt ?? null,
   );
@@ -49,7 +46,7 @@ export function QuestionCard({ scenarioSlug, question, initialState, canSubmit }
   >(null);
 
   const isCompleted = completedAt !== null;
-  const formDisabled = isCompleted || !canSubmit;
+  const formDisabled = isCompleted;
 
   async function handleSubmit(response: QuestionResponse) {
     setError(null);
@@ -96,12 +93,6 @@ export function QuestionCard({ scenarioSlug, question, initialState, canSubmit }
         disabled={formDisabled}
         onSubmit={handleSubmit}
       />
-
-      {!canSubmit ? (
-        <p style={{ color: "var(--muted)", fontSize: ".85rem", marginTop: ".5rem" }}>
-          Instructor preview — submissions disabled.
-        </p>
-      ) : null}
 
       {!isCompleted && feedback && !feedback.correct ? (
         <p className="save-badge save-error" style={{ marginTop: ".5rem" }}>
