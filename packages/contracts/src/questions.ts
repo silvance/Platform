@@ -208,7 +208,35 @@ export const QuestionStatePayload = z.object({
 });
 export type QuestionStatePayload = z.infer<typeof QuestionStatePayload>;
 
-// Whole-scenario progress for one trainee. Returned by
+// Self-progress: one row per scenario the signed-in user has touched.
+// Returned by GET /v1/me/progress. Trimmer than ScenarioProgressPayload —
+// no per-question payloads, just the headline counters so the listing
+// page renders fast.
+export const MeProgressRow = z.object({
+  scenarioId: z.string().uuid(),
+  scenarioSlug: z.string(),
+  scenarioTitle: z.string(),
+  scenarioStatus: z.enum(["draft", "published", "archived"]),
+  startedAt: z.string().datetime(),
+  completedAt: z.string().datetime().nullable(),
+  completedQuestions: z.number().int().nonnegative(),
+  totalQuestions: z.number().int().nonnegative(),
+});
+export type MeProgressRow = z.infer<typeof MeProgressRow>;
+
+export const MeProgressResponse = z.object({
+  rows: z.array(MeProgressRow),
+  // Pre-computed aggregate so the page doesn't recompute totals from
+  // the row set — purely for display, not for any access-control
+  // decisions.
+  totals: z.object({
+    scenariosTouched: z.number().int().nonnegative(),
+    scenariosCompleted: z.number().int().nonnegative(),
+  }),
+});
+export type MeProgressResponse = z.infer<typeof MeProgressResponse>;
+
+// Whole-scenario progress for one user. Returned by
 // GET /v1/scenarios/:slug/progress.
 export const ScenarioProgressPayload = z.object({
   scenarioSlug: z.string(),

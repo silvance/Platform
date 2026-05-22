@@ -25,6 +25,13 @@ import type { SessionContext } from "./auth.service";
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  // Login throttle is intentionally loose (10/min/IP) until the BFF
+  // client-IP propagation lands. Today the web layer calls /auth/login
+  // server-side, so every browser-driven login looks to the API like
+  // it's coming from the BFF's IP — tightening the limit would
+  // pool a whole LAN cohort behind a single bucket and lock real
+  // users out. See docs/known-limitations.md for the propagation
+  // design.
   @Public()
   @Post("login")
   @HttpCode(HttpStatus.OK)

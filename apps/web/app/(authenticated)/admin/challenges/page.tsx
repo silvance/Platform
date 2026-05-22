@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { requireInstructor, readToken } from "@/lib/session";
+import { requireAdmin, readToken } from "@/lib/session";
 import { api } from "@/lib/api";
 import { ImportPackForm } from "./import-pack-form";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminChallengesPage() {
-  await requireInstructor();
+  await requireAdmin();
   const token = await readToken();
   const { scenarios } = await api.authoring.list(token!);
 
