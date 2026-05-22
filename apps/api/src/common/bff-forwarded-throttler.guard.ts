@@ -24,12 +24,15 @@ const BFF_SECRET_HEADER = "x-ci-train-bff-secret";
 //                              an arbitrary internet caller.
 //
 // The shared secret lives in `BFF_FORWARD_SECRET` on both sides.
-// It MUST be unguessable (≥16 random bytes) and MUST be paired
-// with a reverse-proxy config that scrubs any inbound
-// `X-CI-Train-*` headers from public clients (see
-// `deploy/Caddyfile.example`). Otherwise an attacker on the public
-// internet could spoof their own IP and reset their throttle
-// bucket.
+// It MUST be unguessable (≥16 random bytes). The secret IS the
+// trust boundary: in the Vercel + VPS topology the BFF reaches
+// the API over the same public vhost as any other internet
+// client, so we can't and don't filter on the network path. A
+// caller without the matching secret simply gets their override
+// rejected and falls back to req.ip — no failure mode raises
+// the rate limit. See deploy/Caddyfile.example and
+// docs/deployment.md § "Security recap" for the topology
+// rationale.
 //
 // Safe degradation
 // ----------------

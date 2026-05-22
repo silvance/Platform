@@ -464,16 +464,30 @@ These hold in all three modes; what changes is the threat surface
     safe for a single-developer setup.
   - **mode 2 with multiple users / mode 3**: REQUIRED. Generate
     with `openssl rand -hex 32` and set the **same value** on
-    both the api and web services. The web BFF stamps
-    `X-CI-Train-Client-IP` and `X-CI-Train-BFF-Secret` on
-    outbound API calls; `BffForwardedThrottlerGuard` validates
-    the secret (timing-safe) and uses the forwarded IP as the
-    throttle key. Any failure (no secret, wrong secret, malformed
-    IP) silently falls back to `req.ip` — no failure mode
-    raises the rate limit.
-  - The matching `Caddyfile.example` snippet strips inbound
-    `X-CI-Train-*` headers from public clients so they can't
-    spoof the secret. Don't remove it.
+    both sides — for mode 3 that means the Vercel project env
+    AND the VPS api env. The web BFF stamps `X-CI-Train-Client-IP`
+    and `X-CI-Train-BFF-Secret` on outbound API calls;
+    `BffForwardedThrottlerGuard` validates the secret (timing-safe)
+    and uses the forwarded IP as the throttle key. Any failure (no
+    secret, wrong secret, malformed IP) silently falls back to
+    `req.ip` — no failure mode raises the rate limit.
+  - **The trust boundary is the secret itself, not the network
+    path.** In mode 3 the BFF lives on Vercel and reaches the API
+    over the public `api.cicyberlab.com` Caddy vhost, the same
+    path as any internet client. So `Caddyfile.example`
+    intentionally does NOT strip inbound `X-CI-Train-*` headers —
+    stripping them would also kill the legitimate Vercel BFF
+    traffic. A direct curl with a guessed client IP and no secret
+    (or wrong secret) is harmless: the guard rejects the override
+    and keys on `req.ip` instead. Only add a Caddy strip if your
+    deployment has a separate trusted internal path for the BFF
+    (e.g. a sidecar BFF on the VPS or a WireGuard tunnel) — in
+    that case strip on the public vhost and pass through on the
+    internal one.
+  - **Rotation**: changing `BFF_FORWARD_SECRET` requires updating
+    both sides. The web side picks up env changes on the next
+    Vercel deploy; the api side picks them up on the next request
+    (the secret is read lazily on each `getTracker` call).
 - **`POSTGRES_PASSWORD`** lives in the env file (mode 1/2:
   `deploy/env/local.env`; mode 3: `deploy/env/vps.env`). File mode
   600. Never in the repo. Rotate by editing and restarting the
