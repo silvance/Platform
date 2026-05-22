@@ -1,11 +1,17 @@
 import { z, ZodError } from "zod";
 import {
+  AdminCreateUserRequest,
+  AdminResetPasswordRequest,
   AdminScenarioDetail,
   AdminScenarioListResponse,
   AdminScenarioSummary,
+  AdminUpdateUserRequest,
+  AdminUserListResponse,
+  AdminUserResponse,
   AuthoredArtifact,
   AuthoredIndicatorSet,
   AuthoredQuestion,
+  ChangePasswordRequest,
   CreateIndicatorSetRequest,
   CreateQuestionRequest,
   CreateScenarioRequest,
@@ -131,6 +137,55 @@ export const api = {
   },
   me: async (token: string): Promise<MeResponse> =>
     parse(MeResponse, await request("/auth/me", { token })),
+  changePassword: async (
+    token: string,
+    body: ChangePasswordRequest,
+  ): Promise<void> => {
+    await request("/auth/change-password", {
+      method: "POST",
+      body,
+      token,
+      expect: "empty",
+    });
+  },
+  users: {
+    list: async (token: string): Promise<AdminUserListResponse> =>
+      parse(AdminUserListResponse, await request("/admin/users", { token })),
+    create: async (
+      token: string,
+      body: AdminCreateUserRequest,
+    ): Promise<AdminUserResponse> =>
+      parse(
+        AdminUserResponse,
+        await request("/admin/users", { method: "POST", body, token }),
+      ),
+    update: async (
+      token: string,
+      id: string,
+      body: AdminUpdateUserRequest,
+    ): Promise<AdminUserResponse> =>
+      parse(
+        AdminUserResponse,
+        await request(`/admin/users/${encodeURIComponent(id)}`, {
+          method: "PATCH",
+          body,
+          token,
+        }),
+      ),
+    resetPassword: async (
+      token: string,
+      id: string,
+      body: AdminResetPasswordRequest,
+    ): Promise<AdminUserResponse> =>
+      parse(
+        AdminUserResponse,
+        await request(`/admin/users/${encodeURIComponent(id)}/password`, {
+          method: "POST",
+          body,
+          token,
+        }),
+      ),
+  },
   scenarios: {
     list: async (token: string, query: ScenarioListQuery = {}): Promise<ScenarioListResponse> =>
       parse(

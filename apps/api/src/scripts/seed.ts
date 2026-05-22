@@ -4,22 +4,50 @@ import { promises as fs } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { PrismaClient, type Role, type ArtifactKind } from "@prisma/client";
 import { hash, Algorithm } from "@node-rs/argon2";
+import { MIN_PASSWORD_LENGTH } from "@ci-train/contracts";
 
-// Standalone seed runner. Creates one admin and one user with
-// freshly-generated passwords, upserts the two demonstration scenarios,
-// and writes their artifact bytes into the storage root.
+// Standalone seed runner. Idempotently upserts one admin + one user
+// account plus the demonstration scenarios and their artifact bytes.
 //
-// Env var names (SEED_INSTRUCTOR_EMAIL / SEED_TRAINEE_EMAIL) survive
-// from the pre-M12 schema for backwards compatibility with deployed
-// .env files. The roles they create are now `admin` and `user`.
+// M15: bootstrap passwords are env-configurable.
+//   SEED_ADMIN_EMAIL    – admin account (default: instructor@example.local)
+//   SEED_ADMIN_PASSWORD – password for the admin account
+//   SEED_USER_EMAIL     – regular-user account (default: trainee@example.local)
+//   SEED_USER_PASSWORD  – password for the regular-user account
+//
+// Backwards-compat aliases (pre-M12 names, still honored by deployed
+// env files):
+//   SEED_INSTRUCTOR_EMAIL → falls through to SEED_ADMIN_EMAIL
+//   SEED_TRAINEE_EMAIL    → falls through to SEED_USER_EMAIL
+// The roles created are always `admin` and `user`.
+//
+// Password handling — three cases per user:
+//   1. SEED_*_PASSWORD set
+//      → use it. Re-running the seed is idempotent: the password is
+//        re-hashed but always set to the same env value.
+//   2. SEED_*_PASSWORD unset AND the account does NOT yet exist
+//      → generate a random password, print it once (preserves the
+//        original pre-M15 behavior so a fresh local dev still gets
+//        a usable login out of the box).
+//   3. SEED_*_PASSWORD unset AND the account already exists
+//      → DO NOT rotate the password. Re-running the seed on a deploy
+//        that didn't pin SEED_*_PASSWORD must not surprise an admin
+//        whose password was set via the admin UI or reset-password
+//        script.
 //
 // Usage (host):  pnpm --filter @ci-train/api seed
 // Usage (docker): docker compose run --rm api node dist/scripts/seed.js
 
-const SEED_INSTRUCTOR_EMAIL =
-  process.env.SEED_INSTRUCTOR_EMAIL ?? "instructor@example.local";
-const SEED_TRAINEE_EMAIL =
-  process.env.SEED_TRAINEE_EMAIL ?? "trainee@example.local";
+const SEED_ADMIN_EMAIL =
+  process.env.SEED_ADMIN_EMAIL ??
+  process.env.SEED_INSTRUCTOR_EMAIL ??
+  "instructor@example.local";
+const SEED_USER_EMAIL =
+  process.env.SEED_USER_EMAIL ??
+  process.env.SEED_TRAINEE_EMAIL ??
+  "trainee@example.local";
+const SEED_ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD ?? null;
+const SEED_USER_PASSWORD = process.env.SEED_USER_PASSWORD ?? null;
 const STORAGE_ROOT = resolve(
   process.env.ARTIFACT_STORAGE_ROOT ?? "/data/artifacts",
 );
@@ -35,20 +63,75 @@ function randomPassword(): string {
   return randomBytes(18).toString("base64url");
 }
 
+interface SeedUserResult {
+  id: string;
+  // Action taken so the operator-facing log can be precise:
+  //   "created"  — brand-new account, password is in `password`
+  //                (env or random).
+  //   "updated"  — existed already, env password rotated it.
+  //   "kept"     — existed already, env password not provided,
+  //                so we did not touch the password row.
+  action: "created" | "updated" | "kept";
+  // Plaintext password to display ONLY for the "created" (random)
+  // case. For "updated" we don't echo what the operator already
+  // supplied; for "kept" there's nothing to display.
+  passwordToDisplay: string | null;
+}
+
 async function upsertUser(
   prisma: PrismaClient,
   email: string,
   displayName: string,
   role: Role,
-): Promise<{ password: string; id: string }> {
-  const password = randomPassword();
-  const passwordHash = await hash(password, ARGON_OPTS);
+  envPassword: string | null,
+): Promise<SeedUserResult> {
+  if (envPassword !== null && envPassword.length < MIN_PASSWORD_LENGTH) {
+    throw new Error(
+      `Bootstrap password for ${email} is shorter than ${MIN_PASSWORD_LENGTH} ` +
+        `characters. Regenerate it (e.g. \`openssl rand -base64 24\`) and ` +
+        `rerun the seed. Passwords below the minimum length are rejected by ` +
+        `the API at create/reset time too, so seeding under it would leave ` +
+        `you with credentials you can't rotate through the UI.`,
+    );
+  }
+
+  const existing = await prisma.user.findUnique({
+    where: { email },
+    select: { id: true },
+  });
+
+  // Case 3: keep — account exists and operator didn't pin a
+  // password. Refresh displayName + role + un-disable, but leave
+  // passwordHash alone.
+  if (existing && envPassword === null) {
+    const user = await prisma.user.update({
+      where: { id: existing.id },
+      data: { displayName, role, disabled: false },
+    });
+    return { id: user.id, action: "kept", passwordToDisplay: null };
+  }
+
+  // Cases 1 / 2: there's a password to set, either supplied or
+  // freshly random.
+  const plain = envPassword ?? randomPassword();
+  const passwordHash = await hash(plain, ARGON_OPTS);
   const user = await prisma.user.upsert({
     where: { email },
     update: { passwordHash, displayName, role, disabled: false },
     create: { email, passwordHash, displayName, role },
   });
-  return { password, id: user.id };
+
+  if (existing) {
+    return { id: user.id, action: "updated", passwordToDisplay: null };
+  }
+  return {
+    id: user.id,
+    action: "created",
+    // Only echo the password when WE generated it. If the operator
+    // supplied SEED_*_PASSWORD, they already know it, and logging it
+    // back into Docker output would just be one more place it leaks.
+    passwordToDisplay: envPassword === null ? plain : null,
+  };
 }
 
 const RF_AWARENESS_DISCLAIMER = `
@@ -906,6 +989,28 @@ async function upsertScenario(
   }
 }
 
+function describeAction(
+  email: string,
+  envVarName: string,
+  envSet: boolean,
+  r: SeedUserResult,
+): string {
+  switch (r.action) {
+    case "created":
+      return r.passwordToDisplay
+        ? `  created  ${email}  password (random): ${r.passwordToDisplay}`
+        : `  created  ${email}  password: (from env)`;
+    case "updated":
+      return `  updated  ${email}  password: (rotated to env value)`;
+    case "kept":
+      return envSet
+        ? // Unreachable in practice — env set means we go through
+          // create/update; included for completeness.
+          `  kept     ${email}  password: (env supplied but row already had one — investigate)`
+        : `  kept     ${email}  password: (unchanged — set ${envVarName} to rotate)`;
+  }
+}
+
 async function main(): Promise<void> {
   const prisma = new PrismaClient();
   try {
@@ -913,15 +1018,17 @@ async function main(): Promise<void> {
 
     const admin = await upsertUser(
       prisma,
-      SEED_INSTRUCTOR_EMAIL,
+      SEED_ADMIN_EMAIL,
       "Seed Admin",
       "admin",
+      SEED_ADMIN_PASSWORD,
     );
     const user = await upsertUser(
       prisma,
-      SEED_TRAINEE_EMAIL,
+      SEED_USER_EMAIL,
       "Seed User",
       "user",
+      SEED_USER_PASSWORD,
     );
 
     for (const s of SCENARIOS) {
@@ -930,13 +1037,14 @@ async function main(): Promise<void> {
 
     // eslint-disable-next-line no-console
     console.log("\n────────────────────────────────────────");
-    console.log("  ci-train seed users created/updated");
+    console.log("  ci-train seed");
     console.log("────────────────────────────────────────");
-    console.log(`  admin: ${SEED_INSTRUCTOR_EMAIL}`);
-    console.log(`  password : ${admin.password}`);
-    console.log("────────────────────────────────────────");
-    console.log(`  user : ${SEED_TRAINEE_EMAIL}`);
-    console.log(`  password : ${user.password}`);
+    console.log(
+      describeAction(SEED_ADMIN_EMAIL, "SEED_ADMIN_PASSWORD", SEED_ADMIN_PASSWORD !== null, admin),
+    );
+    console.log(
+      describeAction(SEED_USER_EMAIL, "SEED_USER_PASSWORD", SEED_USER_PASSWORD !== null, user),
+    );
     console.log("────────────────────────────────────────");
     console.log(`  scenarios upserted: ${SCENARIOS.length}`);
     for (const s of SCENARIOS) {
@@ -945,8 +1053,20 @@ async function main(): Promise<void> {
       );
     }
     console.log(`  artifact storage root: ${STORAGE_ROOT}`);
+    console.log("────────────────────────────────────────");
+    if (
+      admin.passwordToDisplay !== null ||
+      user.passwordToDisplay !== null
+    ) {
+      console.log("Random passwords above are printed ONCE. Copy now —");
+      console.log("they are not stored anywhere else. For repeatable");
+      console.log("deploys, set SEED_ADMIN_PASSWORD / SEED_USER_PASSWORD.");
+    } else {
+      console.log("To rotate a seeded account's password, run:");
+      console.log("  node dist/scripts/reset-password.js \\");
+      console.log("    --email <email> --password '<new-password>'");
+    }
     console.log("────────────────────────────────────────\n");
-    console.log("Copy passwords now — they are not stored anywhere else.");
   } finally {
     await prisma.$disconnect();
   }

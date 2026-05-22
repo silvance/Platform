@@ -7,12 +7,28 @@ import { z } from "zod";
 export const Role = z.enum(["admin", "user"]);
 export type Role = z.infer<typeof Role>;
 
+// Minimum length for any user-set password (login, admin reset, env
+// bootstrap, CLI reset). 10 chars at 26+10+special ≈ 60 bits entropy
+// if the user picks remotely sensibly; combined with the per-IP
+// throttle this is good enough for the beta operator population.
+// Bumping this is a breaking change for any deployed env files that
+// set SEED_*_PASSWORD below this length.
+export const MIN_PASSWORD_LENGTH = 10;
+export const MAX_PASSWORD_LENGTH = 256;
+
+export const PasswordSchema = z
+  .string()
+  .min(MIN_PASSWORD_LENGTH, {
+    message: `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`,
+  })
+  .max(MAX_PASSWORD_LENGTH);
+
 // Email + password come from a login form. Keep the requirements minimal at
 // the contract layer; the auth service enforces hashing/strength policies
 // when accounts are created.
 export const LoginRequest = z.object({
   email: z.string().email().max(254),
-  password: z.string().min(1).max(256),
+  password: z.string().min(1).max(MAX_PASSWORD_LENGTH),
 });
 export type LoginRequest = z.infer<typeof LoginRequest>;
 
@@ -40,3 +56,19 @@ export const MeResponse = z.object({
   }),
 });
 export type MeResponse = z.infer<typeof MeResponse>;
+
+// Self-service password change. Requires the current password so a
+// stolen / forgotten-but-still-logged-in session can't be used to
+// silently rotate credentials. The new password must differ from the
+// current one (cheap defense against accidental no-op submissions).
+export const ChangePasswordRequest = z
+  .object({
+    currentPassword: z.string().min(1).max(MAX_PASSWORD_LENGTH),
+    newPassword: PasswordSchema,
+  })
+  .refine((v) => v.currentPassword !== v.newPassword, {
+    message: "New password must be different from the current password.",
+    path: ["newPassword"],
+  });
+export type ChangePasswordRequest = z.infer<typeof ChangePasswordRequest>;
+

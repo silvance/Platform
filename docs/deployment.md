@@ -96,7 +96,31 @@ docker compose --env-file deploy/env/local.env \
                run --rm api node dist/scripts/seed.js
 ```
 
-Copy the printed passwords into your password manager.
+Behavior depends on whether you set the bootstrap passwords in
+`deploy/env/local.env` (M15):
+
+| `SEED_ADMIN_PASSWORD` / `SEED_USER_PASSWORD` | First run | Re-run |
+|---|---|---|
+| **set** | account created with that password | password rotated to env value (idempotent) |
+| **unset** | account created with a random password, printed once | password is **left as is** — repeat runs don't surprise you |
+
+Random passwords are printed to the container log exactly once.
+Copy them into your password manager immediately. For repeatable
+local deployments, set explicit passwords in `local.env`.
+
+Forgot the password? Skip the log archaeology — run the
+`reset-password` recovery script:
+
+```bash
+docker compose --env-file deploy/env/local.env \
+               -f deploy/docker-compose.local.yml \
+               exec api node dist/scripts/reset-password.js \
+                 --email instructor@example.local \
+                 --password 'NewPasswordHere'
+```
+
+Or, on a running stack, change your own password via the web UI:
+sign in → **Security** in the top nav.
 
 ## Tear down
 
@@ -303,7 +327,12 @@ $EDITOR deploy/env/vps.env
 Required edits:
 
 - **`POSTGRES_PASSWORD`** — `openssl rand -base64 32`.
-- **`SEED_*_EMAIL`** — your real bootstrap addresses.
+- **`SEED_ADMIN_EMAIL` / `SEED_USER_EMAIL`** — your real bootstrap addresses.
+- **`SEED_ADMIN_PASSWORD` / `SEED_USER_PASSWORD`** — generate with
+  `openssl rand -base64 24` (one per account). These are the real
+  login passwords humans type. See the "Seed" section below.
+- **`BFF_FORWARD_SECRET`** — `openssl rand -hex 32`; must match the
+  Vercel project env (M14).
 - **`TRUST_PROXY=1`** — leave alone. Critical for login throttling.
 
 ## Caddy
@@ -340,14 +369,77 @@ Expect `Prisma connected.` and `ci-train api listening …`.
 
 ## Seed (one-time on a fresh deploy)
 
+For a VPS deploy, **set `SEED_ADMIN_PASSWORD` and
+`SEED_USER_PASSWORD` in `deploy/env/vps.env` before seeding** (M15).
+Without them the seed prints random passwords once to the container
+log and never anywhere else — fragile after a restart, lost the
+moment the log is rotated, and impossible to share with another
+operator without re-running through the recovery script.
+
+Generate fresh values:
+
+```bash
+openssl rand -base64 24   # run once per account
+```
+
+Paste each into `vps.env`. Then seed:
+
 ```bash
 docker compose --env-file deploy/env/vps.env \
                -f deploy/docker-compose.vps.yml \
                run --rm api node dist/scripts/seed.js
 ```
 
-**Copy the printed passwords into your password manager immediately.**
-They are not stored anywhere else.
+The seed is idempotent: re-running it with the same env values is a
+no-op; changing `SEED_*_PASSWORD` and re-running rotates the
+password to the new value. Leaving `SEED_*_PASSWORD` unset on a
+re-run **does not** rotate the password — so passwords you've
+already changed through the web UI or the recovery script stick.
+
+After the seed, sign in to the web app with `SEED_ADMIN_EMAIL` +
+`SEED_ADMIN_PASSWORD`, and from **Admin → Users** add additional
+trainees / admins as needed. Encourage every account to rotate
+their password via **Security** in the top nav on first login.
+
+### Emergency password reset (forgot the admin password)
+
+The `reset-password` recovery script is the supported way to
+recover from a lost password — never edit the `users` table by
+hand.
+
+```bash
+docker compose --env-file deploy/env/vps.env \
+               -f deploy/docker-compose.vps.yml \
+               exec api node dist/scripts/reset-password.js \
+                 --email instructor@cicyberlab.com \
+                 --password 'NewPasswordHere'
+```
+
+Or, to keep the password out of shell history and `ps`:
+
+```bash
+echo -n 'NewPasswordHere' | docker compose ... exec -T api \
+  node dist/scripts/reset-password.js \
+    --email instructor@cicyberlab.com --password-stdin
+```
+
+The script revokes every active session for the target user, so
+they will need to sign in again with the new password. It refuses
+passwords shorter than 10 characters and refuses to create
+accounts.
+
+### `SEED_*` vs other secrets
+
+These are easy to mix up. They are NOT interchangeable:
+
+| Env var | What it protects | Where it's used |
+|---|---|---|
+| `POSTGRES_PASSWORD` | the Postgres role the api connects as | `DATABASE_URL` |
+| `BFF_FORWARD_SECRET` | the BFF → API forwarded-client-IP channel | rate-limit keying (M14) |
+| `SEED_ADMIN_PASSWORD` / `SEED_USER_PASSWORD` | **the actual web-login password a human types** | login form, `/me/security`, `/admin/users` |
+
+The first two never appear on the login screen. The third is the
+one your operators sign in with.
 
 ## Health check
 

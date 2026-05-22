@@ -9,6 +9,7 @@ import { HelloModule } from "./modules/hello/hello.module";
 import { AuthModule } from "./modules/auth/auth.module";
 import { AuthGuard } from "./modules/auth/guards/auth.guard";
 import { RolesGuard } from "./modules/auth/guards/roles.guard";
+import { UsersModule } from "./modules/users/users.module";
 import { ScenariosModule } from "./modules/scenarios/scenarios.module";
 import { ArtifactsModule } from "./modules/artifacts/artifacts.module";
 import { AttemptsModule } from "./modules/attempts/attempts.module";
@@ -22,6 +23,7 @@ import { AuthoringModule } from "./modules/authoring/authoring.module";
     ]),
     DatabaseModule,
     AuthModule,
+    UsersModule,
     ScenariosModule,
     ArtifactsModule,
     AttemptsModule,
