@@ -39,17 +39,29 @@ apps/
                 /v1/attempts/:id (GET; PATCH/answers/:qid; POST /submit; GET /debrief)
 packages/
   contracts/    Shared Zod schemas + inferred TS types
-docker-compose.yml
+deploy/
+  docker-compose.local.yml  Local-only + LAN-beta stack (web + api + db)
+  docker-compose.vps.yml    Public-VPS stack (api + db; web on Vercel)
+  Caddyfile.example         TLS reverse proxy (LAN-beta optional / VPS required)
+  env/
+    local.env.example       env vars for the local + LAN-beta compose
+    vps.env.example         env vars for the VPS compose
+    vercel.env.example      checklist of env vars to set in the Vercel UI
+docs/
+  deployment.md             three-mode deployment guide
+  backups.md                backup + restore procedure (LAN beta + VPS)
 .env.example
 ```
 
-## Quick start (Docker Compose)
+## Quick start (Docker Compose, local mode)
 
 Prereqs: Docker 24+ and Docker Compose v2.
 
 ```bash
-cp .env.example .env
-docker compose up --build
+cp deploy/env/local.env.example deploy/env/local.env
+docker compose --env-file deploy/env/local.env \
+               -f deploy/docker-compose.local.yml \
+               up --build
 ```
 
 Then:
@@ -61,8 +73,13 @@ Then:
 To shut down and wipe the DB volume:
 
 ```bash
-docker compose down -v
+docker compose --env-file deploy/env/local.env \
+               -f deploy/docker-compose.local.yml \
+               down -v
 ```
+
+For **LAN beta** or **public-internet (Vercel + VPS)** deployments,
+see [`docs/deployment.md`](docs/deployment.md).
 
 ## Local development (without Docker)
 
@@ -97,8 +114,8 @@ editing shared schemas.
 | `pnpm test` | Runs the workspace test suites. Currently the API Jest unit tests (auth service, scenarios service, contracts, storage path safety, artifacts service, slug pipe, EML parser — 73 cases as of M4). Web Playwright/integration tests land in a later milestone. |
 | `pnpm seed` | Create or refresh the seed instructor + trainee accounts and print their generated passwords once. |
 | `pnpm dev:api` / `pnpm dev:web` | Run a single app outside Docker |
-| `pnpm compose:up` | `docker compose up --build` |
-| `pnpm compose:down` | `docker compose down -v` (wipes the db volume) |
+| `pnpm compose:up` | Local-mode compose: `docker compose --env-file deploy/env/local.env -f deploy/docker-compose.local.yml up --build` |
+| `pnpm compose:down` | `docker compose … down -v` (wipes the db + artifacts volumes) |
 
 ## Seeding test accounts
 
@@ -162,7 +179,7 @@ regenerates passwords for the same emails (`instructor@example.local`,
 
 ## Verifying M0/M1
 
-After `docker compose up --build`, you should see:
+After `docker compose --env-file deploy/env/local.env -f deploy/docker-compose.local.yml up --build`, you should see:
 
 1. `db` container becomes healthy (Postgres `pg_isready` passes).
 2. `api` container becomes healthy. Two endpoints exist with distinct

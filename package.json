@@ -16,7 +16,7 @@
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r --if-present --workspace-concurrency=1 test",
     "seed": "pnpm --filter @ci-train/api seed",
-    "compose:up": "docker compose up --build",
-    "compose:down": "docker compose down -v"
+    "compose:up": "docker compose --env-file deploy/env/local.env -f deploy/docker-compose.local.yml up --build",
+    "compose:down": "docker compose --env-file deploy/env/local.env -f deploy/docker-compose.local.yml down -v"
   }
 }
