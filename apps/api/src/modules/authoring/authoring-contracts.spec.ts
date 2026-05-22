@@ -1,6 +1,8 @@
 import {
+  CreateIndicatorSetRequest,
   CreateQuestionRequest,
   CreateScenarioRequest,
+  UpdateIndicatorSetRequest,
   UpdateScenarioRequest,
 } from "@ci-train/contracts";
 
@@ -162,5 +164,89 @@ describe("CreateQuestionRequest", () => {
       debriefMd: "x",
     });
     expect(r.success).toBe(false);
+  });
+
+  it("accepts a valid select_indicators", () => {
+    const r = CreateQuestionRequest.parse({
+      type: "select_indicators",
+      promptMd: "Which entries warrant escalation?",
+      weight: 1,
+      debriefMd: "x",
+      indicatorSetId: "00000000-0000-4000-a000-000000000001",
+      correctIds: ["item-a"],
+    });
+    if (r.type !== "select_indicators") throw new Error("expected si");
+    expect(r.correctIds).toEqual(["item-a"]);
+  });
+
+  it("rejects select_indicators with an empty correctIds list", () => {
+    const r = CreateQuestionRequest.safeParse({
+      type: "select_indicators",
+      promptMd: "x",
+      weight: 1,
+      debriefMd: "x",
+      indicatorSetId: "00000000-0000-4000-a000-000000000001",
+      correctIds: [],
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it("rejects select_indicators when indicatorSetId isn't a uuid", () => {
+    const r = CreateQuestionRequest.safeParse({
+      type: "select_indicators",
+      promptMd: "x",
+      weight: 1,
+      debriefMd: "x",
+      indicatorSetId: "not-a-uuid",
+      correctIds: ["x"],
+    });
+    expect(r.success).toBe(false);
+  });
+});
+
+describe("CreateIndicatorSetRequest", () => {
+  const VALID = {
+    slug: "header-indicators",
+    displayName: "Header indicators",
+    sourceArtifactId: null,
+    items: [
+      { id: "a", label: "A" },
+      { id: "b", label: "B" },
+    ],
+  };
+
+  it("accepts a valid payload", () => {
+    expect(CreateIndicatorSetRequest.parse(VALID)).toBeTruthy();
+  });
+
+  it("rejects fewer than 2 items", () => {
+    expect(
+      CreateIndicatorSetRequest.safeParse({
+        ...VALID,
+        items: [{ id: "a", label: "A" }],
+      }).success,
+    ).toBe(false);
+  });
+
+  it("rejects an invalid slug", () => {
+    expect(
+      CreateIndicatorSetRequest.safeParse({ ...VALID, slug: "Has-Caps" }).success,
+    ).toBe(false);
+  });
+});
+
+describe("UpdateIndicatorSetRequest", () => {
+  it("accepts an empty body", () => {
+    expect(UpdateIndicatorSetRequest.parse({})).toEqual({});
+  });
+
+  it("accepts a partial items-only update", () => {
+    const r = UpdateIndicatorSetRequest.parse({
+      items: [
+        { id: "a", label: "A" },
+        { id: "b", label: "B" },
+      ],
+    });
+    expect(r.items?.length).toBe(2);
   });
 });

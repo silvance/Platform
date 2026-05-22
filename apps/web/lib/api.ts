@@ -3,7 +3,10 @@ import {
   AdminScenarioDetail,
   AdminScenarioListResponse,
   AdminScenarioSummary,
+  AuthoredArtifact,
+  AuthoredIndicatorSet,
   AuthoredQuestion,
+  CreateIndicatorSetRequest,
   CreateQuestionRequest,
   CreateScenarioRequest,
   HelloResponse,
@@ -18,6 +21,8 @@ import {
   ScenarioProgressPayload,
   SubmitAnswerRequest,
   SubmitAnswerResponse,
+  UpdateArtifactRequest,
+  UpdateIndicatorSetRequest,
   UpdateQuestionRequest,
   UpdateScenarioRequest,
 } from "@ci-train/contracts";
@@ -35,6 +40,10 @@ export class ApiError extends Error {
 interface RequestOpts {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
+  // Multipart form data. When set, body is ignored. The fetch call
+  // sends the FormData directly (no JSON serialization, no
+  // content-type header — browser/runtime sets it with the boundary).
+  formData?: FormData;
   token?: string | null;
   expect?: "json" | "empty";
 }
@@ -44,13 +53,15 @@ async function request(path: string, opts: RequestOpts = {}): Promise<unknown> {
   const headers: Record<string, string> = {
     accept: "application/json",
   };
-  if (opts.body !== undefined) headers["content-type"] = "application/json";
+  if (opts.body !== undefined && !opts.formData) {
+    headers["content-type"] = "application/json";
+  }
   if (opts.token) headers["authorization"] = `Bearer ${opts.token}`;
 
   const res = await fetch(url, {
     method: opts.method ?? "GET",
     headers,
-    body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
+    body: opts.formData ?? (opts.body === undefined ? undefined : JSON.stringify(opts.body)),
     cache: "no-store",
   });
 
@@ -201,6 +212,76 @@ export const api = {
     ): Promise<void> => {
       await request(
         `/admin/challenges/${encodeURIComponent(slug)}/questions/${encodeURIComponent(questionId)}`,
+        { method: "DELETE", token, expect: "empty" },
+      );
+    },
+    addIndicatorSet: async (
+      token: string,
+      slug: string,
+      body: CreateIndicatorSetRequest,
+    ): Promise<AuthoredIndicatorSet> =>
+      parse(
+        AuthoredIndicatorSet,
+        await request(
+          `/admin/challenges/${encodeURIComponent(slug)}/indicator-sets`,
+          { method: "POST", body, token },
+        ),
+      ),
+    updateIndicatorSet: async (
+      token: string,
+      slug: string,
+      setId: string,
+      body: UpdateIndicatorSetRequest,
+    ): Promise<AuthoredIndicatorSet> =>
+      parse(
+        AuthoredIndicatorSet,
+        await request(
+          `/admin/challenges/${encodeURIComponent(slug)}/indicator-sets/${encodeURIComponent(setId)}`,
+          { method: "PATCH", body, token },
+        ),
+      ),
+    removeIndicatorSet: async (
+      token: string,
+      slug: string,
+      setId: string,
+    ): Promise<void> => {
+      await request(
+        `/admin/challenges/${encodeURIComponent(slug)}/indicator-sets/${encodeURIComponent(setId)}`,
+        { method: "DELETE", token, expect: "empty" },
+      );
+    },
+    addArtifact: async (
+      token: string,
+      slug: string,
+      fd: FormData,
+    ): Promise<AuthoredArtifact> =>
+      parse(
+        AuthoredArtifact,
+        await request(
+          `/admin/challenges/${encodeURIComponent(slug)}/artifacts`,
+          { method: "POST", formData: fd, token },
+        ),
+      ),
+    updateArtifact: async (
+      token: string,
+      slug: string,
+      artifactId: string,
+      body: UpdateArtifactRequest,
+    ): Promise<AuthoredArtifact> =>
+      parse(
+        AuthoredArtifact,
+        await request(
+          `/admin/challenges/${encodeURIComponent(slug)}/artifacts/${encodeURIComponent(artifactId)}`,
+          { method: "PATCH", body, token },
+        ),
+      ),
+    removeArtifact: async (
+      token: string,
+      slug: string,
+      artifactId: string,
+    ): Promise<void> => {
+      await request(
+        `/admin/challenges/${encodeURIComponent(slug)}/artifacts/${encodeURIComponent(artifactId)}`,
         { method: "DELETE", token, expect: "empty" },
       );
     },

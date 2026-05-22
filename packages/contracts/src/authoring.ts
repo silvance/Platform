@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  ArtifactKind,
   Difficulty,
   ScenarioSlug,
   ScenarioStatus,
@@ -9,8 +10,12 @@ import {
 } from "./scenarios.js";
 import {
   ConfidenceValue,
+  IndicatorItem,
   MAX_DEBRIEF_MD_CHARS,
   MAX_HINT_CHARS,
+  MAX_INDICATOR_ITEMS,
+  MAX_INDICATOR_SET_NAME_CHARS,
+  MAX_INDICATOR_SET_SLUG_CHARS,
   MAX_MC_OPTIONS,
   MAX_MC_OPTION_LABEL_CHARS,
   MAX_PROMPT_MD_CHARS,
@@ -121,10 +126,22 @@ export const TextMatchDraft = z.object({
   hintAfterTries: z.number().int().min(1).max(10).default(3),
 });
 
+export const SelectIndicatorsDraft = z.object({
+  type: z.literal("select_indicators"),
+  ...BaseQuestionFields,
+  // The indicator set this question grades against. The service
+  // verifies the set belongs to the same scenario.
+  indicatorSetId: z.string().uuid(),
+  // Subset of items.id from the referenced indicator set. The service
+  // verifies every correctId resolves to a real item.
+  correctIds: z.array(z.string().min(1).max(60)).min(1),
+});
+
 export const CreateQuestionRequest = z.discriminatedUnion("type", [
   MultiChoiceDraft,
   ConfidenceDraft,
   TextMatchDraft,
+  SelectIndicatorsDraft,
 ]);
 export type CreateQuestionRequest = z.infer<typeof CreateQuestionRequest>;
 
@@ -196,15 +213,22 @@ const AuthoredTextMatch = AuthoredBase.extend({
   hint: z.string().max(MAX_HINT_CHARS).nullable(),
   hintAfterTries: z.number().int().min(1).max(10),
 });
+const AuthoredSelectIndicators = AuthoredBase.extend({
+  type: z.literal("select_indicators"),
+  indicatorSetId: z.string().uuid(),
+  correctIds: z.array(z.string()).min(1),
+});
 
-// `unsupported` carries questions that exist in the DB but whose type
-// the M8 admin UI can't yet edit (select_indicators or, defensively,
-// anything else). The list endpoint still returns them so the admin
-// sees them in the question list and isn't confused by a missing row.
+// `unsupported` is a defensive escape hatch: a question whose stored
+// type isn't one the admin UI knows how to render. After M9 all four
+// supported types are authorable; the variant survives so an admin
+// looking at a DB row written by a hypothetical future schema doesn't
+// see the question vanish.
 export const AuthoredQuestion = z.discriminatedUnion("type", [
   AuthoredMultiChoice,
   AuthoredConfidence,
   AuthoredTextMatch,
+  AuthoredSelectIndicators,
   z.object({
     type: z.literal("unsupported"),
     id: z.string().uuid(),
@@ -216,8 +240,95 @@ export const AuthoredQuestion = z.discriminatedUnion("type", [
 ]);
 export type AuthoredQuestion = z.infer<typeof AuthoredQuestion>;
 
+// ─── indicator-set authoring ─────────────────────────────────────
+
+// Slug must be unique per (scenario, slug). The service rejects
+// duplicates with 409.
+export const IndicatorSetSlug = z
+  .string()
+  .min(1)
+  .max(MAX_INDICATOR_SET_SLUG_CHARS)
+  .regex(
+    /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/,
+    "Indicator set slug must be lowercase alphanumeric with hyphens.",
+  );
+
+export const CreateIndicatorSetRequest = z.object({
+  slug: IndicatorSetSlug,
+  displayName: z.string().min(1).max(MAX_INDICATOR_SET_NAME_CHARS),
+  // Optional FK to an artifact on the same scenario. The service
+  // resolves null to "no artifact" rather than rejecting; if you pass
+  // a UUID, the service verifies it belongs to the scenario.
+  sourceArtifactId: z.string().uuid().nullable().optional(),
+  items: z.array(IndicatorItem).min(2).max(MAX_INDICATOR_ITEMS),
+});
+export type CreateIndicatorSetRequest = z.infer<
+  typeof CreateIndicatorSetRequest
+>;
+
+// Update is partial; slug is immutable for the same reason scenario
+// slugs are (any select_indicators question pointing at this set
+// would break if the slug moved).
+export const UpdateIndicatorSetRequest = z.object({
+  displayName: z.string().min(1).max(MAX_INDICATOR_SET_NAME_CHARS).optional(),
+  sourceArtifactId: z.string().uuid().nullable().optional(),
+  items: z.array(IndicatorItem).min(2).max(MAX_INDICATOR_ITEMS).optional(),
+});
+export type UpdateIndicatorSetRequest = z.infer<
+  typeof UpdateIndicatorSetRequest
+>;
+
+// Indicator-set payload as the editor sees it. Items + items.id are
+// authored content, not correctness; correctness lives on the
+// AnswerKey of any select_indicators question that references this set.
+export const AuthoredIndicatorSet = z.object({
+  id: z.string().uuid(),
+  slug: IndicatorSetSlug,
+  displayName: z.string(),
+  sourceArtifactId: z.string().uuid().nullable(),
+  items: z.array(IndicatorItem),
+  questionCount: z.number().int().nonnegative(),
+});
+export type AuthoredIndicatorSet = z.infer<typeof AuthoredIndicatorSet>;
+
+// ─── artifact authoring ──────────────────────────────────────────
+
+// Caps shared with the API. Artifact bytes can be tens of MB (PDFs +
+// PCAPs); 25 MiB is generous for the current artifact types without
+// being a giant XSS vector or a runaway-disk risk. Tighten later if
+// needed.
+export const MAX_ARTIFACT_BYTES = 25 * 1024 * 1024;
+
+// Metadata returned on upload (the controller writes the file via
+// multipart; this schema is what the response body validates against).
+// Same shape as ArtifactListItem to keep the editor's renderer happy.
+export const AuthoredArtifact = z.object({
+  id: z.string().uuid(),
+  ordinal: z.number().int().nonnegative(),
+  displayName: z.string().min(1).max(200),
+  kind: ArtifactKind,
+  sha256: z.string().regex(/^[0-9a-f]{64}$/),
+  sizeBytes: z.number().int().nonnegative(),
+  mimeType: z.string().min(1).max(120),
+  viewerHint: z.string().max(60).nullable(),
+  createdAt: z.string().datetime(),
+});
+export type AuthoredArtifact = z.infer<typeof AuthoredArtifact>;
+
+// PATCH artifact metadata. Bytes are immutable — to replace the file
+// the admin deletes and re-uploads. That keeps the sha256/sizeBytes
+// columns honest (they're never recomputed in-place).
+export const UpdateArtifactRequest = z.object({
+  displayName: z.string().min(1).max(200).optional(),
+  viewerHint: z.string().max(60).nullable().optional(),
+  ordinal: z.number().int().nonnegative().optional(),
+});
+export type UpdateArtifactRequest = z.infer<typeof UpdateArtifactRequest>;
+
 export const AdminScenarioDetail = AdminScenarioSummary.extend({
   brief: ScenarioBriefDraft.nullable(),
   questions: z.array(AuthoredQuestion),
+  indicatorSets: z.array(AuthoredIndicatorSet),
+  artifacts: z.array(AuthoredArtifact),
 });
 export type AdminScenarioDetail = z.infer<typeof AdminScenarioDetail>;
