@@ -66,6 +66,48 @@ If you intend to keep admin-authored content alive across redeploys,
 do **not** re-run the seed — the migrations are the only thing that
 needs to run on upgrade.
 
+## Abuse protection
+
+### Login throttle uses BFF IP, not end-user IP
+
+`POST /v1/auth/login` is rate-limited at 10 req/min/IP via the
+NestJS throttler. The browser, however, does not call the API
+directly — the login form posts to a Next.js server action, and
+the server action calls `api.login()` server-side.
+
+As a result, every browser-driven login request reaches the API
+from the **web container's IP**, not the user's IP. The throttle
+key is the BFF, not the human. A real attacker hitting the public
+API endpoint directly (`api.cicyberlab.com/v1/auth/login`) still
+gets keyed by their own IP and is throttled correctly; the gap is
+only for traffic through the web BFF.
+
+**Operational impact**: the protection works against a flat
+external brute-force attack on the public endpoint. It does **not**
+distinguish between two different browser users sharing the BFF —
+tightening the limit would lock a whole LAN cohort behind one
+bucket.
+
+**Proper fix (deferred)**: a BFF-to-API forwarded-IP channel.
+
+1. The web server action reads the trusted client IP from the
+   incoming request headers (`x-forwarded-for` / `x-real-ip`,
+   filtered against the reverse proxy's known trust boundary).
+2. The web layer forwards that IP to the API in a controlled
+   header (`X-CI-Train-Client-IP`) accompanied by a shared-secret
+   header (`X-CI-Train-BFF-Secret`) only the BFF and API know.
+3. The API ships a custom `ThrottlerGuard` whose `getTracker()`
+   returns the forwarded IP **only** when the secret matches; for
+   any other caller it falls back to `req.ip`.
+4. Caddy (or whichever reverse proxy the install uses) must be
+   configured to scrub inbound `X-CI-Train-*` headers from public
+   clients so direct internet callers cannot spoof the BFF secret.
+
+Until that lands, treat the login throttle as a coarse smoke alarm,
+not a brute-force defense. The proper defense for the beta is to
+keep the deployment behind a reverse proxy that the operator
+controls and rotate seed credentials immediately.
+
 ## Reliability / scale
 
 ### Public beta is not HA-production

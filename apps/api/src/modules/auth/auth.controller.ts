@@ -25,15 +25,17 @@ import type { SessionContext } from "./auth.service";
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  // M13: tightened login throttle. Brute-forcing a known username
-  // against the live API is the highest-value abuse to block at the
-  // wire; legitimate login activity from a single IP fits well under
-  // 5 attempts per 5 minutes. A successful login on the first try
-  // gets the user a session and stops hitting this route.
+  // Login throttle is intentionally loose (10/min/IP) until the BFF
+  // client-IP propagation lands. Today the web layer calls /auth/login
+  // server-side, so every browser-driven login looks to the API like
+  // it's coming from the BFF's IP — tightening the limit would
+  // pool a whole LAN cohort behind a single bucket and lock real
+  // users out. See docs/known-limitations.md for the propagation
+  // design.
   @Public()
   @Post("login")
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 5, ttl: 5 * 60_000 } })
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @UsePipes(new ZodValidationPipe(LoginRequest))
   async login(
     @Body() body: LoginRequest,
