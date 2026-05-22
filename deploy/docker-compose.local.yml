@@ -57,6 +57,9 @@ services:
       ARTIFACT_STORAGE_ROOT: /data/artifacts
       # Local mode does not sit behind a sanitizing proxy. Leave OFF.
       TRUST_PROXY: ${TRUST_PROXY:-false}
+      # Optional in local mode; when set, must match the web service
+      # so the BFF-forwarded-IP throttler can validate the secret.
+      BFF_FORWARD_SECRET: ${BFF_FORWARD_SECRET:-}
     volumes:
       # Named volume so artifacts survive container recreation. Override
       # to a host bind mount via deploy/env/local.env if you want the
@@ -90,6 +93,8 @@ services:
       # can point at a remote api if the operator wants to host them
       # separately.
       API_INTERNAL_URL: ${API_INTERNAL_URL:-http://api:4000}
+      # Optional in local mode; must match the api service when set.
+      BFF_FORWARD_SECRET: ${BFF_FORWARD_SECRET:-}
     ports:
       - "${WEB_BIND_HOST:-0.0.0.0}:${WEB_PORT:-3000}:3000"
     healthcheck:

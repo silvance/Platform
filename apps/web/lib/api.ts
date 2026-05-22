@@ -28,6 +28,7 @@ import {
   UpdateQuestionRequest,
   UpdateScenarioRequest,
 } from "@ci-train/contracts";
+import { bffForwardHeaders } from "./forwarded-ip";
 
 const API_INTERNAL_URL =
   process.env.API_INTERNAL_URL ?? "http://localhost:4000";
@@ -59,6 +60,12 @@ async function request(path: string, opts: RequestOpts = {}): Promise<unknown> {
     headers["content-type"] = "application/json";
   }
   if (opts.token) headers["authorization"] = `Bearer ${opts.token}`;
+
+  // Stamp the BFF-forwarded-IP headers when we're in a request scope
+  // and the shared secret is configured. The API throttler uses these
+  // to key per-real-client-IP for browser-driven traffic; without
+  // them it keys on the BFF container's IP (safe but coarse).
+  Object.assign(headers, await bffForwardHeaders());
 
   const res = await fetch(url, {
     method: opts.method ?? "GET",

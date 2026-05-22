@@ -36,6 +36,15 @@ api.cicyberlab.com {
     # `api.cicyberlab.com` hostname (replace with citrain.lan).
     # tls internal
 
+    # Scrub the BFF-trusted headers from any client coming from the
+    # public internet. The web BFF sets these headers internally
+    # (over the Docker network) to forward the real client IP for
+    # rate-limit keying; the API trusts them only when accompanied
+    # by the shared BFF_FORWARD_SECRET, but defense-in-depth: don't
+    # even let public callers attempt the spoof.
+    request_header -X-CI-Train-Client-IP
+    request_header -X-CI-Train-BFF-Secret
+
     reverse_proxy 127.0.0.1:4000 {
         header_up Host              {host}
         header_up X-Forwarded-Proto {scheme}

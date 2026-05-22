@@ -25,17 +25,19 @@ import type { SessionContext } from "./auth.service";
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  // Login throttle is intentionally loose (10/min/IP) until the BFF
-  // client-IP propagation lands. Today the web layer calls /auth/login
-  // server-side, so every browser-driven login looks to the API like
-  // it's coming from the BFF's IP — tightening the limit would
-  // pool a whole LAN cohort behind a single bucket and lock real
-  // users out. See docs/known-limitations.md for the propagation
-  // design.
+  // M14 tightened the login throttle to 5 attempts / 5 min / *real
+  // client IP*. The realness comes from the BFF forwarded-IP
+  // channel — when the web layer calls /auth/login server-side, it
+  // attaches X-CI-Train-Client-IP + X-CI-Train-BFF-Secret, and
+  // BffForwardedThrottlerGuard keys the bucket by the forwarded IP
+  // instead of the BFF's container IP. In dev, where the secret is
+  // unset, the throttle falls back to req.ip — still safe, just
+  // pools BFF-routed traffic together. Direct hits on the public
+  // API always key on the real peer regardless.
   @Public()
   @Post("login")
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Throttle({ default: { limit: 5, ttl: 5 * 60_000 } })
   @UsePipes(new ZodValidationPipe(LoginRequest))
   async login(
     @Body() body: LoginRequest,
