@@ -36,6 +36,24 @@ api.cicyberlab.com {
     # `api.cicyberlab.com` hostname (replace with citrain.lan).
     # tls internal
 
+    # NOTE on X-CI-Train-Client-IP / X-CI-Train-BFF-Secret
+    # ----------------------------------------------------
+    # The web BFF (on Vercel in mode 3) stamps these two headers on
+    # outbound API calls so the throttler can key per real-client
+    # IP instead of the BFF's egress IP. In mode 3 the BFF reaches
+    # the API over THIS PUBLIC VHOST — Vercel is outside the VPS —
+    # so we MUST pass these headers through. We deliberately do
+    # not strip them.
+    #
+    # Trust boundary is the shared secret, not the network path:
+    # X-CI-Train-BFF-Secret must match the api's BFF_FORWARD_SECRET
+    # env (timing-safe compared on the api side). Any caller —
+    # legitimate BFF or arbitrary internet client — can send these
+    # headers; without the matching secret the API guard falls back
+    # to req.ip. Don't add a `request_header -X-CI-Train-*` line
+    # here unless you also have a separate trusted internal path
+    # for the BFF (e.g. WireGuard or a sidecar BFF on the VPS).
+
     reverse_proxy 127.0.0.1:4000 {
         header_up Host              {host}
         header_up X-Forwarded-Proto {scheme}

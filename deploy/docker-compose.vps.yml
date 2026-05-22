@@ -57,6 +57,9 @@ services:
       # Caddy is the only hop in front. Setting this wrong breaks
       # /auth/login throttling — see docs/deployment.md § security.
       TRUST_PROXY: ${TRUST_PROXY:-1}
+      # Shared with the web service so the BFF-forwarded-IP
+      # throttler can validate inbound X-CI-Train-Client-IP headers.
+      BFF_FORWARD_SECRET: ${BFF_FORWARD_SECRET}
       SEED_INSTRUCTOR_EMAIL: ${SEED_INSTRUCTOR_EMAIL:-instructor@example.local}
       SEED_TRAINEE_EMAIL: ${SEED_TRAINEE_EMAIL:-trainee@example.local}
     volumes:
