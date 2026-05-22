@@ -42,6 +42,10 @@ import { ZodValidationPipe } from "../../common/zod-validation.pipe";
 import { ScenarioSlugPipe } from "../../common/scenario-slug.pipe";
 import { ARTIFACT_STORAGE } from "../artifacts/storage/storage.module";
 import type { ArtifactStorage } from "../artifacts/storage/artifact-storage";
+import { PacksService } from "./packs.service";
+import type { Response } from "express";
+import { Res } from "@nestjs/common";
+import { MAX_PACK_BYTES, type ImportPackResponse } from "@ci-train/contracts";
 
 // Multer's File type isn't exported by @nestjs/platform-express in a
 // usable form (no @types/multer dep). We only need the buffer + a few
@@ -64,6 +68,7 @@ interface UploadedMulterFile {
 export class AuthoringController {
   constructor(
     private readonly authoring: AuthoringService,
+    private readonly packs: PacksService,
     @Inject(ARTIFACT_STORAGE) private readonly storage: ArtifactStorage,
   ) {}
 
@@ -71,6 +76,47 @@ export class AuthoringController {
   async list(): Promise<AdminScenarioListResponse> {
     const scenarios = await this.authoring.list();
     return { scenarios };
+  }
+
+  // ─── packs (M11) ───────────────────────────────────────────────
+  //
+  // Declared BEFORE the slug-parameterized routes so `_import` and
+  // `:slug/export` don't collide with `:slug`. The `_import` prefix
+  // is also a route the ScenarioSlug regex would refuse (slugs must
+  // start with [a-z0-9]), so a future admin can't author a scenario
+  // with that slug and shadow the endpoint.
+  @Post("_import")
+  @UseInterceptors(
+    FileInterceptor("file", {
+      limits: { fileSize: MAX_PACK_BYTES, files: 1 },
+    }),
+  )
+  async importPack(
+    @CurrentSession() session: SessionContext | undefined,
+    @UploadedFile() file: UploadedMulterFile | undefined,
+  ): Promise<ImportPackResponse> {
+    if (!session) throw new UnauthorizedException();
+    if (!file) throw new BadRequestException("Missing 'file' field.");
+    return this.packs.importPack(session.user.id, file.buffer);
+  }
+
+  @Get(":slug/export")
+  async exportPack(
+    @Param("slug", ScenarioSlugPipe) slug: string,
+    @Res() res: Response,
+  ): Promise<void> {
+    const { filename, zipBytes } = await this.packs.exportScenario(slug);
+    res.setHeader("Content-Type", "application/zip");
+    res.setHeader("Content-Length", String(zipBytes.length));
+    // Filename is safe because it's <slug>-<iso-timestamp>.zip — slug
+    // is regex-validated and the timestamp has no path-meaningful
+    // characters after the colon-replace.
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${filename}"`,
+    );
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.send(zipBytes);
   }
 
   @Get(":slug")

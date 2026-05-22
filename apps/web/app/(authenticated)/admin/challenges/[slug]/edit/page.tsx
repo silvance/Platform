@@ -80,14 +80,22 @@ export default async function EditChallengePage({ params }: Props) {
           </code>{" "}
           <span className={`admin-status-${scenario.status}`}>{scenario.status}</span>
         </div>
-        {scenario.status === "published" ? (
-          <Link
-            href={`/scenarios/${scenario.slug}`}
+        <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
+          <a
+            href={`/api/admin/challenges/${scenario.slug}/export`}
             style={{ color: "var(--accent)" }}
           >
-            View as user →
-          </Link>
-        ) : null}
+            Download pack ↓
+          </a>
+          {scenario.status === "published" ? (
+            <Link
+              href={`/scenarios/${scenario.slug}`}
+              style={{ color: "var(--accent)" }}
+            >
+              View as user →
+            </Link>
+          ) : null}
+        </div>
       </header>
 
       <h2>Metadata</h2>
