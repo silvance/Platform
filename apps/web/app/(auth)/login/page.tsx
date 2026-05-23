@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { getCurrentUser } from "@/lib/session";
 import { LoginForm } from "./login-form";
 
@@ -11,10 +12,14 @@ export default async function LoginPage() {
   }
 
   return (
-    <main>
-      <h1>CICyberLab</h1>
-      <p style={{ color: "var(--muted)", marginTop: 0 }}>Sign in to continue.</p>
+    <div className="auth-form-inner">
+      <h1>Sign in</h1>
+      <p className="lead">Welcome back. Use your CICyberLab credentials.</p>
       <LoginForm />
-    </main>
+      <p className="auth-form-footer">
+        No account yet?{" "}
+        <Link href="/register">Request one</Link>
+      </p>
+    </div>
   );
 }

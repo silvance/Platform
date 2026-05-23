@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { getCurrentUser } from "@/lib/session";
 import { RegisterForm } from "./register-form";
 
@@ -12,19 +13,20 @@ export const dynamic = "force-dynamic";
 export default async function RegisterPage() {
   const user = await getCurrentUser();
   if (user) {
-    // Already signed in — registering wouldn't make sense; send
-    // them where they'd normally land.
     redirect(user.role === "admin" ? "/admin" : "/scenarios");
   }
 
   return (
-    <main>
+    <div className="auth-form-inner">
       <h1>Request an account</h1>
-      <p style={{ color: "var(--muted)", marginTop: 0 }}>
-        Submit your details. An admin will review the request; once they
-        approve, you'll be able to sign in.
+      <p className="lead">
+        Submit your details. An admin will review and enable the account.
       </p>
       <RegisterForm />
-    </main>
+      <p className="auth-form-footer">
+        Already have an account?{" "}
+        <Link href="/login">Sign in</Link>
+      </p>
+    </div>
   );
 }

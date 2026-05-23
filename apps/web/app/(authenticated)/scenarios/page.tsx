@@ -59,11 +59,15 @@ export default async function ScenariosPage({ searchParams }: Props) {
 
   return (
     <main>
-      <h1>Challenges</h1>
-      <p style={{ color: "var(--muted)", marginTop: 0 }}>
-        Welcome, {user.displayName}. Pick a challenge to inspect its
-        artifacts, answer questions, and retry until correct.
-      </p>
+      <header className="page-header">
+        <div>
+          <h1>Challenges</h1>
+          <p>
+            Welcome, {user.displayName}. Pick a challenge to inspect its
+            artifacts, answer questions, and retry until correct.
+          </p>
+        </div>
+      </header>
 
       {invalidFilterFields.length > 0 ? (
         <div

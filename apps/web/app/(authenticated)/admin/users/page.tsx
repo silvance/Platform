@@ -22,7 +22,7 @@ export default async function UsersAdminPage() {
       <div className="card" style={{ padding: 0, overflow: "hidden" }}>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
-            <tr style={{ background: "#0b1020", textAlign: "left" }}>
+            <tr style={{ background: "var(--bg-sunken)", textAlign: "left" }}>
               <th style={headerStyle}>User</th>
               <th style={headerStyle}>Role</th>
               <th style={headerStyle}>Status</th>
@@ -82,5 +82,5 @@ const headerStyle: React.CSSProperties = {
   fontSize: ".85rem",
   color: "var(--muted)",
   fontWeight: 500,
-  borderBottom: "1px solid #1f2845",
+  borderBottom: "1px solid var(--border)",
 };

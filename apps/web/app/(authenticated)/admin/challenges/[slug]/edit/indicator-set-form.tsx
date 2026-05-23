@@ -106,7 +106,7 @@ export function IndicatorSetForm({
 
       <fieldset
         style={{
-          border: "1px solid #1f2845",
+          border: "1px solid var(--border)",
           borderRadius: 6,
           padding: ".55rem .85rem",
         }}

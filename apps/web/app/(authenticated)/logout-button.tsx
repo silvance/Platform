@@ -10,14 +10,7 @@ export function LogoutButton() {
       type="button"
       onClick={() => start(() => logoutAction())}
       disabled={pending}
-      style={{
-        background: "transparent",
-        color: "var(--muted)",
-        border: "1px solid #2a3556",
-        borderRadius: 6,
-        padding: ".3rem .65rem",
-        cursor: "pointer",
-      }}
+      className="btn btn-ghost btn-sm"
     >
       {pending ? "Signing out…" : "Sign out"}
     </button>

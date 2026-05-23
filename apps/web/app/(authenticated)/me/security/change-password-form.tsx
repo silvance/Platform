@@ -64,8 +64,8 @@ const legendStyle: React.CSSProperties = {
 const inputStyle: React.CSSProperties = {
   width: "100%",
   padding: ".5rem .75rem",
-  background: "#0b1020",
-  border: "1px solid #2a3556",
+  background: "var(--bg-sunken)",
+  border: "1px solid var(--border-strong)",
   borderRadius: 6,
   color: "var(--fg)",
   fontSize: "1rem",
@@ -76,7 +76,7 @@ const msgStyle: React.CSSProperties = {
 };
 const buttonStyle: React.CSSProperties = {
   background: "var(--accent)",
-  color: "#0b1020",
+  color: "var(--bg-sunken)",
   border: 0,
   borderRadius: 6,
   padding: ".55rem 1rem",
