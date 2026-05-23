@@ -12,6 +12,10 @@ export const AdminUserSummary = z.object({
   displayName: z.string(),
   role: Role,
   disabled: z.boolean(),
+  // M17 self-registration: null means the account is pending
+  // admin approval and cannot sign in. The /admin/users UI groups
+  // these into a "Pending" section + an Approve action.
+  approvedAt: z.string().datetime().nullable(),
   createdAt: z.string().datetime(),
   lastLoginAt: z.string().datetime().nullable(),
 });

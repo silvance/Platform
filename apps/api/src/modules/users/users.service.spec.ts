@@ -37,6 +37,7 @@ const ROW = (over: Partial<Record<string, unknown>> = {}) => ({
   displayName: "Test User",
   role: "user",
   disabled: false,
+  approvedAt: new Date("2026-05-01T00:00:00Z"),
   createdAt: new Date("2026-05-01T00:00:00Z"),
   lastLoginAt: null,
   ...over,
@@ -186,6 +187,51 @@ describe("UsersService", () => {
       const sessWhere = fake.session.updateMany.mock.calls[0][0].where;
       expect(sessWhere.userId).toBe("u2");
       expect(sessWhere.NOT).toBeUndefined();
+    });
+  });
+
+  describe("approve (M17)", () => {
+    it("404s when the target user doesn't exist", async () => {
+      const fake = makeFakePrisma();
+      const svc = new UsersService(fake.api, makeAuth(fake.api));
+      fake.user.findUnique.mockResolvedValue(null);
+
+      await expect(svc.approve("ghost")).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      expect(fake.user.update).not.toHaveBeenCalled();
+    });
+
+    it("sets approvedAt = NOW for a pending user", async () => {
+      const fake = makeFakePrisma();
+      const svc = new UsersService(fake.api, makeAuth(fake.api));
+      fake.user.findUnique.mockResolvedValue({ id: "u3", approvedAt: null });
+      fake.user.update.mockResolvedValue(
+        ROW({ id: "u3", approvedAt: new Date("2026-05-23T10:00:00Z") }),
+      );
+
+      const out = await svc.approve("u3");
+      expect(out.approvedAt).toBe("2026-05-23T10:00:00.000Z");
+
+      const updateData = fake.user.update.mock.calls[0][0].data;
+      expect(updateData.approvedAt).toBeInstanceOf(Date);
+    });
+
+    it("is a no-op (no second write) when the user is already approved", async () => {
+      const fake = makeFakePrisma();
+      const svc = new UsersService(fake.api, makeAuth(fake.api));
+      const already = new Date("2026-05-20T08:00:00Z");
+      // First findUnique = approve() pre-check.
+      // Second findUnique = the get() re-read for the canonical row.
+      fake.user.findUnique
+        .mockResolvedValueOnce({ id: "u3", approvedAt: already })
+        .mockResolvedValueOnce(ROW({ id: "u3", approvedAt: already }));
+
+      const out = await svc.approve("u3");
+      expect(out.approvedAt).toBe("2026-05-20T08:00:00.000Z");
+      // Critical: NO update call — the canonical approval time isn't
+      // re-bumped on re-approve. Audit trail keeps the original.
+      expect(fake.user.update).not.toHaveBeenCalled();
     });
   });
 });

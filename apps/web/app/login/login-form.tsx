@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import Link from "next/link";
 import { loginAction, type LoginActionState } from "./actions";
 
 const initial: LoginActionState = { error: null };
@@ -38,6 +39,20 @@ export function LoginForm() {
       <button type="submit" disabled={pending} style={buttonStyle}>
         {pending ? "Signing in…" : "Sign in"}
       </button>
+      <p
+        style={{
+          marginTop: "0.85rem",
+          marginBottom: 0,
+          color: "var(--muted)",
+          fontSize: ".85rem",
+        }}
+      >
+        No account yet?{" "}
+        <Link href="/register" style={{ color: "var(--accent)" }}>
+          Request one
+        </Link>
+        .
+      </p>
     </form>
   );
 }

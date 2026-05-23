@@ -16,6 +16,8 @@ import {
   LoginRequest,
   LoginResponse,
   MeResponse,
+  RegisterRequest,
+  RegisterResponse,
 } from "@ci-train/contracts";
 import { AuthService } from "./auth.service";
 import { ZodValidationPipe } from "../../common/zod-validation.pipe";
@@ -57,6 +59,32 @@ export class AuthController {
       user: result.user,
       token: result.token,
       expiresAt: result.expiresAt.toISOString(),
+    };
+  }
+
+  // M17 self-registration. Public; account lands in pending-
+  // approval state regardless of outcome. Throttle is tighter than
+  // login (3 / 5 min) because every successful call writes to
+  // users; combined with the M14 per-real-client-IP keying, this
+  // makes bulk-spam registration impractical without distributed
+  // infrastructure.
+  @Public()
+  @Post("register")
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 3, ttl: 5 * 60_000 } })
+  @UsePipes(new ZodValidationPipe(RegisterRequest))
+  async register(@Body() body: RegisterRequest): Promise<RegisterResponse> {
+    await this.authService.register({
+      email: body.email,
+      displayName: body.displayName,
+      password: body.password,
+    });
+    // Same response regardless of whether a row was created — no
+    // account-enumeration via response shape or status code.
+    return {
+      pendingApproval: true,
+      message:
+        "Registration received. An administrator will review your account; you'll be able to sign in once it's enabled.",
     };
   }
 

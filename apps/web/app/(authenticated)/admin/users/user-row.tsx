@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import type { AdminUserSummary, Role } from "@ci-train/contracts";
 import { MIN_PASSWORD_LENGTH } from "@ci-train/contracts";
 import {
+  approveUserAction,
   resetPasswordAction,
   updateUserAction,
   type UserActionState,
@@ -30,10 +31,14 @@ export function UserRow({ user, isSelf }: Props) {
     resetPasswordAction,
     initial,
   );
+  const [approveState, approveActionFn, approving] = useActionState(
+    approveUserAction,
+    initial,
+  );
 
-  // Combined banner: prefer the most recent message of either form.
-  const banner =
-    pickLatest(updateState, resetState);
+  // Combined banner: prefer the most recent message across all
+  // three forms (update, reset-password, approve).
+  const banner = pickLatest(pickLatest(updateState, resetState), approveState);
 
   return (
     <tr style={{ borderTop: "1px solid #1f2845", verticalAlign: "top" }}>
@@ -58,13 +63,21 @@ export function UserRow({ user, isSelf }: Props) {
         />
       </td>
       <td style={cellStyle}>
-        <DisabledControl
-          userId={user.id}
-          currentlyDisabled={user.disabled}
-          locked={isSelf}
-          action={updateAction}
-          pending={updating}
-        />
+        {user.approvedAt === null ? (
+          <PendingApprovalControl
+            userId={user.id}
+            action={approveActionFn}
+            pending={approving}
+          />
+        ) : (
+          <DisabledControl
+            userId={user.id}
+            currentlyDisabled={user.disabled}
+            locked={isSelf}
+            action={updateAction}
+            pending={updating}
+          />
+        )}
       </td>
       <td style={cellStyle}>
         <div style={{ color: "var(--muted)", fontSize: ".85rem" }}>
@@ -148,6 +161,26 @@ function RoleControl({
         <option value="user">user</option>
         <option value="admin">admin</option>
       </select>
+    </form>
+  );
+}
+
+function PendingApprovalControl({
+  userId,
+  action,
+  pending,
+}: {
+  userId: string;
+  action: (formData: FormData) => void;
+  pending: boolean;
+}) {
+  return (
+    <form action={action} style={{ display: "flex", gap: ".4rem", alignItems: "center" }}>
+      <input type="hidden" name="id" value={userId} />
+      <span className="tag-bad" style={{ fontSize: ".75rem" }}>pending</span>
+      <button type="submit" disabled={pending} style={inlineButtonStyle}>
+        {pending ? "Approving…" : "Approve"}
+      </button>
     </form>
   );
 }
