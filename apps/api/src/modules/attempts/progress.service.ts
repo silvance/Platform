@@ -227,7 +227,12 @@ export class ProgressService {
         select: { id: true, status: true },
       });
       if (!scenario) throw new NotFoundException("Scenario not found.");
-      if (scenario.status !== "published") {
+      // Drafts are admin-only on the read side (see getProgress);
+      // mirror that gate on the SUBMIT side so admins can solve the
+      // drafts they're previewing. Without this branch the
+      // /admin/challenges → Solve → submit-answer path would 404
+      // for every Tier-2 draft.
+      if (role !== "admin" && scenario.status !== "published") {
         throw new NotFoundException("Scenario not found.");
       }
 
