@@ -28,7 +28,15 @@ function makeFakePrisma() {
 }
 
 function makeAuth(prisma: PrismaService): AuthService {
-  return new AuthService(prisma);
+  // AccessCodesService is only consumed by AuthService.register,
+  // which isn't exercised in the UsersService suite. A bare stub
+  // with a validateAndConsume that always succeeds is enough to
+  // satisfy the constructor signature without pulling in a real
+  // database fixture.
+  const accessCodes = {
+    validateAndConsume: jest.fn().mockResolvedValue(true),
+  } as unknown as import("../access-codes/access-codes.service").AccessCodesService;
+  return new AuthService(prisma, accessCodes);
 }
 
 const ROW = (over: Partial<Record<string, unknown>> = {}) => ({

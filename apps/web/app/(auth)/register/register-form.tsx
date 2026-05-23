@@ -14,11 +14,11 @@ export function RegisterForm() {
     return (
       <div className="card">
         <h2 style={{ marginTop: 0, fontSize: "1.05rem" }}>
-          Registration received
+          Account ready
         </h2>
         <p className="muted">{state.ok}</p>
         <p style={{ margin: 0 }}>
-          <Link href="/login">← Back to sign in</Link>
+          <Link href="/login">→ Sign in</Link>
         </p>
       </div>
     );
@@ -26,6 +26,22 @@ export function RegisterForm() {
 
   return (
     <form action={action} className="auth-form">
+      <div className="field">
+        <label className="field-label" htmlFor="accessCode">
+          Access code
+        </label>
+        <input
+          id="accessCode"
+          name="accessCode"
+          type="text"
+          required
+          autoComplete="off"
+          autoCapitalize="characters"
+          spellCheck={false}
+          className="input"
+          placeholder="From your invite"
+        />
+      </div>
       <div className="field">
         <label className="field-label" htmlFor="email">Email</label>
         <input
@@ -88,7 +104,7 @@ export function RegisterForm() {
         className="btn btn-primary"
         style={{ width: "100%", marginTop: "0.25rem" }}
       >
-        {pending ? "Submitting…" : "Request account"}
+        {pending ? "Submitting…" : "Create account"}
       </button>
     </form>
   );

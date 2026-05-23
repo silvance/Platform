@@ -72,26 +72,26 @@ export const ChangePasswordRequest = z
   });
 export type ChangePasswordRequest = z.infer<typeof ChangePasswordRequest>;
 
-// M17 self-registration. Anyone with a browser may submit a
-// registration; the account lands with approvedAt = null and
-// cannot sign in until an admin approves it via
-// /admin/users/:id/approve. Default role is always "user" — the
+// Self-registration. Gated by an admin-issued access code (M23) —
+// see access-codes.ts. The endpoint will create the account as
+// role=user with approvedAt set immediately so the user can sign
+// in on the next request. Default role is always "user" — the
 // register endpoint does NOT accept a role from the request body.
 export const RegisterRequest = z.object({
   email: z.string().email().max(254),
   displayName: z.string().min(1).max(120),
   password: PasswordSchema,
+  accessCode: z.string().min(1, "Access code is required.").max(64),
 });
 export type RegisterRequest = z.infer<typeof RegisterRequest>;
 
 // The register endpoint deliberately returns a flat, leak-free
-// shape. No user id, no session token (the user can't sign in
-// until approved), no "your email is already registered" tell.
-// `pendingApproval` is always true on a fresh registration; it
-// becomes false from the user's perspective only once an admin
-// approves and the user signs in.
+// shape. No user id, no session token, no "your email is already
+// registered" tell — the SAME response is returned whether the row
+// was created or the email was already on file (admin-created or
+// previously self-registered). The web UI sends the user to /login
+// after either outcome.
 export const RegisterResponse = z.object({
-  pendingApproval: z.literal(true),
   message: z.string(),
 });
 export type RegisterResponse = z.infer<typeof RegisterResponse>;

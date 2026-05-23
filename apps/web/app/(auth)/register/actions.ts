@@ -1,13 +1,14 @@
 "use server";
 
 import { api, ApiError } from "@/lib/api";
-import { RegisterRequest } from "@ci-train/contracts";
+import { ACCESS_CODE_REJECT_MESSAGE, RegisterRequest } from "@ci-train/contracts";
 
 // Discriminated state. `ok` carries the success message we render
 // in place of the form; `error` is the message we keep above the
-// form when the submission fails validation or throttling.
+// form when the submission fails validation, throttling, or the
+// access-code gate.
 //
-// Note: the API deliberately returns the SAME response shape
+// Note: the API deliberately returns the SAME success response
 // whether the email was new or already registered, so this action
 // can't tell the user "that email is already taken" — which would
 // leak account enumeration. The success message is the same.
@@ -40,6 +41,7 @@ export async function registerAction(
     email: formData.get("email"),
     displayName: formData.get("displayName"),
     password,
+    accessCode: formData.get("accessCode"),
   });
   if (!parsed.success) {
     return {
@@ -59,9 +61,18 @@ export async function registerAction(
       };
     }
     if (err instanceof ApiError && err.status === 400) {
+      // Pull the API's message when it's the access-code rejection;
+      // otherwise fall back to the generic shape message. The API
+      // never distinguishes WHY a code was rejected (missing /
+      // wrong / disabled / expired / exhausted) — same message for
+      // all so we don't help bulk-test attackers narrow it down.
+      const body = err.body as { message?: string } | undefined;
+      if (body?.message === ACCESS_CODE_REJECT_MESSAGE) {
+        return { error: ACCESS_CODE_REJECT_MESSAGE, ok: null };
+      }
       return {
         error:
-          "Registration didn't meet requirements (email + name + password ≥ 10 chars).",
+          "Registration didn't meet requirements (email + name + password ≥ 10 chars + access code).",
         ok: null,
       };
     }

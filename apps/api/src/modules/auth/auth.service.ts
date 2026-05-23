@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   Logger,
@@ -8,7 +9,9 @@ import {
 import { hash, verify, Algorithm } from "@node-rs/argon2";
 import { randomBytes, createHash, timingSafeEqual } from "node:crypto";
 import type { Role } from "@prisma/client";
+import { ACCESS_CODE_REJECT_MESSAGE } from "@ci-train/contracts";
 import { PrismaService } from "../database/prisma.service";
+import { AccessCodesService } from "../access-codes/access-codes.service";
 
 export interface AuthenticatedUser {
   id: string;
@@ -50,7 +53,10 @@ export class AuthService implements OnModuleInit {
   // ~30ms gap between "no hash to verify" and "verify a real hash".
   private dummyHash: string | null = null;
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly accessCodes: AccessCodesService,
+  ) {}
 
   async onModuleInit(): Promise<void> {
     this.dummyHash = await hash(
@@ -63,57 +69,73 @@ export class AuthService implements OnModuleInit {
     return hash(plain, ARGON_OPTS);
   }
 
-  // M17 self-registration. Always returns void — the caller is the
-  // public endpoint which always echoes the same generic response
-  // regardless of whether a new row was created. This is by design:
-  // returning "email already registered" leaks account enumeration
-  // to anyone curl-ing the register endpoint.
+  // Self-registration (M23: gated by an admin-issued access code).
   //
-  // Outcomes:
-  //   - email is brand new      → create with approvedAt = null,
-  //                                role = "user", disabled = false.
-  //                                Login is gated on approvedAt
-  //                                being set by an admin.
-  //   - email already exists    → no-op. The existing row is
-  //                                untouched (no password rotation,
-  //                                no role change, no
-  //                                approvedAt flip). The endpoint
-  //                                still returns the same 200.
+  // Always returns void — the caller is the public endpoint which
+  // echoes a single generic response on success. This is by design:
+  // returning "email already registered" would leak account
+  // enumeration to anyone curl-ing the register endpoint.
   //
-  // The argon2 hash work runs in both branches so the response time
+  // Order matters here:
+  //   1. Validate-and-consume the access code FIRST inside a Prisma
+  //      transaction. Failure throws BadRequestException with the
+  //      generic ACCESS_CODE_REJECT_MESSAGE — same message for all
+  //      modes (missing / wrong / disabled / expired / exhausted).
+  //   2. With a valid code in hand, check whether the email already
+  //      exists. If so, we silently no-op the user write AND we
+  //      refund the access-code usage (we don't want bad-faith
+  //      enumeration to drain a usesLimit-capped code).
+  //   3. Otherwise create a new user with approvedAt set to NOW
+  //      (so they can sign in immediately) and role="user".
+  //
+  // Argon2 hash work runs in both branches so the response time
   // doesn't differ between "new" and "existing" — same defense the
   // login path uses with verifyAgainstDummy.
   async register(input: {
     email: string;
     displayName: string;
     password: string;
+    accessCode: string;
   }): Promise<void> {
-    // Hash unconditionally — the work runs whether or not we'll use
-    // the hash, so the timing profile of register-new ≈ register-
-    // existing. If we computed only on the "new" branch an attacker
-    // could probe email existence by response time.
     const passwordHash = await this.hashPassword(input.password);
 
-    const existing = await this.prisma.user.findUnique({
-      where: { email: input.email },
-      select: { id: true },
-    });
-    if (existing) {
-      // Silent no-op. We deliberately don't update password or
-      // displayName — that would let a registration form vandalise
-      // an admin-created account.
-      return;
-    }
+    await this.prisma.$transaction(async (tx) => {
+      const consumed = await this.accessCodes.validateAndConsume(
+        tx,
+        input.accessCode,
+      );
+      if (!consumed) {
+        throw new BadRequestException(ACCESS_CODE_REJECT_MESSAGE);
+      }
 
-    await this.prisma.user.create({
-      data: {
-        email: input.email,
-        displayName: input.displayName,
-        passwordHash,
-        role: "user",
-        // approvedAt left null on purpose. Login refuses until set.
-        approvedAt: null,
-      },
+      const existing = await tx.user.findUnique({
+        where: { email: input.email },
+        select: { id: true },
+      });
+      if (existing) {
+        // Refund the code use so an enumeration probe doesn't drain
+        // a usesLimit-capped code. The response is still the generic
+        // success the caller would have seen for a brand-new email
+        // (controller responsibility) so this branch is invisible
+        // externally.
+        await tx.accessCode.update({
+          where: { code: input.accessCode.trim() },
+          data: { usesCount: { decrement: 1 } },
+        });
+        return;
+      }
+
+      await tx.user.create({
+        data: {
+          email: input.email,
+          displayName: input.displayName,
+          passwordHash,
+          role: "user",
+          // M23: access-code-gated registrations are auto-approved.
+          // The admin who issued the code is the trust anchor.
+          approvedAt: new Date(),
+        },
+      });
     });
   }
 

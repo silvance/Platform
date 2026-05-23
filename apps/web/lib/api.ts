@@ -1,5 +1,9 @@
 import { z, ZodError } from "zod";
 import {
+  AccessCodeListResponse,
+  CreateAccessCodeRequest,
+  CreateAccessCodeResponse,
+  DisableAccessCodeResponse,
   AdminCreateUserRequest,
   AdminResetPasswordRequest,
   AdminReviewListResponse,
@@ -233,6 +237,36 @@ export const api = {
   stats: {
     get: async (token: string): Promise<AdminStatsResponse> =>
       parse(AdminStatsResponse, await request("/admin/stats", { token })),
+  },
+  accessCodes: {
+    list: async (token: string): Promise<AccessCodeListResponse> =>
+      parse(
+        AccessCodeListResponse,
+        await request("/admin/access-codes", { token }),
+      ),
+    create: async (
+      token: string,
+      body: CreateAccessCodeRequest,
+    ): Promise<CreateAccessCodeResponse> =>
+      parse(
+        CreateAccessCodeResponse,
+        await request("/admin/access-codes", {
+          method: "POST",
+          token,
+          body,
+        }),
+      ),
+    disable: async (
+      token: string,
+      id: string,
+    ): Promise<DisableAccessCodeResponse> =>
+      parse(
+        DisableAccessCodeResponse,
+        await request(`/admin/access-codes/${encodeURIComponent(id)}/disable`, {
+          method: "PATCH",
+          token,
+        }),
+      ),
   },
   authoring: {
     list: async (

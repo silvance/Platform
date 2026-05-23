@@ -14,6 +14,7 @@ import { ScenariosModule } from "./modules/scenarios/scenarios.module";
 import { ArtifactsModule } from "./modules/artifacts/artifacts.module";
 import { AttemptsModule } from "./modules/attempts/attempts.module";
 import { AuthoringModule } from "./modules/authoring/authoring.module";
+import { AccessCodesModule } from "./modules/access-codes/access-codes.module";
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { AuthoringModule } from "./modules/authoring/authoring.module";
     ArtifactsModule,
     AttemptsModule,
     AuthoringModule,
+    AccessCodesModule,
     HealthModule,
     HelloModule,
   ],
