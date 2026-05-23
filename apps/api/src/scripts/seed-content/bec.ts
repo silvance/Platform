@@ -417,21 +417,24 @@ directory. Triage and report.
       },
       {
         ordinal: 3,
-        type: "text_match",
+        type: "multi_choice",
         weight: 1,
         promptMd:
-          "What is the *out-of-band* verification step you should recommend HR take before processing this change?",
-        textMatch: {
-          acceptableAnswers: ["call alex", "phone alex", "call by phone", "voice verify", "voice confirmation"],
-          hint: "Out-of-band = a channel the attacker doesn't control.",
-        },
+          "What's the *out-of-band* verification step HR should take before processing this change? (Out-of-band = a channel the attacker doesn't control.)",
+        options: [
+          { id: "reply-and-confirm", label: "Reply to the email asking Alex to confirm in writing." },
+          { id: "call-known-number", label: "Call Alex on a phone number from the corporate directory (not one in the email)." },
+          { id: "check-spf", label: "Re-check the SPF / DKIM result one more time." },
+          { id: "ask-it-to-scan", label: "Forward to IT and ask them to scan the message for malware." },
+        ],
+        allowMultiple: false,
         expected: {
-          type: "text_match",
-          acceptableAnswers: ["call alex", "phone alex", "call by phone", "voice verify", "voice confirmation"],
-          regex: false,
+          type: "multi_choice",
+          correctIds: ["call-known-number"],
+          allowMultiple: false,
         },
         debriefMd:
-          "Out-of-band verification by phone (or in person) to a known-good number for the employee — not the one in the email — is the operational defense. The technical signals raise alarm; the phone call resolves it.",
+          "Out-of-band verification by phone (or in person) to a **known-good** number — i.e. one from the corporate directory, never one supplied in the suspect email — is the operational defense. The technical signals raise alarm; the phone call resolves it. Replying to the email confirms nothing because the attacker may be reading the inbox; re-checking auth headers tells you nothing new; a malware scan is a different question.",
       },
     ],
   },

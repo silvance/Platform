@@ -178,35 +178,21 @@ cross-examination.
       },
       {
         ordinal: 3,
-        type: "text_match",
+        type: "multi_choice",
         weight: 1,
         promptMd:
-          "What is the **single missing artifact** that would convert S4 (lookalike page = credential-collection) from speculation into fact?",
-        textMatch: {
-          acceptableAnswers: [
-            "page content",
-            "page contents",
-            "page capture",
-            "page screenshot",
-            "rendered page capture",
-            "sandbox page capture",
-            "url scan",
-            "url analyzer output",
-          ],
-        },
+          "Which **single missing artifact** would convert S4 (\"lookalike page = credential-collection\") from speculation into fact?",
+        options: [
+          { id: "page-capture", label: "A rendered-page capture from a sandboxed browser (or a URL-analyzer report)" },
+          { id: "whois-info", label: "whois data for `vendor-lookup-alike.com`" },
+          { id: "passive-dns", label: "Passive-DNS history for the lookalike domain" },
+          { id: "more-clicks", label: "More controller proxy-log clicks on the same domain" },
+        ],
+        allowMultiple: false,
         expected: {
-          type: "text_match",
-          acceptableAnswers: [
-            "page content",
-            "page contents",
-            "page capture",
-            "page screenshot",
-            "rendered page capture",
-            "sandbox page capture",
-            "url scan",
-            "url analyzer output",
-          ],
-          regex: false,
+          type: "multi_choice",
+          correctIds: ["page-capture"],
+          allowMultiple: false,
         },
         debriefMd:
           "A rendered-page capture from a sandboxed browser (or a URL-analyzer report) is what converts the inference into fact. Without it, S4 is speculation — defensible as an *operating hypothesis*, not as a finding.",

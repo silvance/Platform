@@ -720,17 +720,25 @@ and the file's original owner is a different account.
       },
       {
         ordinal: 2,
-        type: "text_match",
+        type: "multi_choice",
         weight: 1,
-        promptMd: "Where would you look next to distinguish *deletion* from *authorship*?",
-        textMatch: { acceptableAnswers: ["mft", "ntfs mft", "master file table", "sharepoint history", "version history", "office authoring history"] },
+        promptMd:
+          "Which of these would carry the strongest *authorship* signal (vs the deletion + ownership we already have)? Select all that apply.",
+        options: [
+          { id: "mft-create", label: "NTFS MFT entries for the file's create event (who and when it was first written here)" },
+          { id: "sharepoint-version", label: "SharePoint / shared-drive version history (every save event with the saving user)" },
+          { id: "office-authoring", label: "Office document authoring history (`creator`, `lastModifiedBy` in the file's core.xml)" },
+          { id: "recycle-bin-metadata", label: "The recycle bin `$I` metadata we already have" },
+          { id: "ntfs-owner", label: "NTFS owner SID we already have" },
+        ],
+        allowMultiple: true,
         expected: {
-          type: "text_match",
-          acceptableAnswers: ["mft", "ntfs mft", "master file table", "sharepoint history", "version history", "office authoring history"],
-          regex: false,
+          type: "multi_choice",
+          correctIds: ["mft-create", "sharepoint-version", "office-authoring"],
+          allowMultiple: true,
         },
         debriefMd:
-          "MFT entries for the file's creation, SharePoint / shared-drive version history, or Office authoring history all carry stronger authorship signals than NTFS ownership alone.",
+          "MFT *create* entries, shared-drive version history, and Office authoring metadata all directly record an authoring event. The recycle bin entry and the NTFS owner are what we already had — they tell us about *deletion* and *ownership*, not *authorship*. Ownership is whatever account created the file at this filesystem; on shared drives that's often a service or originator that has nothing to do with who wrote the content.",
       },
       {
         ordinal: 3,

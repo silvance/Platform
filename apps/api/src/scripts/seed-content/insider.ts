@@ -212,21 +212,24 @@ finding by itself.
       },
       {
         ordinal: 3,
-        type: "text_match",
+        type: "multi_choice",
         weight: 1,
         promptMd:
-          "Name the **single artifact source** that, if added, would most directly turn 'USB was mounted' into 'files were written to USB.' (Short noun phrase.)",
-        textMatch: {
-          acceptableAnswers: ["edr file-write events", "edr file write events", "file write events", "file-write events", "file create events on usb", "edr write events", "edr write logs", "sysmon file-create on usb", "sysmon filecreate"],
-          hint: "It's an event-source that names which paths bytes went TO during the mount window.",
-        },
+          "Which **single** additional source would most directly turn 'USB was mounted' into 'these specific files were written to the USB'?",
+        options: [
+          { id: "edr-filewrite", label: "EDR / Sysmon FileCreate (file-write) events scoped to the USB volume during the mount window" },
+          { id: "more-vpn-logons", label: "More VPN logon records for Tran" },
+          { id: "dms-view-events", label: "Additional DMS view-events for the same documents" },
+          { id: "usb-serial-history", label: "USB VID/PID/serial history from the OS USB registry" },
+        ],
+        allowMultiple: false,
         expected: {
-          type: "text_match",
-          acceptableAnswers: ["edr file-write events", "edr file write events", "file write events", "file-write events", "file create events on usb", "edr write events", "edr write logs", "sysmon file-create on usb", "sysmon filecreate"],
-          regex: false,
+          type: "multi_choice",
+          correctIds: ["edr-filewrite"],
+          allowMultiple: false,
         },
         debriefMd:
-          "EDR (or Sysmon) **file-write** / **FileCreate** events scoped to the USB volume during the mount window. That converts \"a USB was mounted\" into \"these specific files were copied to it.\" The data-handling portal is the policy gate; EDR is the technical gate. Both should be queried before any finding.",
+          "EDR / Sysmon **FileCreate** events scoped to the USB volume during the mount window. That converts \"a USB was mounted\" into \"these specific files were copied to it.\" The other sources help with adjacent questions (was the device known? what else did Tran touch?) but none of them confirms a *write* to the USB. The data-handling portal is the policy gate; EDR is the technical gate. Both belong in a finished writeup.",
       },
       {
         ordinal: 4,
@@ -317,17 +320,23 @@ team is in the final two weeks of a release. Triage.
       },
       {
         ordinal: 2,
-        type: "text_match",
+        type: "multi_choice",
         weight: 1,
-        promptMd: "What additional artifact would convert 'off-hours logon' into 'off-hours data exfil'?",
-        textMatch: { acceptableAnswers: ["file-write events", "edr file write events", "file write to usb", "data egress", "egress logs", "vpn egress", "data loss prevention", "dlp"] },
+        promptMd: "Which additional artifact would convert 'off-hours logon' into 'off-hours data exfil'?",
+        options: [
+          { id: "egress-or-dlp", label: "DLP egress logs OR EDR file-write events to removable media during the window" },
+          { id: "more-logons", label: "More keycard / console-unlock entries for the same user" },
+          { id: "team-roster", label: "The team roster confirming who else is on Release Train Alpha" },
+          { id: "vpn-uptime", label: "VPN-server uptime stats for the same window" },
+        ],
+        allowMultiple: false,
         expected: {
-          type: "text_match",
-          acceptableAnswers: ["file-write events", "edr file write events", "file write to usb", "data egress", "egress logs", "vpn egress", "data loss prevention", "dlp"],
-          regex: false,
+          type: "multi_choice",
+          correctIds: ["egress-or-dlp"],
+          allowMultiple: false,
         },
         debriefMd:
-          "EDR file-write events to removable media or DLP egress logs are what convert a *presence* signal into a *what-did-they-do* signal.",
+          "EDR file-write events to removable media, or DLP egress logs, are what convert a *presence* signal into a *what-did-they-do* signal. The other options either repeat the presence-signal we already have or address unrelated questions.",
       },
       {
         ordinal: 3,
@@ -417,17 +426,23 @@ Triage.
       },
       {
         ordinal: 2,
-        type: "text_match",
+        type: "multi_choice",
         weight: 1,
-        promptMd: "Name the single missing artifact source that would resolve the question.",
-        textMatch: { acceptableAnswers: ["edr file-write events", "edr file write events", "file-write events", "file write events", "sysmon file-create", "data-handling portal", "data handling portal", "portal logs"] },
+        promptMd: "Which missing source would resolve the question? Select all that apply.",
+        options: [
+          { id: "edr-filewrite", label: "EDR / Sysmon FileCreate (file-write) events scoped to the USB volume during the mount window" },
+          { id: "portal-log", label: "The data-handling portal approval log for this USB write" },
+          { id: "more-mounts", label: "More USB mount / dismount events for the same device" },
+          { id: "doc-access-list", label: "The full access-list of DOC-FIN-9912 to see who else can open it" },
+        ],
+        allowMultiple: true,
         expected: {
-          type: "text_match",
-          acceptableAnswers: ["edr file-write events", "edr file write events", "file-write events", "file write events", "sysmon file-create", "data-handling portal", "data handling portal", "portal logs"],
-          regex: false,
+          type: "multi_choice",
+          correctIds: ["edr-filewrite", "portal-log"],
+          allowMultiple: true,
         },
         debriefMd:
-          "Either EDR file-write events scoped to the USB volume during the mount window, or the data-handling portal log. Either alone is enough to convert the lead into a finding.",
+          "Either EDR file-write events scoped to the USB volume during the mount window OR the data-handling portal log. Either alone is enough to convert the lead into a finding — EDR speaks to *what happened*, the portal speaks to *whether it was authorized*. The other options give context but don't speak to write-or-no-write.",
       },
       {
         ordinal: 3,
