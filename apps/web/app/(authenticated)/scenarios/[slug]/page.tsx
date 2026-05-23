@@ -213,14 +213,12 @@ function ArtifactTabs({
   artifacts: ArtifactListItem[];
   activeArtifactId: string | null;
 }) {
+  // The brief + questions are rendered unconditionally below the
+  // tabs, so the old "Brief + questions" tab that just cleared the
+  // artifact selection was redundant. Tabs are now strictly one per
+  // artifact; no tab is highlighted when no artifact is open.
   return (
     <nav className="artifact-tabs" aria-label="Scenario artifacts">
-      <Link
-        href={`/scenarios/${slug}`}
-        className={`tab ${activeArtifactId === null ? "tab-active" : ""}`}
-      >
-        Brief + questions
-      </Link>
       {artifacts.map((a) => (
         <Link
           key={a.id}
