@@ -43,14 +43,19 @@ deploy/
 ├── docker-compose.local.yml   ← modes 1 + 2 (local + LAN beta)
 ├── docker-compose.vps.yml     ← mode 3 (api + db only)
 ├── Caddyfile.example          ← TLS reverse proxy (modes 2 optional, 3 required)
+├── scripts/
+│   └── deploy-vps.sh          ← automated mode-3 deploy (M21c)
 └── env/
     ├── local.env.example      ← modes 1 + 2
     ├── vps.env.example        ← mode 3 (VPS side)
     └── vercel.env.example     ← mode 3 (Vercel side; checklist for the UI)
 
 docs/
-├── deployment.md   ← this file
-└── backups.md      ← backup + restore procedure (modes 2 + 3)
+├── deployment.md                  ← this file (install + first-run)
+├── operator-runbook.md            ← everyday ops + recovery (M21c)
+├── post-merge-deploy.md           ← the every-PR deploy checklist (M21c)
+├── backups.md                     ← backup + restore procedure
+└── backup-restore-checklist.md    ← monthly restore drill (M21c)
 ```
 
 # Mode 1 — Local-only
@@ -675,6 +680,10 @@ data justifies it, not before.
 
 ## See also
 
+- `docs/operator-runbook.md` — everyday ops, common breakages, recovery procedures.
+- `docs/post-merge-deploy.md` — the checklist to run after every PR merge.
 - `docs/backups.md` — backup + restore procedure (modes 2 + 3).
+- `docs/backup-restore-checklist.md` — the monthly restore drill.
+- `deploy/scripts/deploy-vps.sh --help` — automated deploy command + flags.
 - Root `README.md` — auth model, architecture overview, milestone log.
 - `deploy/env/*.example` — env-var checklists per mode.
