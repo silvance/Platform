@@ -167,6 +167,24 @@ export const AdminScenarioSummary = z.object({
   tags: z.array(z.string()),
   status: ScenarioStatus,
   questionCount: z.number().int().nonnegative(),
+  // M21b admin review fields. Always present in admin payloads;
+  // never reach user-facing endpoints. Avoid circular import on
+  // review.ts by inlining the literal here — the
+  // ScenarioReviewStatus zod schema in review.ts is the source
+  // of truth for the enum, but the literal list is small enough
+  // to mirror.
+  reviewStatus: z.enum([
+    "needs_review",
+    "approved",
+    "needs_rewrite",
+    "too_generic",
+    "unclear_question",
+    "answer_key_issue",
+    "debrief_issue",
+    "retire_candidate",
+  ]),
+  reviewNotes: z.string().nullable(),
+  reviewedAt: z.string().datetime().nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
@@ -190,6 +208,11 @@ const AuthoredBase = z.object({
   promptMd: z.string().min(1).max(MAX_PROMPT_MD_CHARS),
   weight: z.number().int().min(1).max(10),
   debriefMd: z.string().min(1).max(MAX_DEBRIEF_MD_CHARS),
+  // M21b admin-only review notes (per-question). Always present
+  // in the AuthoredQuestion shape returned by the admin
+  // editor; `null` until an admin records something. Never
+  // reaches user-facing question payloads.
+  reviewNotes: z.string().nullable(),
 });
 const AuthoredMultiChoice = AuthoredBase.extend({
   type: z.literal("multi_choice"),

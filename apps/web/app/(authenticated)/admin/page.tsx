@@ -33,6 +33,13 @@ export default async function AdminPage() {
             Add users, reset passwords, change roles, or disable accounts.
           </p>
         </Link>
+        <Link href="/admin/review" className="card" style={cardStyle}>
+          <strong style={{ fontSize: "1.05rem" }}>Review</strong>
+          <p style={pStyle}>
+            Playthrough log — mark scenarios approved / needs-rewrite / flagged,
+            capture notes without leaving the page.
+          </p>
+        </Link>
       </div>
     </main>
   );

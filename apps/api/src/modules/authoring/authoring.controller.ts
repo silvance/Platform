@@ -18,6 +18,7 @@ import { FileInterceptor } from "@nestjs/platform-express";
 import { createHash, randomUUID } from "node:crypto";
 import { join } from "node:path";
 import {
+  AdminReviewListResponse,
   AdminScenarioDetail,
   AdminScenarioListResponse,
   AdminScenarioSummary,
@@ -29,6 +30,8 @@ import {
   CreateQuestionRequest,
   CreateScenarioRequest,
   MAX_ARTIFACT_BYTES,
+  SetQuestionReviewRequest,
+  SetScenarioReviewRequest,
   UpdateArtifactRequest,
   UpdateIndicatorSetRequest,
   UpdateQuestionRequest,
@@ -76,6 +79,54 @@ export class AuthoringController {
   async list(): Promise<AdminScenarioListResponse> {
     const scenarios = await this.authoring.list();
     return { scenarios };
+  }
+
+  // ─── M21b admin review workflow ────────────────────────────────
+  //
+  // GET /v1/admin/challenges/_review
+  // PATCH /v1/admin/challenges/:slug/review
+  // PATCH /v1/admin/challenges/:slug/questions/:questionId/review
+  //
+  // `_review` (underscore prefix) is declared BEFORE the slug-
+  // parameterized routes so it doesn't shadow `:slug`. The Scenario-
+  // Slug regex refuses underscores, so a scenario named "_review"
+  // can never be authored.
+
+  @Get("_review")
+  async listForReview(): Promise<AdminReviewListResponse> {
+    const scenarios = await this.authoring.listForReview();
+    return { scenarios };
+  }
+
+  @Patch(":slug/review")
+  async setScenarioReview(
+    @Param("slug", ScenarioSlugPipe) slug: string,
+    @Body(new ZodValidationPipe(SetScenarioReviewRequest))
+    body: SetScenarioReviewRequest,
+    @CurrentSession() session: SessionContext | undefined,
+  ): Promise<{ scenario: AdminScenarioSummary }> {
+    if (!session) throw new UnauthorizedException();
+    const scenario = await this.authoring.setScenarioReview(
+      slug,
+      session.user.id,
+      { status: body.status, notes: body.notes },
+    );
+    return { scenario };
+  }
+
+  @Patch(":slug/questions/:questionId/review")
+  async setQuestionReview(
+    @Param("slug", ScenarioSlugPipe) slug: string,
+    @Param("questionId", new ParseUUIDPipe({ version: "4" })) questionId: string,
+    @Body(new ZodValidationPipe(SetQuestionReviewRequest))
+    body: SetQuestionReviewRequest,
+  ): Promise<{ question: AuthoredQuestion }> {
+    const question = await this.authoring.setQuestionReview(
+      slug,
+      questionId,
+      body.notes,
+    );
+    return { question };
   }
 
   // ─── packs (M11) ───────────────────────────────────────────────

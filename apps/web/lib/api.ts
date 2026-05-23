@@ -2,6 +2,7 @@ import { z, ZodError } from "zod";
 import {
   AdminCreateUserRequest,
   AdminResetPasswordRequest,
+  AdminReviewListResponse,
   AdminScenarioDetail,
   AdminScenarioListResponse,
   AdminScenarioSummary,
@@ -12,6 +13,8 @@ import {
   AuthoredIndicatorSet,
   AuthoredQuestion,
   ChangePasswordRequest,
+  SetQuestionReviewRequest,
+  SetScenarioReviewRequest,
   CreateIndicatorSetRequest,
   CreateQuestionRequest,
   CreateScenarioRequest,
@@ -233,6 +236,38 @@ export const api = {
         AdminScenarioDetail,
         await request(`/admin/challenges/${encodeURIComponent(slug)}`, { token }),
       ),
+    listForReview: async (token: string): Promise<AdminReviewListResponse> =>
+      parse(
+        AdminReviewListResponse,
+        await request("/admin/challenges/_review", { token }),
+      ),
+    setScenarioReview: async (
+      token: string,
+      slug: string,
+      body: SetScenarioReviewRequest,
+    ): Promise<{ scenario: AdminScenarioSummary }> => {
+      const raw = await request(
+        `/admin/challenges/${encodeURIComponent(slug)}/review`,
+        { method: "PATCH", body, token },
+      );
+      // Inline wrapper validation. AdminScenarioSummary is the
+      // contract schema; wrapping it in `{ scenario: ... }` is
+      // a one-line z.object here rather than another exported
+      // alias in the contract package.
+      return z.object({ scenario: AdminScenarioSummary }).parse(raw);
+    },
+    setQuestionReview: async (
+      token: string,
+      slug: string,
+      questionId: string,
+      body: SetQuestionReviewRequest,
+    ): Promise<{ question: AuthoredQuestion }> => {
+      const raw = await request(
+        `/admin/challenges/${encodeURIComponent(slug)}/questions/${encodeURIComponent(questionId)}/review`,
+        { method: "PATCH", body, token },
+      );
+      return z.object({ question: AuthoredQuestion }).parse(raw);
+    },
     create: async (
       token: string,
       body: CreateScenarioRequest,
