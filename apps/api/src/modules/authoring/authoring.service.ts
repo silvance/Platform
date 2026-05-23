@@ -8,6 +8,7 @@ import {
 import { Prisma } from "@prisma/client";
 import type { ArtifactKind, QuestionType as PrismaQuestionType } from "@prisma/client";
 import {
+  AdminReviewRow,
   AdminScenarioDetail,
   AdminScenarioSummary,
   AuthoredArtifact,
@@ -17,6 +18,7 @@ import {
   CreateQuestionRequest,
   CreateScenarioRequest,
   IndicatorItem,
+  ScenarioReviewStatus,
   UpdateArtifactRequest,
   UpdateIndicatorSetRequest,
   UpdateQuestionRequest,
@@ -87,6 +89,7 @@ export class AuthoringService {
         expectedJson: q.answerKey?.expectedJson ?? null,
         debriefMd: q.answerKey?.debriefMd ?? null,
         indicatorSetId: q.indicatorSetId ?? null,
+        reviewNotes: q.reviewNotes ?? null,
       }),
     );
 
@@ -304,6 +307,7 @@ export class AuthoringService {
         expectedJson: created.answerKey?.expectedJson ?? null,
         debriefMd: created.answerKey?.debriefMd ?? null,
         indicatorSetId: created.indicatorSetId ?? null,
+        reviewNotes: created.reviewNotes ?? null,
       });
     });
   }
@@ -384,6 +388,7 @@ export class AuthoringService {
             ?.expectedJson ?? null,
         debriefMd,
         indicatorSetId: updated.indicatorSetId ?? null,
+        reviewNotes: updated.reviewNotes ?? null,
       });
     });
   }
@@ -710,6 +715,119 @@ export class AuthoringService {
       }
     });
   }
+
+  // ─── M21b admin review workflow ────────────────────────────────
+
+  // Sets the per-scenario review verdict + optional notes. Records
+  // who reviewed it and when. Idempotent on identical inputs.
+  async setScenarioReview(
+    slug: string,
+    actorUserId: string,
+    input: { status: ScenarioReviewStatus; notes?: string | undefined },
+  ): Promise<AdminScenarioSummary> {
+    const existing = await this.prisma.scenario.findUnique({
+      where: { slug },
+      select: { id: true },
+    });
+    if (!existing) throw new NotFoundException("Scenario not found.");
+
+    const row = await this.prisma.scenario.update({
+      where: { id: existing.id },
+      data: {
+        reviewStatus: input.status,
+        // `notes` undefined → leave the prior value alone. `notes`
+        // set to a string (including empty) → overwrite.
+        ...(input.notes !== undefined ? { reviewNotes: input.notes } : {}),
+        reviewedAt: new Date(),
+        reviewedByUserId: actorUserId,
+      },
+      include: { _count: { select: { questions: true } } },
+    });
+    return toSummary(row, row._count.questions);
+  }
+
+  // Sets per-question review notes. Question-level notes are
+  // free-text only; the scenario-level status carries the verdict.
+  async setQuestionReview(
+    slug: string,
+    questionId: string,
+    notes: string,
+  ): Promise<AuthoredQuestion> {
+    const scenario = await this.prisma.scenario.findUnique({
+      where: { slug },
+      select: { id: true },
+    });
+    if (!scenario) throw new NotFoundException("Scenario not found.");
+
+    const question = await this.prisma.question.findFirst({
+      where: { id: questionId, scenarioId: scenario.id },
+      include: { answerKey: true },
+    });
+    if (!question) throw new NotFoundException("Question not found.");
+
+    const updated = await this.prisma.question.update({
+      where: { id: question.id },
+      data: { reviewNotes: notes },
+      include: { answerKey: true },
+    });
+
+    return toAuthoredQuestion({
+      id: updated.id,
+      ordinal: updated.ordinal,
+      type: updated.type,
+      promptMd: updated.promptMd,
+      weight: updated.weight,
+      optionsJson: updated.optionsJson,
+      expectedJson: updated.answerKey?.expectedJson ?? null,
+      debriefMd: updated.answerKey?.debriefMd ?? null,
+      indicatorSetId: updated.indicatorSetId ?? null,
+      reviewNotes: updated.reviewNotes ?? null,
+    });
+  }
+
+  // /admin/review feed. One row per scenario with the counts the
+  // table renders + the latest reviewer summary. Uses scalar SQL
+  // joins (no N+1) by including the reviewer + question + artifact
+  // counts in a single query.
+  async listForReview(): Promise<AdminReviewRow[]> {
+    const rows = await this.prisma.scenario.findMany({
+      orderBy: [
+        // Bring the not-yet-approved rows to the top so the
+        // operator's eye lands on what they need to look at next.
+        { reviewStatus: "asc" },
+        { updatedAt: "desc" },
+      ],
+      include: {
+        reviewer: {
+          select: { id: true, displayName: true },
+        },
+        _count: { select: { questions: true, artifacts: true } },
+        questions: {
+          select: { reviewNotes: true },
+        },
+      },
+    });
+    return rows.map((r) => ({
+      id: r.id,
+      slug: r.slug,
+      title: r.title,
+      status: r.status as never,
+      difficulty: r.difficulty,
+      tags: r.tags,
+      artifactCount: r._count.artifacts,
+      questionCount: r._count.questions,
+      reviewStatus: r.reviewStatus as never,
+      reviewNotes: r.reviewNotes,
+      reviewedAt: r.reviewedAt ? r.reviewedAt.toISOString() : null,
+      reviewer: r.reviewer
+        ? { id: r.reviewer.id, displayName: r.reviewer.displayName }
+        : null,
+      questionsWithNotes: r.questions.filter(
+        (q) => typeof q.reviewNotes === "string" && q.reviewNotes.trim() !== "",
+      ).length,
+      updatedAt: r.updatedAt.toISOString(),
+    }));
+  }
 }
 
 // Some validation needs DB lookups (select_indicators must verify the
@@ -899,6 +1017,13 @@ function toSummary(
     status: string;
     createdAt: Date;
     updatedAt: Date;
+    // M21b review fields. Always selected by the list/get queries
+    // below; never returned to user-facing endpoints (they hit a
+    // different controller that doesn't shape rows through this
+    // helper).
+    reviewStatus: string;
+    reviewNotes: string | null;
+    reviewedAt: Date | null;
   },
   questionCount: number,
 ): AdminScenarioSummary {
@@ -913,6 +1038,9 @@ function toSummary(
     tags: row.tags,
     status: row.status as never,
     questionCount,
+    reviewStatus: row.reviewStatus as never,
+    reviewNotes: row.reviewNotes,
+    reviewedAt: row.reviewedAt ? row.reviewedAt.toISOString() : null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -928,6 +1056,10 @@ interface RawQuestion {
   expectedJson: unknown;
   debriefMd: string | null;
   indicatorSetId: string | null;
+  // M21b admin-only review notes. Always selected by the
+  // authoring queries below; nullable until an admin records
+  // something.
+  reviewNotes: string | null;
 }
 
 function toAuthoredQuestion(q: RawQuestion): AuthoredQuestion {
@@ -958,6 +1090,7 @@ function toAuthoredQuestion(q: RawQuestion): AuthoredQuestion {
       promptMd: q.promptMd,
       weight: q.weight,
       debriefMd: debrief,
+      reviewNotes: q.reviewNotes,
       options: Array.isArray(opts?.options) ? (opts!.options as never) : [],
       allowMultiple: Boolean(opts?.allowMultiple),
       correctIds: Array.isArray(exp?.correctIds)
@@ -982,6 +1115,7 @@ function toAuthoredQuestion(q: RawQuestion): AuthoredQuestion {
       promptMd: q.promptMd,
       weight: q.weight,
       debriefMd: debrief,
+      reviewNotes: q.reviewNotes,
       expectedRange: [lo, hi],
     };
   }
@@ -1011,6 +1145,7 @@ function toAuthoredQuestion(q: RawQuestion): AuthoredQuestion {
       promptMd: q.promptMd,
       weight: q.weight,
       debriefMd: debrief,
+      reviewNotes: q.reviewNotes,
       acceptableAnswers: Array.isArray(exp?.acceptableAnswers)
         ? (exp!.acceptableAnswers as string[])
         : [],
@@ -1038,6 +1173,7 @@ function toAuthoredQuestion(q: RawQuestion): AuthoredQuestion {
     promptMd: q.promptMd,
     weight: q.weight,
     debriefMd: debrief,
+    reviewNotes: q.reviewNotes,
     indicatorSetId: q.indicatorSetId ?? "",
     correctIds: Array.isArray(exp?.correctIds)
       ? (exp!.correctIds as string[])

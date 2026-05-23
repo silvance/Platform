@@ -45,6 +45,27 @@ enum ScenarioSource {
   imported
 }
 
+// M21b admin review verdict. The default `needs_review` means
+// "no admin has playtested this yet"; the operator promotes a
+// scenario to `approved` once they've walked through it and
+// confirmed the content, questions, and debriefs hold up. The
+// other values are diagnostic categories so the reviewer can
+// flag what's wrong without writing prose every time — details
+// go in the free-text reviewNotes column. None of these values
+// are user-visible: drafts vs published is the visibility gate
+// (ScenarioStatus), reviewStatus is purely an internal
+// operations signal.
+enum ScenarioReviewStatus {
+  needs_review
+  approved
+  needs_rewrite
+  too_generic
+  unclear_question
+  answer_key_issue
+  debrief_issue
+  retire_candidate
+}
+
 // Keep in sync with ArtifactKind in packages/contracts/src/scenarios.ts.
 enum ArtifactKind {
   text
@@ -79,6 +100,7 @@ model User {
 
   sessions          Session[]
   authoredScenarios Scenario[]         @relation("ScenarioAuthor")
+  reviewedScenarios Scenario[]         @relation("ScenarioReviewer")
   progress          ScenarioProgress[]
 
   @@map("users")
@@ -123,14 +145,27 @@ model Scenario {
   createdAt        DateTime       @default(now()) @map("created_at")
   updatedAt        DateTime       @updatedAt @map("updated_at")
 
+  // M21b admin review workflow. reviewStatus is the diagnostic
+  // verdict, reviewNotes the free-text detail, reviewedAt the
+  // most recent verdict timestamp, reviewedByUserId the admin
+  // who set it. None of these are exposed to regular users; the
+  // /admin/review surface reads them, the regular /scenarios
+  // detail does not.
+  reviewStatus       ScenarioReviewStatus @default(needs_review) @map("review_status")
+  reviewNotes        String?              @map("review_notes")
+  reviewedAt         DateTime?            @map("reviewed_at")
+  reviewedByUserId   String?              @map("reviewed_by_user_id") @db.Uuid
+
   brief         ScenarioBrief?
   artifacts     Artifact[]
   questions     Question[]
   progress      ScenarioProgress[]
   indicatorSets IndicatorSet[]
   author        User?              @relation("ScenarioAuthor", fields: [authorUserId], references: [id], onDelete: SetNull)
+  reviewer      User?              @relation("ScenarioReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
 
   @@index([status])
+  @@index([reviewStatus])
   @@index([skillAreas], type: Gin)
   @@index([tags], type: Gin)
   @@map("scenarios")
@@ -209,6 +244,12 @@ model Question {
   // constraint in the migration.
   indicatorSetId  String?      @map("indicator_set_id") @db.Uuid
   weight          Int          @default(1)
+  // M21b: per-question free-text review notes. Same admin-only
+  // visibility rules as scenario.reviewNotes. Pair with a
+  // scenario-level reviewStatus to record granular issues
+  // ("Q3 prompt phrasing is ambiguous") without losing the
+  // top-level verdict.
+  reviewNotes     String?      @map("review_notes")
   createdAt       DateTime     @default(now()) @map("created_at")
   updatedAt       DateTime     @updatedAt @map("updated_at")
 
