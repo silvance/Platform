@@ -342,16 +342,17 @@ describe("seed catalogue acceptance — M16", () => {
     expect(new Set(slugs).size).toBe(slugs.length);
   });
 
-  it("every scenario has 2-6 artifacts and 3-6 questions (or close)", () => {
-    // Soft bounds — the validator already enforces "at least 1 of
-    // each"; this spec catches drift in the M16 product target so
-    // a future PR adding a 1-artifact, 1-question scenario at least
-    // surfaces in review. Drafts (Tier-2) can dip below; polished
-    // (Tier-1) entries should hit the range.
+  it("every polished scenario has ≥1 artifact and ≥3 questions", () => {
+    // Soft bound — the validator already enforces "at least 1 of
+    // each"; this spec catches drift on the *question* count so a
+    // future single-question challenge has to be deliberate. The
+    // artifact-count floor is intentionally 1: M20 beginner-tier
+    // scenarios are designed to be tight, focused, single-artifact
+    // exercises around one foundational concept.
     for (const s of SCENARIOS) {
       const isPolished = (s.status ?? "published") === "published";
       if (!isPolished) continue;
-      expect(s.artifacts.length).toBeGreaterThanOrEqual(2);
+      expect(s.artifacts.length).toBeGreaterThanOrEqual(1);
       expect(s.questions.length).toBeGreaterThanOrEqual(3);
     }
   });
