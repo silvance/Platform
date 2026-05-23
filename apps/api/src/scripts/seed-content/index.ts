@@ -3,6 +3,7 @@ import { BEGINNER_SCENARIOS } from "./beginner";
 import { BEC_SCENARIOS } from "./bec";
 import { PHISHING_SCENARIOS } from "./phishing";
 import { DFIR_SCENARIOS } from "./dfir";
+import { WINDOWS11_SCENARIOS } from "./windows11";
 import { INSIDER_SCENARIOS } from "./insider";
 import { RF_AWARENESS_SCENARIOS } from "./rf-awareness";
 import { REPORT_WRITING_SCENARIOS } from "./report-writing";
@@ -23,6 +24,7 @@ export const SCENARIOS: ScenarioSeed[] = [
   ...BEC_SCENARIOS,
   ...PHISHING_SCENARIOS,
   ...DFIR_SCENARIOS,
+  ...WINDOWS11_SCENARIOS,
   ...INSIDER_SCENARIOS,
   ...RF_AWARENESS_SCENARIOS,
   ...REPORT_WRITING_SCENARIOS,
