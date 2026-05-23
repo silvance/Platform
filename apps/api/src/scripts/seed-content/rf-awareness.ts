@@ -17,6 +17,9 @@ export const RF_AWARENESS_SCENARIOS: ScenarioSeed[] = [
     difficulty: 2,
     estimatedMinutes: 25,
     tags: ["rf_awareness", "report_writing", "inference_discipline"],
+    lane: "rf_awareness",
+    module: "Reports & observations",
+    sequence: 1,
     disclaimer: RF_AWARENESS_DISCLAIMER,
     brief: `
 # Brief
@@ -214,6 +217,9 @@ language that collapses that distinction.
     difficulty: 2,
     estimatedMinutes: 15,
     tags: ["rf_awareness", "report_writing", "inference_discipline"],
+    lane: "rf_awareness",
+    module: "Reports & observations",
+    sequence: 2,
     status: "draft",
     disclaimer: RF_AWARENESS_DISCLAIMER,
     brief: `

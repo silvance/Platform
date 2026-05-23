@@ -77,6 +77,18 @@ const BASE_ROW = {
   source: "authored",
   importedPackHash: null,
   tags: ["a"],
+  // M25 curated-library defaults — every row mocked through these
+  // tests carries a lane so the toListItem mapper has something to
+  // serialise.
+  lane: "foundations" as const,
+  module: null as string | null,
+  sequence: 0,
+  // M21b review defaults (every row mocked here goes through the
+  // user-facing path which doesn't read these, but the toListItem
+  // mapper now also needs lane/module/sequence which it does read).
+  reviewStatus: "needs_review",
+  reviewNotes: null as string | null,
+  reviewedAt: null as Date | null,
   createdAt: new Date("2026-01-01T00:00:00.000Z"),
   updatedAt: new Date("2026-01-01T00:00:00.000Z"),
 };
@@ -196,6 +208,30 @@ describe("ScenariosService (unit)", () => {
       const svc = new ScenariosService(prisma);
       const res = await svc.getBySlug("user", "test-user-id", "rf");
       expect(res.brief?.disclaimerMd).toBe("> awareness only");
+    });
+  });
+
+  describe("laneOverview (M25)", () => {
+    it("returns one row per Lane enum value with counts of published scenarios", async () => {
+      const { prisma } = makeFakePrisma([
+        { ...BASE_ROW, id: "1", slug: "a", lane: "foundations" },
+        { ...BASE_ROW, id: "2", slug: "b", lane: "foundations" },
+        { ...BASE_ROW, id: "3", slug: "c", lane: "windows_artifacts" },
+        // archived rows should NOT count
+        { ...BASE_ROW, id: "4", slug: "d", lane: "windows_artifacts", status: "archived" },
+      ]);
+      const svc = new ScenariosService(prisma);
+      const { lanes } = await svc.laneOverview("user", "test-user-id");
+
+      // 9 canonical lanes returned regardless of contents.
+      expect(lanes).toHaveLength(9);
+      const foundations = lanes.find((l) => l.lane === "foundations");
+      const win = lanes.find((l) => l.lane === "windows_artifacts");
+      const empty = lanes.find((l) => l.lane === "rf_awareness");
+      expect(foundations?.publishedScenarioCount).toBe(2);
+      expect(win?.publishedScenarioCount).toBe(1); // archived excluded
+      expect(empty?.publishedScenarioCount).toBe(0);
+      expect(empty?.completedScenarioCount).toBe(0);
     });
   });
 });

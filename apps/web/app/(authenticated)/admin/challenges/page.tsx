@@ -3,6 +3,8 @@ import { requireAdmin, readToken } from "@/lib/session";
 import { api } from "@/lib/api";
 import {
   AdminScenarioListQuery,
+  LANE_LABELS,
+  Lane,
   REVIEW_STATUS_LABELS,
 } from "@ci-train/contracts";
 import { ImportPackForm } from "./import-pack-form";
@@ -30,6 +32,7 @@ function parseFilters(
     reviewStatus: readSingle(sp["reviewStatus"]),
     tag: readSingle(sp["tag"]),
     q: readSingle(sp["q"]),
+    lane: readSingle(sp["lane"]),
   };
   const shape = AdminScenarioListQuery.shape;
   const query: Record<string, unknown> = {};
@@ -111,6 +114,7 @@ export default async function AdminChallengesPage({ searchParams }: Props) {
             <thead>
               <tr>
                 <th>Title</th>
+                <th>Lane / module</th>
                 <th>Status</th>
                 <th>Difficulty</th>
                 <th>Questions</th>
@@ -134,6 +138,18 @@ export default async function AdminChallengesPage({ searchParams }: Props) {
                         {s.slug}
                       </code>
                     </div>
+                  </td>
+                  <td style={{ fontSize: ".85rem" }}>
+                    {LANE_LABELS[s.lane]}
+                    {s.module ? (
+                      <div style={{ color: "var(--muted)", fontSize: ".8rem" }}>
+                        {s.module} · #{s.sequence}
+                      </div>
+                    ) : (
+                      <div style={{ color: "var(--muted)", fontSize: ".8rem" }}>
+                        #{s.sequence}
+                      </div>
+                    )}
                   </td>
                   <td>
                     <span className={`admin-status-${s.status}`}>{s.status}</span>
@@ -223,6 +239,17 @@ function FilterBar({
           <option value="published">Published</option>
           <option value="draft">Draft</option>
           <option value="archived">Archived</option>
+        </select>
+      </label>
+      <label style={{ display: "flex", flexDirection: "column", gap: ".25rem" }}>
+        <span className="field-label">Lane</span>
+        <select name="lane" defaultValue={query.lane ?? ""} className="select">
+          <option value="">Any</option>
+          {Lane.options.map((l) => (
+            <option key={l} value={l}>
+              {LANE_LABELS[l]}
+            </option>
+          ))}
         </select>
       </label>
       <label style={{ display: "flex", flexDirection: "column", gap: ".25rem" }}>

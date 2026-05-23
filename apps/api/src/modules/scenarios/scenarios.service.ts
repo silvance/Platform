@@ -1,12 +1,17 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import type { Role } from "@prisma/client";
 import { PrismaService } from "../database/prisma.service";
-import type {
-  ArtifactListItem,
-  ScenarioListItem,
-  ScenarioListQuery,
-  ScenarioDetail,
-  ScenarioBriefPayload,
+import {
+  Lane,
+  LANE_DESCRIPTIONS,
+  LANE_LABELS,
+  type ArtifactListItem,
+  type LaneOverviewResponse,
+  type LaneSummary,
+  type ScenarioListItem,
+  type ScenarioListQuery,
+  type ScenarioDetail,
+  type ScenarioBriefPayload,
 } from "@ci-train/contracts";
 
 // Non-admin users see only `published` scenarios. Admins see
@@ -45,6 +50,13 @@ export class ScenariosService {
     if (query.tag) {
       where["tags"] = { has: query.tag };
     }
+    // M25 lane filter. When a lane is requested, sort by sequence
+    // within that lane (then title) so the page that just got the
+    // list can render the recommended order directly.
+    if (query.lane) {
+      where["lane"] = query.lane;
+    }
+    const inLaneOrder = query.lane !== undefined;
 
     // M22: pull the actor's progress rows in parallel with the
     // scenario list. ScenarioProgress already denormalises both
@@ -55,7 +67,9 @@ export class ScenariosService {
     const [rows, total, progressRows] = await this.prisma.$transaction([
       this.prisma.scenario.findMany({
         where,
-        orderBy: [{ difficulty: "asc" }, { title: "asc" }],
+        orderBy: inLaneOrder
+          ? [{ sequence: "asc" }, { title: "asc" }]
+          : [{ lane: "asc" }, { sequence: "asc" }, { title: "asc" }],
         include: {
           _count: { select: { questions: true } },
         },
@@ -93,6 +107,86 @@ export class ScenariosService {
       }),
       total,
     };
+  }
+
+  // M25 lane overview for the /scenarios landing page. Returns one
+  // row per Lane enum value (in canonical enum order), with the
+  // count of published scenarios in the lane plus the actor's
+  // progress projection (how many they've completed, how many they
+  // have in-progress). Empty lanes still appear so the UI can show
+  // "no challenges yet" rather than hide a category silently.
+  async laneOverview(
+    role: Role,
+    actorUserId: string,
+  ): Promise<LaneOverviewResponse> {
+    // Non-admin users only ever see published scenarios; for admins
+    // we still scope the overview to published so the count matches
+    // what the lane page will show by default. Admins can deep-link
+    // to drafts via /admin/challenges if they need it.
+    const where = { status: "published" as const };
+
+    const [scenarios, progressRows] = await this.prisma.$transaction([
+      this.prisma.scenario.findMany({
+        where,
+        select: {
+          id: true,
+          lane: true,
+          _count: { select: { questions: true } },
+        },
+      }),
+      this.prisma.scenarioProgress.findMany({
+        where: { userId: actorUserId },
+        select: {
+          scenarioId: true,
+          completedQuestions: true,
+          totalQuestions: true,
+        },
+      }),
+    ]);
+
+    const progressByScenarioId = new Map(
+      progressRows.map((p) => [p.scenarioId, p]),
+    );
+
+    // Bucket scenarios by lane, then compute counts.
+    const buckets = new Map<Lane, {
+      published: number;
+      completed: number;
+      inProgress: number;
+    }>();
+    for (const lane of Lane.options) {
+      buckets.set(lane, { published: 0, completed: 0, inProgress: 0 });
+    }
+    for (const s of scenarios) {
+      const bucket = buckets.get(s.lane);
+      if (!bucket) continue;
+      bucket.published += 1;
+      const p = progressByScenarioId.get(s.id);
+      if (!p) continue;
+      const total = p.totalQuestions || s._count.questions;
+      if (total > 0 && p.completedQuestions >= total) {
+        bucket.completed += 1;
+      } else if (p.completedQuestions > 0) {
+        bucket.inProgress += 1;
+      }
+    }
+
+    const lanes: LaneSummary[] = Lane.options.map((lane) => {
+      const b = buckets.get(lane)!;
+      return {
+        lane,
+        label: LANE_LABELS[lane],
+        description: LANE_DESCRIPTIONS[lane],
+        publishedScenarioCount: b.published,
+        completedScenarioCount: b.completed,
+        inProgressScenarioCount: b.inProgress,
+      };
+    });
+
+    // role is part of the signature for future per-role filtering
+    // but doesn't change anything today — published is published.
+    void role;
+    return { lanes };
   }
 
   async getBySlug(
@@ -181,6 +275,9 @@ function toListItem(
     status: row.status,
     source: row.source,
     version: row.version,
+    lane: row.lane,
+    module: row.module ?? null,
+    sequence: row.sequence,
     completedQuestions: progress.completedQuestions,
     totalQuestions: progress.totalQuestions,
     createdAt: row.createdAt.toISOString(),

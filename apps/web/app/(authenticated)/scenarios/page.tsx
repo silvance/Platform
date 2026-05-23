@@ -1,87 +1,19 @@
 import Link from "next/link";
 import { requireUser, readToken } from "@/lib/session";
 import { api } from "@/lib/api";
-import { ScenarioListQuery, isAwarenessOnly, type ScenarioListItem } from "@ci-train/contracts";
+import type { LaneSummary } from "@ci-train/contracts";
 
 export const dynamic = "force-dynamic";
 
-interface Props {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}
-
-function readSingle(v: string | string[] | undefined): string | undefined {
-  if (Array.isArray(v)) return v[0];
-  return v;
-}
-
-// Field-by-field safeParse so a single bad query param doesn't take
-// the rest of the user's filters with it. Returns the salvaged query
-// plus the names of fields whose values were dropped.
-function parseScenarioFilters(
-  sp: Record<string, string | string[] | undefined>,
-): { query: ScenarioListQuery; invalidFilterFields: string[] } {
-  const shape = ScenarioListQuery.shape;
-  const raw = {
-    skillArea: readSingle(sp["skillArea"]),
-    difficulty: readSingle(sp["difficulty"]),
-    tag: readSingle(sp["tag"]),
-  };
-  const query: Record<string, unknown> = {};
-  const invalid: string[] = [];
-  for (const key of Object.keys(raw) as Array<keyof typeof raw>) {
-    const value = raw[key];
-    if (value === undefined) continue;
-    const r = shape[key].safeParse(value);
-    if (r.success) {
-      if (r.data !== undefined) query[key] = r.data;
-    } else {
-      invalid.push(key);
-    }
-  }
-  return {
-    query: query as ScenarioListQuery,
-    invalidFilterFields: invalid,
-  };
-}
-
-// M22 difficulty-tab navigation. Reuses the existing ?difficulty=
-// filter so each tab is a real, bookmarkable, server-rendered URL
-// — clicking "Level 2" gets you /scenarios?difficulty=2 with its
-// own page state. The "All" tab clears the filter.
-const DIFFICULTY_TABS: Array<{
-  label: string;
-  blurb: string;
-  difficulty: number | null;
-}> = [
-  { label: "All", blurb: "Every difficulty",              difficulty: null },
-  { label: "Level 1", blurb: "Intro / Basics",            difficulty: 1 },
-  { label: "Level 2", blurb: "Beginner",                  difficulty: 2 },
-  { label: "Level 3", blurb: "Intermediate",              difficulty: 3 },
-  { label: "Level 4", blurb: "Advanced",                  difficulty: 4 },
-  { label: "Level 5", blurb: "Expert",                    difficulty: 5 },
-];
-
-function buildHref(
-  query: ScenarioListQuery,
-  difficulty: number | null,
-): string {
-  const params = new URLSearchParams();
-  if (difficulty !== null) params.set("difficulty", String(difficulty));
-  if (query.skillArea) params.set("skillArea", query.skillArea);
-  if (query.tag) params.set("tag", query.tag);
-  const qs = params.toString();
-  return qs ? `/scenarios?${qs}` : "/scenarios";
-}
-
-export default async function ScenariosPage({ searchParams }: Props) {
+// M25 challenge-library landing page. Replaces the flat all-cards
+// list with a lane overview: one card per Lane, showing the count
+// of published challenges plus the user's progress in that lane.
+// Each card links to /scenarios/lanes/<slug>, which renders the
+// challenges in their recommended sequence within the lane.
+export default async function ScenariosPage() {
   const user = await requireUser();
   const token = await readToken();
-
-  const sp = await searchParams;
-  const { query, invalidFilterFields } = parseScenarioFilters(sp);
-
-  const list = await api.scenarios.list(token!, query);
-  const activeDifficulty = query.difficulty ?? null;
+  const { lanes } = await api.scenarios.lanes(token!);
 
   return (
     <main>
@@ -89,98 +21,48 @@ export default async function ScenariosPage({ searchParams }: Props) {
         <div>
           <h1>Challenges</h1>
           <p>
-            Welcome, {user.displayName}. Pick a challenge to inspect its
-            artifacts, answer questions, and retry until correct.
+            Welcome, {user.displayName}. Pick a lane to start.
           </p>
         </div>
       </header>
 
-      <nav
-        aria-label="Filter by difficulty"
+      <ul
+        className="lane-list"
         style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: ".4rem",
-          marginBottom: "1rem",
+          listStyle: "none",
+          padding: 0,
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
+          gap: "1rem",
+          marginTop: "1rem",
         }}
       >
-        {DIFFICULTY_TABS.map((t) => {
-          const isActive = activeDifficulty === t.difficulty;
-          return (
+        {lanes.map((lane) => (
+          <li key={lane.lane}>
             <Link
-              key={t.label}
-              href={buildHref(query, t.difficulty)}
-              className="nav-link"
-              data-active={isActive}
-              style={{ paddingLeft: "0.85rem", paddingRight: "0.85rem" }}
-              title={t.blurb}
+              href={`/scenarios/lanes/${encodeURIComponent(lane.lane)}`}
+              className="card"
+              style={{
+                display: "block",
+                padding: "1rem 1.1rem",
+                textDecoration: "none",
+                color: "inherit",
+                height: "100%",
+              }}
             >
-              {t.label}
+              <LaneCard lane={lane} />
             </Link>
-          );
-        })}
-      </nav>
-
-      {invalidFilterFields.length > 0 ? (
-        <div
-          className="card"
-          style={{
-            borderColor: "rgba(255, 196, 0, 0.45)",
-            background: "rgba(255, 196, 0, 0.06)",
-            color: "#f0d68a",
-          }}
-        >
-          Ignored invalid filter{invalidFilterFields.length === 1 ? "" : "s"}:{" "}
-          {invalidFilterFields.map((f) => (
-            <code key={f} style={{ marginRight: ".5rem" }}>{f}</code>
-          ))}
-        </div>
-      ) : null}
-
-      <FilterBar query={query} totalShown={list.scenarios.length} total={list.total} />
-
-      {list.scenarios.length === 0 ? (
-        <div className="card">
-          <p style={{ margin: 0 }}>No scenarios match your filters.</p>
-        </div>
-      ) : (
-        <ul className="scenario-list" style={{ listStyle: "none", padding: 0 }}>
-          {list.scenarios.map((s) => (
-            <li key={s.id} className="scenario-card">
-              <Link href={`/scenarios/${s.slug}`}>
-                <ScenarioCard scenario={s} />
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
+          </li>
+        ))}
+      </ul>
     </main>
   );
 }
 
-// M22 progress chip. Three states:
-//   completed     all questions correct (or no questions but row exists)
-//   in-progress   started, at least one question solved, not all
-//   (omitted)     never started
-function ProgressBadge({ scenario }: { scenario: ScenarioListItem }) {
-  const { completedQuestions: done, totalQuestions: total } = scenario;
-  if (total > 0 && done >= total) {
-    return <span className="chip chip-ok">✓ Completed</span>;
-  }
-  if (done > 0) {
-    return (
-      <span className="chip chip-partial">
-        In progress · {done}/{total}
-      </span>
-    );
-  }
-  return null;
-}
-
-function ScenarioCard({ scenario }: { scenario: ScenarioListItem }) {
-  const hasAwarenessOnly = scenario.skillAreas.some(isAwarenessOnly);
+function LaneCard({ lane }: { lane: LaneSummary }) {
+  const empty = lane.publishedScenarioCount === 0;
   return (
-    <>
+    <div style={{ display: "flex", flexDirection: "column", gap: ".5rem", height: "100%" }}>
       <div
         style={{
           display: "flex",
@@ -189,52 +71,62 @@ function ScenarioCard({ scenario }: { scenario: ScenarioListItem }) {
           gap: ".5rem",
         }}
       >
-        <h3 style={{ margin: 0 }}>{scenario.title}</h3>
-        <ProgressBadge scenario={scenario} />
+        <h3 style={{ margin: 0, fontSize: "1.05rem" }}>{lane.label}</h3>
+        <LaneProgressBadge lane={lane} />
       </div>
-      <div className="summary">{scenario.summary}</div>
-      <div>
-        {scenario.skillAreas.map((a) => (
-          <span
-            key={a}
-            className={`chip ${hasAwarenessOnly && isAwarenessOnly(a) ? "chip-rf" : "chip-skill"}`}
-          >
-            {a}
-          </span>
-        ))}
-        <span className="chip chip-difficulty">difficulty {scenario.difficulty}/5</span>
-        {scenario.estimatedMinutes !== null ? (
-          <span className="chip">≈ {scenario.estimatedMinutes} min</span>
-        ) : null}
+      <p
+        style={{
+          margin: 0,
+          color: "var(--muted)",
+          fontSize: ".88rem",
+          lineHeight: 1.45,
+          flex: 1,
+        }}
+      >
+        {lane.description}
+      </p>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: ".5rem",
+          fontSize: ".82rem",
+          color: "var(--muted)",
+          marginTop: ".25rem",
+        }}
+      >
+        {empty ? (
+          <span>No challenges yet</span>
+        ) : (
+          <>
+            <span>
+              <strong style={{ color: "var(--fg)" }}>
+                {lane.publishedScenarioCount}
+              </strong>{" "}
+              challenge{lane.publishedScenarioCount === 1 ? "" : "s"}
+            </span>
+            {lane.inProgressScenarioCount > 0 ? (
+              <span>· {lane.inProgressScenarioCount} in progress</span>
+            ) : null}
+          </>
+        )}
       </div>
-    </>
+    </div>
   );
 }
 
-function FilterBar({
-  query,
-  totalShown,
-  total,
-}: {
-  query: ScenarioListQuery;
-  totalShown: number;
-  total: number;
-}) {
-  const hasAny = Boolean(query.skillArea || query.difficulty || query.tag);
-  if (!hasAny) {
+function LaneProgressBadge({ lane }: { lane: LaneSummary }) {
+  const total = lane.publishedScenarioCount;
+  if (total === 0) return null;
+  if (lane.completedScenarioCount >= total) {
+    return <span className="chip chip-ok">✓ Lane complete</span>;
+  }
+  if (lane.completedScenarioCount > 0) {
     return (
-      <p style={{ color: "var(--muted)", fontSize: ".9rem" }}>
-        Showing {totalShown} of {total}.
-      </p>
+      <span className="chip chip-partial">
+        {lane.completedScenarioCount}/{total} done
+      </span>
     );
   }
-  return (
-    <p style={{ color: "var(--muted)", fontSize: ".9rem" }}>
-      Showing {totalShown} of {total} ·
-      {query.skillArea ? <> skillArea=<code>{query.skillArea}</code></> : null}
-      {query.difficulty !== undefined ? <> · difficulty={query.difficulty}</> : null}
-      {query.tag ? <> · tag=<code>{query.tag}</code></> : null}
-      {" "}<Link href="/scenarios" style={{ color: "var(--accent)" }}>clear filters</Link>
-    </p>
-  );
+  return null;
 }

@@ -16,6 +16,9 @@ export const DFIR_SCENARIOS: ScenarioSeed[] = [
     difficulty: 3,
     estimatedMinutes: 40,
     tags: ["dfir", "usb_media", "classified_spillage", "df_artifacts", "removable_media", "report_writing", "inference_discipline"],
+    lane: "removable_media_spillage",
+    module: "USB carving & spillage",
+    sequence: 1,
     brief: `
 # Brief
 
@@ -291,6 +294,9 @@ the attribution inferences.
     difficulty: 3,
     estimatedMinutes: 35,
     tags: ["dfir", "df_artifacts", "windows_artifacts", "inference_discipline", "report_writing"],
+    lane: "windows_artifacts",
+    module: "Execution evidence",
+    sequence: 1,
     brief: `
 # Brief
 
@@ -493,6 +499,9 @@ answer.
     difficulty: 3,
     estimatedMinutes: 30,
     tags: ["dfir", "df_artifacts", "windows_artifacts", "inference_discipline"],
+    lane: "windows_artifacts",
+    module: "Execution evidence",
+    sequence: 2,
     brief: `
 # Brief
 
@@ -675,6 +684,9 @@ that gets called out in any subsequent legal review.
     difficulty: 2,
     estimatedMinutes: 18,
     tags: ["dfir", "df_artifacts", "windows_artifacts", "inference_discipline"],
+    lane: "windows_artifacts",
+    module: "Deleted-file attribution",
+    sequence: 1,
     status: "draft",
     brief: `
 # Brief (DRAFT)
@@ -774,6 +786,9 @@ and the file's original owner is a different account.
     difficulty: 2,
     estimatedMinutes: 15,
     tags: ["dfir", "df_artifacts", "windows_artifacts", "inference_discipline"],
+    lane: "windows_artifacts",
+    module: "Recent items & shellbags",
+    sequence: 1,
     status: "draft",
     brief: `
 # Brief (DRAFT)

@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   ArtifactKind,
   Difficulty,
+  Lane,
   ScenarioSlug,
   ScenarioStatus,
   SkillArea,
@@ -68,6 +69,13 @@ export const CreateScenarioRequest = z.object({
   tags: z.array(ScenarioTag).max(20).default([]),
   status: ScenarioStatus.default("draft"),
   brief: ScenarioBriefDraft,
+  // M25 curated-library placement. Lane defaults to foundations at
+  // the API layer so a create request that omits the field still
+  // lands the scenario in a known bucket; the admin can re-bucket
+  // later. Module is free-text; sequence orders within the lane.
+  lane: Lane.default("foundations"),
+  module: z.string().min(1).max(120).nullable().optional(),
+  sequence: z.number().int().nonnegative().max(10_000).default(0),
 });
 export type CreateScenarioRequest = z.infer<typeof CreateScenarioRequest>;
 
@@ -82,6 +90,9 @@ export const UpdateScenarioRequest = z.object({
   tags: z.array(ScenarioTag).max(20).optional(),
   status: ScenarioStatus.optional(),
   brief: ScenarioBriefDraft.optional(),
+  lane: Lane.optional(),
+  module: z.string().min(1).max(120).nullable().optional(),
+  sequence: z.number().int().nonnegative().max(10_000).optional(),
 });
 export type UpdateScenarioRequest = z.infer<typeof UpdateScenarioRequest>;
 
@@ -185,6 +196,10 @@ export const AdminScenarioSummary = z.object({
   ]),
   reviewNotes: z.string().nullable(),
   reviewedAt: z.string().datetime().nullable(),
+  // M25 curated-library placement.
+  lane: Lane,
+  module: z.string().nullable(),
+  sequence: z.number().int().nonnegative(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
@@ -236,6 +251,8 @@ export const AdminScenarioListQuery = z.object({
     .optional(),
   tag: z.string().min(1).max(60).optional(),
   q: z.string().min(1).max(120).optional(),
+  // M25 lane filter for the admin challenge list.
+  lane: Lane.optional(),
 });
 export type AdminScenarioListQuery = z.infer<typeof AdminScenarioListQuery>;
 

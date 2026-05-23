@@ -34,6 +34,21 @@ enum SkillArea {
   inference_discipline
 }
 
+// M25: curated challenge-library lanes. One lane per scenario.
+// Order in this enum is the canonical user-facing display order
+// for the /scenarios lane overview.
+enum Lane {
+  foundations
+  email_bec
+  windows_artifacts
+  removable_media_spillage
+  insider_risk
+  network_logs
+  rf_awareness
+  evidence_handling
+  report_writing
+}
+
 enum ScenarioStatus {
   draft
   published
@@ -183,6 +198,14 @@ model Scenario {
   reviewedAt         DateTime?            @map("reviewed_at")
   reviewedByUserId   String?              @map("reviewed_by_user_id") @db.Uuid
 
+  // M25 curated challenge-library structure. Lane is the broad
+  // mission area (DB enum so typos can't ship). Module is a free-
+  // text subdivision the admin can introduce inside a lane without
+  // a migration. Sequence orders scenarios within their lane.
+  lane     Lane    @default(foundations)
+  module   String? @db.VarChar(120)
+  sequence Int     @default(0)
+
   brief         ScenarioBrief?
   artifacts     Artifact[]
   questions     Question[]
@@ -193,6 +216,7 @@ model Scenario {
 
   @@index([status])
   @@index([reviewStatus])
+  @@index([lane, sequence])
   @@index([skillAreas], type: Gin)
   @@index([tags], type: Gin)
   @@map("scenarios")

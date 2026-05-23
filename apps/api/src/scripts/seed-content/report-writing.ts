@@ -18,6 +18,9 @@ export const REPORT_WRITING_SCENARIOS: ScenarioSeed[] = [
     difficulty: 3,
     estimatedMinutes: 30,
     tags: ["report_writing", "inference_discipline", "bec"],
+    lane: "report_writing",
+    module: "Findings vs facts",
+    sequence: 3,
     brief: `
 # Brief
 
@@ -220,6 +223,9 @@ cross-examination.
     difficulty: 1,
     estimatedMinutes: 10,
     tags: ["report_writing", "inference_discipline"],
+    lane: "report_writing",
+    module: "Findings vs facts",
+    sequence: 1,
     status: "draft",
     brief: `
 # Brief (DRAFT)
@@ -306,6 +312,9 @@ category the writeup should treat it as.
     difficulty: 1,
     estimatedMinutes: 10,
     tags: ["report_writing", "df_artifacts", "windows_artifacts"],
+    lane: "report_writing",
+    module: "Findings vs facts",
+    sequence: 2,
     status: "draft",
     brief: `
 # Brief (DRAFT)

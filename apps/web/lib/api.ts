@@ -27,6 +27,7 @@ import {
   HelloResponse,
   HealthResponse,
   ImportPackResponse,
+  LaneOverviewResponse,
   LoginRequest,
   RegisterRequest,
   RegisterResponse,
@@ -219,6 +220,8 @@ export const api = {
         ScenarioListResponse,
         await request(`/scenarios${buildQuery(query)}`, { token }),
       ),
+    lanes: async (token: string): Promise<LaneOverviewResponse> =>
+      parse(LaneOverviewResponse, await request("/scenarios/lanes", { token })),
     getBySlug: async (token: string, slug: string): Promise<ScenarioDetail> =>
       parse(ScenarioDetail, await request(`/scenarios/${encodeURIComponent(slug)}`, { token })),
     getParsedEml: async (

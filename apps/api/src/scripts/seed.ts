@@ -218,6 +218,9 @@ async function upsertScenario(
       status,
       source: "authored",
       authorUserId: authorId,
+      lane: s.lane,
+      module: s.module ?? null,
+      sequence: s.sequence ?? 0,
     },
     create: {
       slug: s.slug,
@@ -230,6 +233,9 @@ async function upsertScenario(
       status,
       source: "authored",
       authorUserId: authorId,
+      lane: s.lane,
+      module: s.module ?? null,
+      sequence: s.sequence ?? 0,
     },
   });
 

@@ -17,6 +17,9 @@ export const BEC_SCENARIOS: ScenarioSeed[] = [
     difficulty: 2,
     estimatedMinutes: 45,
     tags: ["bec", "email_headers", "inference_discipline", "report_writing"],
+    lane: "email_bec",
+    module: "BEC mechanics",
+    sequence: 1,
     brief: `
 # Brief
 
@@ -320,6 +323,9 @@ Distinguish:
     difficulty: 1,
     estimatedMinutes: 20,
     tags: ["bec", "email_headers", "inference_discipline"],
+    lane: "email_bec",
+    module: "BEC mechanics",
+    sequence: 2,
     status: "draft",
     brief: `
 # Brief (DRAFT)

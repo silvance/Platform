@@ -17,6 +17,9 @@ export const PHISHING_SCENARIOS: ScenarioSeed[] = [
     difficulty: 2,
     estimatedMinutes: 30,
     tags: ["phishing", "email_headers", "inference_discipline"],
+    lane: "email_bec",
+    module: "Header analysis",
+    sequence: 1,
     brief: `
 # Brief
 
@@ -257,6 +260,9 @@ A correct answer separates:
     difficulty: 2,
     estimatedMinutes: 25,
     tags: ["phishing", "df_artifacts", "inference_discipline"],
+    lane: "email_bec",
+    module: "Static review of lures",
+    sequence: 1,
     brief: `
 # Brief
 
@@ -470,6 +476,9 @@ Separate:
     difficulty: 1,
     estimatedMinutes: 12,
     tags: ["phishing", "email_headers", "inference_discipline"],
+    lane: "email_bec",
+    module: "Header analysis",
+    sequence: 2,
     status: "draft",
     brief: `
 # Brief (DRAFT)
@@ -569,6 +578,9 @@ the mismatch proves and what it doesn't.
     difficulty: 1,
     estimatedMinutes: 10,
     tags: ["phishing", "email_headers", "report_writing"],
+    lane: "email_bec",
+    module: "Header analysis",
+    sequence: 3,
     status: "draft",
     brief: `
 # Brief (DRAFT)
@@ -659,6 +671,9 @@ user is asking whether it's safe to reply.
     difficulty: 1,
     estimatedMinutes: 10,
     tags: ["phishing", "email_headers", "df_artifacts"],
+    lane: "email_bec",
+    module: "Header analysis",
+    sequence: 4,
     status: "draft",
     brief: `
 # Brief (DRAFT)
@@ -747,6 +762,9 @@ expiry. Look closely at the sender domain.
     difficulty: 1,
     estimatedMinutes: 12,
     tags: ["phishing", "inference_discipline", "report_writing"],
+    lane: "email_bec",
+    module: "Static review of lures",
+    sequence: 2,
     status: "draft",
     brief: `
 # Brief (DRAFT)

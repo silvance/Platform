@@ -20,6 +20,9 @@ export const INSIDER_SCENARIOS: ScenarioSeed[] = [
     difficulty: 3,
     estimatedMinutes: 40,
     tags: ["insider_risk", "account_compromise", "df_artifacts", "report_writing", "inference_discipline"],
+    lane: "insider_risk",
+    module: "Leaving-employee triage",
+    sequence: 1,
     brief: `
 # Brief
 
@@ -263,6 +266,9 @@ finding by itself.
     difficulty: 2,
     estimatedMinutes: 15,
     tags: ["insider_risk", "account_compromise", "report_writing", "inference_discipline"],
+    lane: "insider_risk",
+    module: "Behavioral patterns",
+    sequence: 1,
     status: "draft",
     brief: `
 # Brief (DRAFT)
@@ -374,6 +380,9 @@ team is in the final two weeks of a release. Triage.
     difficulty: 2,
     estimatedMinutes: 12,
     tags: ["insider_risk", "account_compromise", "df_artifacts", "inference_discipline"],
+    lane: "insider_risk",
+    module: "Removable media + access",
+    sequence: 1,
     status: "draft",
     brief: `
 # Brief (DRAFT)

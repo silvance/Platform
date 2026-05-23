@@ -44,6 +44,19 @@ const VALID_SKILL_AREAS = new Set<string>([
 // Mirrored from the Prisma schema's ScenarioStatus enum.
 const VALID_STATUSES = new Set<string>(["draft", "published", "archived"]);
 
+// Mirrored from the Prisma schema's Lane enum.
+const VALID_LANES = new Set<string>([
+  "foundations",
+  "email_bec",
+  "windows_artifacts",
+  "removable_media_spillage",
+  "insider_risk",
+  "network_logs",
+  "rf_awareness",
+  "evidence_handling",
+  "report_writing",
+]);
+
 export function validateScenarios(scenarios: ScenarioSeed[]): void {
   const errors: string[] = [];
   const seenSlugs = new Set<string>();
@@ -101,6 +114,25 @@ export function validateScenarios(scenarios: ScenarioSeed[]): void {
     // status: optional; if set, must be a valid ScenarioStatus.
     if (s.status !== undefined && !VALID_STATUSES.has(s.status)) {
       errors.push(`${ctx} status "${s.status}" is not a valid ScenarioStatus`);
+    }
+
+    // M25: lane is REQUIRED and must be a valid Lane enum value.
+    // The runtime default in the DB is "foundations", but the
+    // catalogue file is the source of truth for assignment; missing
+    // lane here is a content-authoring bug, not a runtime fallback.
+    if (!s.lane) {
+      errors.push(`${ctx} missing required field "lane"`);
+    } else if (!VALID_LANES.has(s.lane)) {
+      errors.push(`${ctx} lane "${s.lane}" is not a valid Lane enum value`);
+    }
+    if (s.module !== undefined && (typeof s.module !== "string" || s.module.length === 0 || s.module.length > 120)) {
+      errors.push(`${ctx} module must be a non-empty string up to 120 chars`);
+    }
+    if (
+      s.sequence !== undefined &&
+      (!Number.isInteger(s.sequence) || s.sequence < 0 || s.sequence > 10_000)
+    ) {
+      errors.push(`${ctx} sequence must be an integer in [0, 10000]`);
     }
 
     if (!s.artifacts || s.artifacts.length === 0) {
