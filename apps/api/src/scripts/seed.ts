@@ -5,21 +5,30 @@ import { dirname, join, resolve } from "node:path";
 import { PrismaClient, type Role, type ArtifactKind } from "@prisma/client";
 import { hash, Algorithm } from "@node-rs/argon2";
 import { MIN_PASSWORD_LENGTH } from "@ci-train/contracts";
+import { assertDistinctSeedEmails } from "./seed-config";
 
-// Standalone seed runner. Idempotently upserts one admin + one user
-// account plus the demonstration scenarios and their artifact bytes.
+// Standalone seed runner. Idempotently upserts one admin + one
+// regular-user account, plus the demonstration challenges and
+// their artifact bytes.
+//
+// Role model (kept current with M15 product framing):
+//   user  – can sign in, browse and solve challenges, view their
+//           own progress, and change their own password.
+//   admin – everything a user can do AND author / import / export
+//           challenges plus manage other user accounts. Admins are
+//           still challenge users — they solve challenges and have
+//           their own progress like anyone else.
 //
 // M15: bootstrap passwords are env-configurable.
-//   SEED_ADMIN_EMAIL    – admin account (default: instructor@example.local)
+//   SEED_ADMIN_EMAIL    – admin account (default: admin@example.local)
 //   SEED_ADMIN_PASSWORD – password for the admin account
-//   SEED_USER_EMAIL     – regular-user account (default: trainee@example.local)
+//   SEED_USER_EMAIL     – regular-user account (default: user@example.local)
 //   SEED_USER_PASSWORD  – password for the regular-user account
 //
-// Backwards-compat aliases (pre-M12 names, still honored by deployed
-// env files):
+// Backwards-compat aliases (kept only so deployed env files from
+// before M15 keep working — don't use them in new deploys):
 //   SEED_INSTRUCTOR_EMAIL → falls through to SEED_ADMIN_EMAIL
 //   SEED_TRAINEE_EMAIL    → falls through to SEED_USER_EMAIL
-// The roles created are always `admin` and `user`.
 //
 // Password handling — three cases per user:
 //   1. SEED_*_PASSWORD set
@@ -41,11 +50,11 @@ import { MIN_PASSWORD_LENGTH } from "@ci-train/contracts";
 const SEED_ADMIN_EMAIL =
   process.env.SEED_ADMIN_EMAIL ??
   process.env.SEED_INSTRUCTOR_EMAIL ??
-  "instructor@example.local";
+  "admin@example.local";
 const SEED_USER_EMAIL =
   process.env.SEED_USER_EMAIL ??
   process.env.SEED_TRAINEE_EMAIL ??
-  "trainee@example.local";
+  "user@example.local";
 const SEED_ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD ?? null;
 const SEED_USER_PASSWORD = process.env.SEED_USER_PASSWORD ?? null;
 const STORAGE_ROOT = resolve(
@@ -1012,6 +1021,11 @@ function describeAction(
 }
 
 async function main(): Promise<void> {
+  // Run BEFORE constructing the Prisma client / touching the FS so
+  // a misconfigured deploy fails fast with a clear message rather
+  // than silently demoting the admin row.
+  assertDistinctSeedEmails(SEED_ADMIN_EMAIL, SEED_USER_EMAIL);
+
   const prisma = new PrismaClient();
   try {
     await fs.mkdir(STORAGE_ROOT, { recursive: true });

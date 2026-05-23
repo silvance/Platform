@@ -115,7 +115,7 @@ Forgot the password? Skip the log archaeology — run the
 docker compose --env-file deploy/env/local.env \
                -f deploy/docker-compose.local.yml \
                exec api node dist/scripts/reset-password.js \
-                 --email instructor@example.local \
+                 --email admin@example.local \
                  --password 'NewPasswordHere'
 ```
 
@@ -327,7 +327,10 @@ $EDITOR deploy/env/vps.env
 Required edits:
 
 - **`POSTGRES_PASSWORD`** — `openssl rand -base64 32`.
-- **`SEED_ADMIN_EMAIL` / `SEED_USER_EMAIL`** — your real bootstrap addresses.
+- **`SEED_ADMIN_EMAIL` / `SEED_USER_EMAIL`** — your real bootstrap
+  addresses. **Must be different** (case-insensitively); the seed
+  refuses to run otherwise. Use a plus-alias
+  (`james+user@cicyberlab.com`) if you only have one mailbox.
 - **`SEED_ADMIN_PASSWORD` / `SEED_USER_PASSWORD`** — generate with
   `openssl rand -base64 24` (one per account). These are the real
   login passwords humans type. See the "Seed" section below.
@@ -411,7 +414,7 @@ hand.
 docker compose --env-file deploy/env/vps.env \
                -f deploy/docker-compose.vps.yml \
                exec api node dist/scripts/reset-password.js \
-                 --email instructor@cicyberlab.com \
+                 --email admin@cicyberlab.com \
                  --password 'NewPasswordHere'
 ```
 
@@ -420,7 +423,7 @@ Or, to keep the password out of shell history and `ps`:
 ```bash
 echo -n 'NewPasswordHere' | docker compose ... exec -T api \
   node dist/scripts/reset-password.js \
-    --email instructor@cicyberlab.com --password-stdin
+    --email admin@cicyberlab.com --password-stdin
 ```
 
 The script revokes every active session for the target user, so

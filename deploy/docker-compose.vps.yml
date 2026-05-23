@@ -61,8 +61,8 @@ services:
       # throttler can validate inbound X-CI-Train-Client-IP headers.
       BFF_FORWARD_SECRET: ${BFF_FORWARD_SECRET}
       # M15 names (preferred). Backwards-compat aliases below.
-      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-${SEED_INSTRUCTOR_EMAIL:-instructor@example.local}}
-      SEED_USER_EMAIL: ${SEED_USER_EMAIL:-${SEED_TRAINEE_EMAIL:-trainee@example.local}}
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-${SEED_INSTRUCTOR_EMAIL:-admin@example.local}}
+      SEED_USER_EMAIL: ${SEED_USER_EMAIL:-${SEED_TRAINEE_EMAIL:-user@example.local}}
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-}
       SEED_USER_PASSWORD: ${SEED_USER_PASSWORD:-}
       # Backwards-compat (passed through so the seed's alias logic

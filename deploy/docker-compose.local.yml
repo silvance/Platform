@@ -62,8 +62,8 @@ services:
       BFF_FORWARD_SECRET: ${BFF_FORWARD_SECRET:-}
       # M15 seed accounts. Passwords optional in local mode: leave
       # blank → random passwords printed by the seed on first run.
-      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-${SEED_INSTRUCTOR_EMAIL:-instructor@example.local}}
-      SEED_USER_EMAIL: ${SEED_USER_EMAIL:-${SEED_TRAINEE_EMAIL:-trainee@example.local}}
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-${SEED_INSTRUCTOR_EMAIL:-admin@example.local}}
+      SEED_USER_EMAIL: ${SEED_USER_EMAIL:-${SEED_TRAINEE_EMAIL:-user@example.local}}
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-}
       SEED_USER_PASSWORD: ${SEED_USER_PASSWORD:-}
       SEED_INSTRUCTOR_EMAIL: ${SEED_INSTRUCTOR_EMAIL:-}
