@@ -21,6 +21,11 @@ const NAV_ITEMS: Array<{ href: string; label: string; admin?: boolean }> = [
   { href: "/me/progress", label: "Progress" },
   { href: "/me/security", label: "Security" },
   { href: "/admin", label: "Admin", admin: true },
+  // M21f: surface Review directly in the nav. Buried as a tile
+  // on /admin in M21b — feedback was that operators couldn't
+  // find it. A top-level link makes the playthrough surface
+  // unmissable.
+  { href: "/admin/review", label: "Review", admin: true },
 ];
 
 export function AppHeader({ user, theme, pendingApprovalCount }: Props) {
