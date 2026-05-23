@@ -5,7 +5,12 @@ import { api, ApiError } from "@/lib/api";
 import { Markdown } from "@/components/markdown";
 import { ArtifactViewer } from "@/components/viewers/artifact-viewer";
 import { QuestionCard } from "@/components/questions/question-card";
-import { isAwarenessOnly, type ArtifactListItem } from "@ci-train/contracts";
+import {
+  isAwarenessOnly,
+  type AdminScenarioDetail,
+  type ArtifactListItem,
+} from "@ci-train/contracts";
+import { InlineReviewPanel } from "./inline-review-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +25,7 @@ function readSingle(v: string | string[] | undefined): string | undefined {
 }
 
 export default async function ScenarioWorkspacePage({ params, searchParams }: Props) {
-  await requireUser();
+  const user = await requireUser();
   const token = await readToken();
   const { slug } = await params;
   const sp = await searchParams;
@@ -37,6 +42,21 @@ export default async function ScenarioWorkspacePage({ params, searchParams }: Pr
   } catch (err) {
     if (err instanceof ApiError && err.status === 404) notFound();
     throw err;
+  }
+
+  // M21g: admin-only inline review payload. Fetched from the
+  // authoring endpoint which already carries reviewStatus +
+  // per-question reviewNotes. The user-facing /scenarios/:slug
+  // payload above never contains these fields, so trust-boundary
+  // discipline is preserved by construction. Failure is non-fatal:
+  // we just don't render the panel.
+  let adminDetail: AdminScenarioDetail | null = null;
+  if (user.role === "admin") {
+    try {
+      adminDetail = await api.authoring.get(token!, slug);
+    } catch {
+      adminDetail = null;
+    }
   }
 
   const showAwarenessBanner = scenario.skillAreas.some(isAwarenessOnly);
@@ -119,6 +139,14 @@ export default async function ScenarioWorkspacePage({ params, searchParams }: Pr
           </div>
         </div>
       </div>
+
+      {adminDetail ? (
+        <InlineReviewPanel
+          slug={slug}
+          admin={adminDetail}
+          questions={adminDetail.questions}
+        />
+      ) : null}
 
       {/* Brief (collapsible so it doesn't push questions off the screen) */}
       {scenario.brief ? (
