@@ -869,4 +869,428 @@ for what it actually records.
       },
     ],
   },
+
+  // ─── Removable media / spillage — adds to that lane ─────────
+  {
+    slug: "usb-usbstor-history-001",
+    title: "Removable Media: USBSTOR Device History",
+    summary:
+      "A registry extract lists the USB mass-storage devices Windows has seen. Read the entries correctly and decide what they do and don't prove.",
+    skillAreas: ["df_artifacts", "removable_media", "windows_artifacts", "inference_discipline"],
+    difficulty: 3,
+    estimatedMinutes: 20,
+    tags: ["dfir", "removable_media", "usbstor", "windows_artifacts", "inference_discipline"],
+    lane: "removable_media_spillage",
+    module: "Device history",
+    sequence: 1,
+    brief: `
+# Brief
+
+A Windows host (\`WS-3104\`, assigned to \`s.alvarez\`) is under
+review. The artefact is a parsed extract of the registry's
+\`USBSTOR\` key plus a small slice of \`setupapi.dev.log\`. These
+together are the canonical "what USB devices has this machine
+seen?" record.
+
+Reading them correctly is the point of this exercise.
+
+## What USBSTOR records
+
+Each subkey under \`HKLM\\SYSTEM\\CurrentControlSet\\Enum\\USBSTOR\`
+represents a class of device, named like:
+\`Disk&Ven_<VENDOR>&Prod_<PRODUCT>&Rev_<REV>\`. Under each class
+the instance ID (the device's reported serial) gets its own
+subkey carrying:
+
+- **FirstInstallDate / InstallDate** — first time the OS
+  installed drivers for this instance.
+- **LastArrivalDate** — most recent time the device was
+  enumerated (plugged in).
+- **LastRemovalDate** — most recent unplug.
+- The friendly name + parent ID prefix linking back to mount
+  points.
+
+## What it does NOT establish on its own
+
+- *Who* plugged the device in. USBSTOR is a per-host artefact;
+  attribution to a user requires correlating with the logged-on
+  user (security event log) at the LastArrivalDate.
+- *What files were copied to or from the device.* That requires
+  file-system / journal / LNK-on-host artefacts and (ideally) the
+  device itself.
+- *Whether the device's reported serial is real.* Some
+  mass-storage devices return a zero or generated serial; the
+  field is taken at face value here.
+`.trim(),
+    artifacts: [
+      {
+        ordinal: 1,
+        displayName: "usbstor-extract.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "HKLM\\SYSTEM\\CurrentControlSet\\Enum\\USBSTOR  (parsed extract)",
+            "------------------------------------------------------------",
+            "",
+            "Disk&Ven_Kingston&Prod_DataTraveler_3.0&Rev_PMAP",
+            "  Instance: AA-CORP-IT-099  (asset-register match: yes; issued to IT pool)",
+            "    FirstInstallDate: 2026-04-02T08:11:04Z",
+            "    LastArrivalDate:  2026-09-18T14:22:08Z",
+            "    LastRemovalDate:  2026-09-18T15:08:41Z",
+            "    FriendlyName:     Kingston DataTraveler 3.0",
+            "",
+            "Disk&Ven_SanDisk&Prod_Cruzer_Glide_3.0&Rev_1.00",
+            "  Instance: BB-PRIV-EX-118  (asset-register match: NO)",
+            "    FirstInstallDate: 2026-11-04T19:42:11Z",
+            "    LastArrivalDate:  2026-11-04T19:42:11Z",
+            "    LastRemovalDate:  2026-11-04T20:55:30Z",
+            "    FriendlyName:     SanDisk Cruzer Glide 3.0",
+            "",
+            "Disk&Ven_Generic&Prod_USB_SD_Reader&Rev_1.00",
+            "  Instance: 0000000000000001  (default/generated serial)",
+            "    FirstInstallDate: 2026-08-15T10:30:20Z",
+            "    LastArrivalDate:  2026-08-15T10:30:20Z",
+            "    LastRemovalDate:  2026-08-15T10:42:01Z",
+            "    FriendlyName:     Generic USB SD Reader",
+            "",
+          ].join("\n"),
+        ),
+      },
+      {
+        ordinal: 2,
+        displayName: "setupapi-dev-slice.log",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "setupapi.dev.log  (excerpt — first-install entries only)",
+            "---------------------------------------------------------",
+            "",
+            ">>>  [Device Install (Hardware initiated) - USBSTOR\\Disk&Ven_Kingston&Prod_DataTraveler_3.0&Rev_PMAP\\AA-CORP-IT-099]",
+            ">>>  Section start 2026-04-02 08:11:04.012",
+            "      <<<  Section end 2026-04-02 08:11:04.498",
+            "",
+            ">>>  [Device Install (Hardware initiated) - USBSTOR\\Disk&Ven_Generic&Prod_USB_SD_Reader&Rev_1.00\\0000000000000001]",
+            ">>>  Section start 2026-08-15 10:30:20.117",
+            "      <<<  Section end 2026-08-15 10:30:20.852",
+            "",
+            ">>>  [Device Install (Hardware initiated) - USBSTOR\\Disk&Ven_SanDisk&Prod_Cruzer_Glide_3.0&Rev_1.00\\BB-PRIV-EX-118]",
+            ">>>  Section start 2026-11-04 19:42:11.330",
+            "      <<<  Section end 2026-11-04 19:42:12.041",
+            "",
+          ].join("\n"),
+        ),
+      },
+      {
+        ordinal: 3,
+        displayName: "security-log-interactive-logons.csv",
+        kind: "csv",
+        mimeType: "text/csv; charset=utf-8",
+        bytes: utf8(
+          [
+            "utc,event_id,event_name,user,logon_type",
+            "2026-11-04T08:30:01Z,4624,LogonSuccess,CORP\\s.alvarez,interactive",
+            "2026-11-04T19:00:00Z,4634,Logoff,CORP\\s.alvarez,interactive",
+            "2026-11-04T19:01:08Z,4624,LogonSuccess,CORP\\m.greene,interactive",
+            "2026-11-04T21:30:01Z,4634,Logoff,CORP\\m.greene,interactive",
+            "(Workstation is a shared kiosk used by both accounts on overlapping shifts.)",
+          ].join("\n") + "\n",
+        ),
+      },
+    ],
+    questions: [
+      {
+        ordinal: 1,
+        type: "multi_choice",
+        weight: 2,
+        promptMd:
+          "Which statements are supported by the artefacts as written?",
+        options: [
+          {
+            id: "two-asset-mismatch",
+            label:
+              "At least one USB device whose serial is NOT in the corporate asset register was enumerated on this host (the SanDisk instance `BB-PRIV-EX-118`).",
+          },
+          {
+            id: "sandisk-window",
+            label:
+              "The non-asset-register SanDisk was enumerated 2026-11-04 19:42:11Z and unplugged 2026-11-04 20:55:30Z — a roughly 1h 13m window.",
+          },
+          {
+            id: "user-attribution-from-usbstor",
+            label:
+              "USBSTOR alone names `s.alvarez` as the user who plugged in the SanDisk.",
+          },
+          {
+            id: "user-attribution-from-security-log",
+            label:
+              "The interactive-logon slice shows `m.greene` was the logged-on user during the SanDisk window — that's a stronger attribution lead than USBSTOR by itself.",
+          },
+          {
+            id: "files-copied",
+            label:
+              "These artefacts establish whether files were copied to the SanDisk.",
+          },
+        ],
+        allowMultiple: true,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["two-asset-mismatch", "sandisk-window", "user-attribution-from-security-log"],
+          allowMultiple: true,
+        },
+        debriefMd: [
+          "**Supported:**",
+          "",
+          "- The SanDisk serial isn't on the asset register, and USBSTOR + setupapi agree on the window.",
+          "- The shared-kiosk security log puts `m.greene` at the console during the SanDisk window, not `s.alvarez`. That's a different actor than the host's primary assignment.",
+          "",
+          "**Not supported:**",
+          "",
+          "- *USBSTOR names the user* — USBSTOR is per-host. You need the security log (or equivalent session attribution) to name a person.",
+          "- *Files copied* — USBSTOR doesn't see file operations. Copy attribution requires LNK / shellbag / journal artefacts on the host and (ideally) the device itself.",
+        ].join("\n"),
+      },
+      {
+        ordinal: 2,
+        type: "multi_choice",
+        weight: 1,
+        promptMd:
+          "What are the right next investigative steps if the SanDisk mount is the focus?",
+        options: [
+          {
+            id: "find-the-device",
+            label:
+              "Locate and image the SanDisk device, on chain of custody.",
+          },
+          {
+            id: "lnk-shellbags",
+            label:
+              "Pull host-side LNK / shellbag artefacts and journal entries that reference the SanDisk's volume during the window.",
+          },
+          {
+            id: "interview-greene",
+            label:
+              "Interview `m.greene` about what device they connected during the 19:42–20:55Z window.",
+          },
+          {
+            id: "block-all-usb",
+            label:
+              "Disable USB ports on this kiosk immediately.",
+          },
+        ],
+        allowMultiple: true,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["find-the-device", "lnk-shellbags", "interview-greene"],
+          allowMultiple: true,
+        },
+        debriefMd:
+          "Device imaging + host-side LNK/journal/shellbag evidence + a user interview cover the three open questions (what's on the device, what was copied, who copied). Disabling USB ports is a policy reaction that may be sensible at the unit level but doesn't help the investigation.",
+      },
+      {
+        ordinal: 3,
+        type: "confidence",
+        weight: 1,
+        promptMd:
+          "Confidence (1–5) that `m.greene` connected the non-asset-register SanDisk during their session at this kiosk, based ONLY on these artefacts.",
+        expected: { type: "confidence", expectedRange: [3, 4] },
+        debriefMd:
+          "**3 or 4.** USBSTOR + setupapi establish that the SanDisk was enumerated. The security-log slice puts `m.greene` at the console during the window. That's strong session-level attribution. It is NOT conclusive about personal action — a session can be left unlocked, a different person can plug something in during a brief turn — and the artefacts don't speak to that. Pair with a brief interview before naming the person in any report.",
+      },
+    ],
+  },
+
+  // ─── Spillage workflow ──────────────────────────────────────
+  {
+    slug: "spillage-discovery-workflow-001",
+    title: "Spillage Discovery: First-Hour Workflow",
+    summary:
+      "Possible classified spillage on an unauthorised system. Pick the right first-hour steps — and the wrong ones.",
+    skillAreas: ["report_writing", "df_artifacts", "removable_media", "inference_discipline"],
+    difficulty: 2,
+    estimatedMinutes: 15,
+    tags: ["spillage", "removable_media", "workflow", "report_writing"],
+    lane: "removable_media_spillage",
+    module: "Spillage workflow",
+    sequence: 1,
+    brief: `
+# Brief
+
+A DA-civilian analyst (\`r.becker\`) has just told you they
+opened a Word document on an unclassified workstation that
+*appeared* to carry a \`(U//FOUO)\` marker in the body. They
+closed the file immediately, didn't print, didn't email it
+anywhere, and walked over to your office to report.
+
+This is a **possible spillage**. The unclassified workstation is
+not authorised for that material. The next hour matters: the
+right sequence preserves evidence, contains the spread, and
+keeps the response defensible. The wrong sequence destroys
+evidence, contaminates witnesses, or — worst — fails to contain.
+
+The objective of this exercise is to pick the right steps. It is
+not to substitute for unit spillage SOP or the responsible
+information-systems-security manager (ISSM); when a real
+spillage happens, both of those are in the loop early.
+`.trim(),
+    artifacts: [
+      {
+        ordinal: 1,
+        displayName: "candidate-actions.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "Candidate first-hour actions",
+            "----------------------------",
+            "",
+            "  A. Leave the workstation powered on. Disconnect it from the",
+            "     network (cable / WLAN). Do not touch the keyboard or mouse.",
+            "",
+            "  B. Notify the supporting ACI office and the ISSM.",
+            "",
+            "  C. Have r.becker write a one-page contemporaneous narrative",
+            "     while the events are fresh — what they did, what they saw,",
+            "     when they reported.",
+            "",
+            "  D. Immediately delete the suspect file from the workstation",
+            "     to prevent further exposure.",
+            "",
+            "  E. Reboot the workstation \"just to clear it\" before any",
+            "     forensic work begins.",
+            "",
+            "  F. Forward the suspect document by email to the supporting",
+            "     ACI office so they can examine it.",
+            "",
+            "  G. Image the workstation under chain of custody once the",
+            "     supporting forensic examiner is on scene.",
+            "",
+            "  H. Tell every other person in the office bay what happened and",
+            "     who reported it.",
+            "",
+            "  I. Decide right now whether the marker in the document was",
+            "     real or just a draft watermark, and act accordingly.",
+            "",
+          ].join("\n"),
+        ),
+      },
+    ],
+    questions: [
+      {
+        ordinal: 1,
+        type: "multi_choice",
+        weight: 2,
+        promptMd:
+          "Pick the actions that belong in the **first-hour workflow**.",
+        options: [
+          {
+            id: "A",
+            label: "A — leave powered on, disconnect network, hands off.",
+          },
+          {
+            id: "B",
+            label: "B — notify the supporting ACI office and the ISSM.",
+          },
+          {
+            id: "C",
+            label: "C — contemporaneous one-page narrative from r.becker.",
+          },
+          {
+            id: "D",
+            label: "D — delete the suspect file from the workstation.",
+          },
+          {
+            id: "E",
+            label: "E — reboot the workstation \"to clear it.\"",
+          },
+          {
+            id: "F",
+            label: "F — email the suspect document to the supporting ACI office for review.",
+          },
+          {
+            id: "G",
+            label: "G — image the workstation under chain of custody once the examiner is on scene.",
+          },
+          {
+            id: "H",
+            label: "H — inform every other person in the office bay.",
+          },
+          {
+            id: "I",
+            label: "I — decide right now whether the marker was real.",
+          },
+        ],
+        allowMultiple: true,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["A", "B", "C", "G"],
+          allowMultiple: true,
+        },
+        debriefMd: [
+          "**Belong in the first hour:**",
+          "",
+          "- *A — power-on, network-off, hands-off* — preserves the live state for the forensic examiner. Network-off contains further spread.",
+          "- *B — notify ACI + ISSM* — both have authoritative roles in the response; bring them in early.",
+          "- *C — contemporaneous narrative* — the witness's recollection is at its freshest now. A short factual one-pager is the right artefact and feeds the case file.",
+          "- *G — image under chain of custody* — once the examiner is on scene, image the workstation with proper custody. Imaging is what makes any subsequent finding defensible.",
+          "",
+          "**Do NOT:**",
+          "",
+          "- *D — delete the file* — destroys evidence and may amount to spoliation. The file's existence and metadata are part of the investigation.",
+          "- *E — reboot* — wipes volatile state (running processes, in-memory paths) the examiner may need; can also alter on-disk artefacts.",
+          "- *F — email it to ACI* — moves the suspect content into a new system (mail server, mailboxes, archive). That's *spreading the spillage*, not containing it. Talk to ACI; do not forward the document.",
+          "- *H — broadcast to the bay* — contaminates witnesses, amplifies exposure, and may compromise the response. Need-to-know.",
+          "- *I — decide on marker validity now* — that's the examiner's call after triage with the appropriate classification authority. Don't pre-judge.",
+        ].join("\n"),
+      },
+      {
+        ordinal: 2,
+        type: "multi_choice",
+        weight: 1,
+        promptMd:
+          "If asked at this point what the marker on the document means, the best response is:",
+        options: [
+          {
+            id: "neutral-defer",
+            label:
+              "\"A marker consistent with controlled-use language was observed on the document. Classification determination is the responsibility of the original-classification authority and is being coordinated. We are preserving the workstation under chain of custody.\"",
+          },
+          {
+            id: "self-classify",
+            label:
+              "\"The document is classified as (U//FOUO) and an unauthorised disclosure has occurred.\"",
+          },
+          {
+            id: "minimise",
+            label:
+              "\"It's probably a draft watermark; not really a problem.\"",
+          },
+          {
+            id: "refuse-comment",
+            label:
+              "\"I cannot discuss anything about this incident.\"",
+          },
+        ],
+        allowMultiple: false,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["neutral-defer"],
+          allowMultiple: false,
+        },
+        debriefMd:
+          "Describe what was observed, name the right authority for the classification determination, and report the containment posture. Don't self-classify (it's not your call), don't minimise (you don't know yet), and don't blank-stonewall (you can describe what's being done about the *incident* without describing the *content*).",
+      },
+      {
+        ordinal: 3,
+        type: "confidence",
+        weight: 1,
+        promptMd:
+          "Confidence (1–5) that, with the right first-hour actions above and an examiner on scene, this incident can be cleanly preserved and reported.",
+        expected: { type: "confidence", expectedRange: [3, 5] },
+        debriefMd:
+          "**4 (or thereabouts).** Power-on + network-off + hands-off + contemporaneous narrative + ACI/ISSM in the loop + imaging under custody is the canonical clean response. The remaining uncertainty is whatever the examination + classification determination later turn up — that's the work the workflow exists to make possible.",
+      },
+    ],
+  },
 ];
