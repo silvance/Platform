@@ -121,14 +121,6 @@ export default async function ScenarioWorkspacePage({ params }: Props) {
         </div>
       </div>
 
-      {adminDetail ? (
-        <InlineReviewPanel
-          slug={slug}
-          admin={adminDetail}
-          questions={adminDetail.questions}
-        />
-      ) : null}
-
       {/* Brief (collapsible so it doesn't push questions off the screen) */}
       {scenario.brief ? (
         <details className="card" style={{ marginBottom: "1rem" }} open>
@@ -190,6 +182,19 @@ export default async function ScenarioWorkspacePage({ params }: Props) {
         saved automatically. There's no overall "submit" — completing every
         question marks the scenario complete.
       </footer>
+
+      {/* Admin review panel: rendered at the very bottom of the
+          page so it doesn't push the brief / artifacts / questions
+          down when an admin is solving. Still admin-only by
+          construction (adminDetail is only fetched when role
+          === "admin"). */}
+      {adminDetail ? (
+        <InlineReviewPanel
+          slug={slug}
+          admin={adminDetail}
+          questions={adminDetail.questions}
+        />
+      ) : null}
     </main>
   );
 }

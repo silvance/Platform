@@ -31,8 +31,14 @@ export default async function LanePage({ params }: Props) {
 
   const { scenarios } = await api.scenarios.list(token!, { lane });
 
-  // Group by module preserving service-returned (sequence, title)
-  // order. Scenarios without a module land under "Other".
+  // Group by module. The service returns scenarios sorted by
+  // (sequence, title), so each module's items end up in
+  // recommended-order order inside its bucket — that part is
+  // good. The order of the *modules themselves* in the lane is
+  // less obvious: sorting by service-returned (sequence, title)
+  // makes module order alphabetical by title, which is wrong for
+  // a tiered lane. Re-sort module groups so easier modules come
+  // first; tiebreak alphabetically for a stable display.
   const groups = new Map<string, ScenarioListItem[]>();
   for (const s of scenarios) {
     const key = s.module ?? "Other";
@@ -40,6 +46,14 @@ export default async function LanePage({ params }: Props) {
     if (bucket) bucket.push(s);
     else groups.set(key, [s]);
   }
+  const orderedGroups = Array.from(groups.entries()).sort(
+    ([aName, aItems], [bName, bItems]) => {
+      const aDiff = Math.min(...aItems.map((i) => i.difficulty));
+      const bDiff = Math.min(...bItems.map((i) => i.difficulty));
+      if (aDiff !== bDiff) return aDiff - bDiff;
+      return aName.localeCompare(bName);
+    },
+  );
 
   return (
     <main>
@@ -72,7 +86,7 @@ export default async function LanePage({ params }: Props) {
             marginTop: "1rem",
           }}
         >
-          {Array.from(groups.entries()).map(([moduleName, items]) => (
+          {orderedGroups.map(([moduleName, items]) => (
             <section key={moduleName}>
               <h2
                 style={{
