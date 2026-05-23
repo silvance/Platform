@@ -68,10 +68,21 @@ export default async function AdminChallengesPage() {
               {scenarios.map((s) => (
                 <tr key={s.id}>
                   <td>
-                    <div style={{ fontWeight: 600 }}>{s.title}</div>
-                    <code style={{ color: "var(--muted)", fontSize: ".8rem" }}>
-                      {s.slug}
-                    </code>
+                    {/* Title links to the solve view so admins can open + work
+                        through any challenge from this table — M16 product
+                        framing: admins can solve challenges like users. The
+                        slug code below the title stays plain text. */}
+                    <Link
+                      href={`/scenarios/${encodeURIComponent(s.slug)}`}
+                      style={{ fontWeight: 600, color: "var(--fg)" }}
+                    >
+                      {s.title}
+                    </Link>
+                    <div>
+                      <code style={{ color: "var(--muted)", fontSize: ".8rem" }}>
+                        {s.slug}
+                      </code>
+                    </div>
                   </td>
                   <td>
                     <span className={`admin-status-${s.status}`}>{s.status}</span>
@@ -83,7 +94,13 @@ export default async function AdminChallengesPage() {
                   </td>
                   <td>
                     <Link
-                      href={`/admin/challenges/${s.slug}/edit`}
+                      href={`/scenarios/${encodeURIComponent(s.slug)}`}
+                      style={{ color: "var(--accent)", marginRight: "1rem" }}
+                    >
+                      Solve →
+                    </Link>
+                    <Link
+                      href={`/admin/challenges/${encodeURIComponent(s.slug)}/edit`}
                       style={{ color: "var(--accent)" }}
                     >
                       Edit →
