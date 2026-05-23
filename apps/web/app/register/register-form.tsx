@@ -65,6 +65,17 @@ export function RegisterForm() {
           style={inputStyle}
         />
       </label>
+      <label style={labelStyle}>
+        <div style={legendStyle}>Confirm password</div>
+        <input
+          name="confirmPassword"
+          type="password"
+          required
+          minLength={MIN_PASSWORD_LENGTH}
+          autoComplete="new-password"
+          style={inputStyle}
+        />
+      </label>
       {state.error ? (
         <div className="tag-bad" style={msgStyle}>{state.error}</div>
       ) : null}

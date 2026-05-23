@@ -38,7 +38,18 @@ export class UsersService {
 
   async list(): Promise<AdminUserSummary[]> {
     const rows = await this.prisma.user.findMany({
-      orderBy: [{ role: "asc" }, { email: "asc" }],
+      // Pending-approval rows (approvedAt = NULL) first so a new
+      // self-registration is obvious the moment an admin opens the
+      // page. Postgres's default for ASC is NULLS LAST — we want
+      // the opposite — so the `nulls: "first"` qualifier is the
+      // load-bearing bit, not the asc/desc choice. After the
+      // pending group, fall back to the pre-M17 ordering (role
+      // then email).
+      orderBy: [
+        { approvedAt: { sort: "asc", nulls: "first" } },
+        { role: "asc" },
+        { email: "asc" },
+      ],
       select: {
         id: true,
         email: true,

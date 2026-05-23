@@ -20,10 +20,26 @@ export async function registerAction(
   _prev: RegisterActionState,
   formData: FormData,
 ): Promise<RegisterActionState> {
+  const password = formData.get("password");
+  const confirmPassword = formData.get("confirmPassword");
+
+  // Confirm-password is a client-side / BFF-side concern only — the
+  // API has no opinion on it (the RegisterRequest contract carries
+  // a single password). Check before touching Zod so the mismatch
+  // message comes out cleanly rather than mixed in with min-length
+  // errors.
+  if (
+    typeof password === "string" &&
+    typeof confirmPassword === "string" &&
+    password !== confirmPassword
+  ) {
+    return { error: "Passwords don't match. Re-type the confirmation.", ok: null };
+  }
+
   const parsed = RegisterRequest.safeParse({
     email: formData.get("email"),
     displayName: formData.get("displayName"),
-    password: formData.get("password"),
+    password,
   });
   if (!parsed.success) {
     return {

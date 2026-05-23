@@ -211,6 +211,22 @@ export class AuthService implements OnModuleInit {
     if (!session) return null;
     if (session.revokedAt) return null;
     if (session.expiresAt.getTime() <= Date.now()) return null;
+    // Note: approvedAt is intentionally NOT checked here.
+    //
+    // approvedAt is the *gate at login time* — login() in this same
+    // service refuses to mint a session for an unapproved user. Once
+    // a session exists, by construction the user was approved at the
+    // moment it was minted. The mid-session "kill switch" for an
+    // already-active account is `disabled`, which IS checked below;
+    // setting it via /admin/users immediately invalidates every
+    // session belonging to the target.
+    //
+    // If a future "unapprove" / "revert to pending" feature is
+    // added, the implementation must EITHER (a) revoke all of the
+    // target's sessions in the same transaction (preferred — mirrors
+    // disable()), OR (b) add a `session.user.approvedAt === null`
+    // check here. Picking only one is correct; the choice should
+    // be deliberate.
     if (session.user.disabled) return null;
     return {
       sessionId: session.id,
