@@ -22,7 +22,7 @@ export function tinyPngBytes(): Buffer {
 // text. Hand-built to keep the seed self-contained (no PDF
 // library dependency). Renders in any standards-compliant
 // viewer.
-export function buildTinyPdf(text = "ci-train seed PDF artifact"): Buffer {
+export function buildTinyPdf(text = "CICyberLab seed PDF artifact"): Buffer {
   // Strip parentheses defensively — PDF strings use them as
   // delimiters. Anything else printable is fine.
   const safeText = text.replace(/[()]/g, "");

@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 export async function GET(): Promise<NextResponse> {
   return NextResponse.json({
     status: "ok",
-    service: "ci-train-web",
+    service: "cicyberlab-web",
     timestamp: new Date().toISOString(),
   });
 }
