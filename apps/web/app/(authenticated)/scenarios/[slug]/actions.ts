@@ -5,6 +5,7 @@ import { api, ApiError } from "@/lib/api";
 import { readToken } from "@/lib/session";
 import {
   QuestionResponse,
+  ScenarioReviewStatus,
   SubmitAnswerRequest,
   type SubmitAnswerResponse,
 } from "@ci-train/contracts";
@@ -52,4 +53,73 @@ export async function submitAnswerAction(
   // counter, completed badges) reflects the change on the next nav.
   revalidatePath(`/scenarios/${scenarioSlug}`);
   return { ok: true, result };
+}
+
+// M21g inline review actions. The /admin/review and the
+// authoring-editor surfaces already expose review save endpoints;
+// these are the same endpoints, but scoped to revalidate the
+// solve view so the admin sees their freshly-saved verdict +
+// notes reflected without leaving the challenge.
+
+export type InlineReviewResult =
+  | { ok: true }
+  | { ok: false; error: string };
+
+export async function setInlineScenarioReviewAction(
+  slug: string,
+  _prev: InlineReviewResult | undefined,
+  formData: FormData,
+): Promise<InlineReviewResult> {
+  const token = await readToken();
+  if (!token) return { ok: false, error: "Not signed in." };
+
+  const statusRaw = formData.get("status");
+  const parsedStatus = ScenarioReviewStatus.safeParse(statusRaw);
+  if (!parsedStatus.success) {
+    return { ok: false, error: "Invalid review status." };
+  }
+  const notesRaw = formData.get("notes");
+  const notes = typeof notesRaw === "string" ? notesRaw : undefined;
+
+  try {
+    await api.authoring.setScenarioReview(token, slug, {
+      status: parsedStatus.data,
+      ...(notes !== undefined ? { notes } : {}),
+    });
+  } catch (err) {
+    if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+      return { ok: false, error: "Not authorized." };
+    }
+    return {
+      ok: false,
+      error: err instanceof ApiError ? err.message : "Save failed.",
+    };
+  }
+  revalidatePath(`/scenarios/${slug}`);
+  return { ok: true };
+}
+
+export async function setInlineQuestionReviewAction(
+  slug: string,
+  questionId: string,
+  _prev: InlineReviewResult | undefined,
+  formData: FormData,
+): Promise<InlineReviewResult> {
+  const token = await readToken();
+  if (!token) return { ok: false, error: "Not signed in." };
+  const raw = formData.get("notes");
+  const notes = typeof raw === "string" ? raw : "";
+  try {
+    await api.authoring.setQuestionReview(token, slug, questionId, { notes });
+  } catch (err) {
+    if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+      return { ok: false, error: "Not authorized." };
+    }
+    return {
+      ok: false,
+      error: err instanceof ApiError ? err.message : "Save failed.",
+    };
+  }
+  revalidatePath(`/scenarios/${slug}`);
+  return { ok: true };
 }
