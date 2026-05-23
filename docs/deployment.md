@@ -96,7 +96,31 @@ docker compose --env-file deploy/env/local.env \
                run --rm api node dist/scripts/seed.js
 ```
 
-Copy the printed passwords into your password manager.
+Behavior depends on whether you set the bootstrap passwords in
+`deploy/env/local.env` (M15):
+
+| `SEED_ADMIN_PASSWORD` / `SEED_USER_PASSWORD` | First run | Re-run |
+|---|---|---|
+| **set** | account created with that password | password rotated to env value (idempotent) |
+| **unset** | account created with a random password, printed once | password is **left as is** — repeat runs don't surprise you |
+
+Random passwords are printed to the container log exactly once.
+Copy them into your password manager immediately. For repeatable
+local deployments, set explicit passwords in `local.env`.
+
+Forgot the password? Skip the log archaeology — run the
+`reset-password` recovery script:
+
+```bash
+docker compose --env-file deploy/env/local.env \
+               -f deploy/docker-compose.local.yml \
+               exec api node dist/scripts/reset-password.js \
+                 --email admin@example.local \
+                 --password 'NewPasswordHere'
+```
+
+Or, on a running stack, change your own password via the web UI:
+sign in → **Security** in the top nav.
 
 ## Tear down
 
@@ -109,8 +133,8 @@ docker compose --env-file deploy/env/local.env \
 # Mode 2 — LAN / internal beta
 
 A dedicated machine on a local network hosting the stack for a small
-team of instructors and trainees. Same compose file as mode 1, with
-two operational differences:
+team of users + admins. Same compose file as mode 1, with two
+operational differences:
 
 - **Persistent volumes** are not wiped between restarts.
 - **Backup discipline** matters — this is real data now. See
@@ -123,7 +147,7 @@ two operational differences:
 - Static IP or DHCP reservation so other devices can reach it
   reliably.
 - LAN DNS entry (optional but recommended): e.g. `citrain.lan` → that
-  static IP. Without LAN DNS, trainees just hit
+  static IP. Without LAN DNS, users just hit
   `http://<static-ip>:3000`.
 
 ## Setup
@@ -149,7 +173,7 @@ docker compose --env-file deploy/env/local.env \
                up -d --build
 ```
 
-Trainees open `http://<host>:3000`.
+Users open `http://<host>:3000`.
 
 ## Optional — Caddy in front (LAN HTTPS)
 
@@ -158,7 +182,7 @@ Useful if you want the URL to be `https://citrain.lan` instead of
 
 - Change `api.cicyberlab.com` to e.g. `citrain.lan`.
 - Uncomment the `tls internal` line. Caddy will mint a self-signed
-  certificate; trainee browsers will need to accept it once.
+  certificate; user browsers will need to accept it once.
 - Add an additional block that fronts the web service:
   ```
   citrain.lan {
@@ -225,7 +249,7 @@ The public-beta topology for `cicyberlab.com`:
 | vCPU      | 2           |                                                      |
 | RAM       | 2 GB        | Argon2 password hashing wants memory; 2 GB is the floor. |
 | Disk      | 40 GB SSD   |                                                      |
-| Bandwidth | 1 TB/month  | Comfortable for beta scale (~150–300 trainees).      |
+| Bandwidth | 1 TB/month  | Comfortable for beta scale (~150–300 users).         |
 | Open ports| 22 / 80 / 443 | SSH source-restricted to admin IPs.                |
 
 ## DNS
@@ -303,7 +327,15 @@ $EDITOR deploy/env/vps.env
 Required edits:
 
 - **`POSTGRES_PASSWORD`** — `openssl rand -base64 32`.
-- **`SEED_*_EMAIL`** — your real bootstrap addresses.
+- **`SEED_ADMIN_EMAIL` / `SEED_USER_EMAIL`** — your real bootstrap
+  addresses. **Must be different** (case-insensitively); the seed
+  refuses to run otherwise. Use a plus-alias
+  (`james+user@cicyberlab.com`) if you only have one mailbox.
+- **`SEED_ADMIN_PASSWORD` / `SEED_USER_PASSWORD`** — generate with
+  `openssl rand -base64 24` (one per account). These are the real
+  login passwords humans type. See the "Seed" section below.
+- **`BFF_FORWARD_SECRET`** — `openssl rand -hex 32`; must match the
+  Vercel project env (M14).
 - **`TRUST_PROXY=1`** — leave alone. Critical for login throttling.
 
 ## Caddy
@@ -340,14 +372,77 @@ Expect `Prisma connected.` and `ci-train api listening …`.
 
 ## Seed (one-time on a fresh deploy)
 
+For a VPS deploy, **set `SEED_ADMIN_PASSWORD` and
+`SEED_USER_PASSWORD` in `deploy/env/vps.env` before seeding** (M15).
+Without them the seed prints random passwords once to the container
+log and never anywhere else — fragile after a restart, lost the
+moment the log is rotated, and impossible to share with another
+operator without re-running through the recovery script.
+
+Generate fresh values:
+
+```bash
+openssl rand -base64 24   # run once per account
+```
+
+Paste each into `vps.env`. Then seed:
+
 ```bash
 docker compose --env-file deploy/env/vps.env \
                -f deploy/docker-compose.vps.yml \
                run --rm api node dist/scripts/seed.js
 ```
 
-**Copy the printed passwords into your password manager immediately.**
-They are not stored anywhere else.
+The seed is idempotent: re-running it with the same env values is a
+no-op; changing `SEED_*_PASSWORD` and re-running rotates the
+password to the new value. Leaving `SEED_*_PASSWORD` unset on a
+re-run **does not** rotate the password — so passwords you've
+already changed through the web UI or the recovery script stick.
+
+After the seed, sign in to the web app with `SEED_ADMIN_EMAIL` +
+`SEED_ADMIN_PASSWORD`, and from **Admin → Users** add additional
+users / admins as needed. Encourage every account to rotate their
+password via **Security** in the top nav on first login.
+
+### Emergency password reset (forgot the admin password)
+
+The `reset-password` recovery script is the supported way to
+recover from a lost password — never edit the `users` table by
+hand.
+
+```bash
+docker compose --env-file deploy/env/vps.env \
+               -f deploy/docker-compose.vps.yml \
+               exec api node dist/scripts/reset-password.js \
+                 --email admin@cicyberlab.com \
+                 --password 'NewPasswordHere'
+```
+
+Or, to keep the password out of shell history and `ps`:
+
+```bash
+echo -n 'NewPasswordHere' | docker compose ... exec -T api \
+  node dist/scripts/reset-password.js \
+    --email admin@cicyberlab.com --password-stdin
+```
+
+The script revokes every active session for the target user, so
+they will need to sign in again with the new password. It refuses
+passwords shorter than 10 characters and refuses to create
+accounts.
+
+### `SEED_*` vs other secrets
+
+These are easy to mix up. They are NOT interchangeable:
+
+| Env var | What it protects | Where it's used |
+|---|---|---|
+| `POSTGRES_PASSWORD` | the Postgres role the api connects as | `DATABASE_URL` |
+| `BFF_FORWARD_SECRET` | the BFF → API forwarded-client-IP channel | rate-limit keying (M14) |
+| `SEED_ADMIN_PASSWORD` / `SEED_USER_PASSWORD` | **the actual web-login password a human types** | login form, `/me/security`, `/admin/users` |
+
+The first two never appear on the login screen. The third is the
+one your operators sign in with.
 
 ## Health check
 
@@ -507,14 +602,14 @@ These hold in all three modes; what changes is the threat surface
 The single-node Mode 3 topology is acceptable for the
 personally-funded beta because:
 
-- The expected user volume (~150–300 trainees) fits comfortably in
+- The expected user volume (~150–300 users) fits comfortably in
   2 GB RAM.
 - Artifact totals stay under a few GB at full scenario coverage.
 - A reboot is acceptable downtime at this audience size.
 
 **Trigger conditions** for moving off this topology — any of:
 
-- Sustained user count crosses ~500 active trainees / month.
+- Sustained user count crosses ~500 active users / month.
 - Artifact volume crosses ~10 GB or contains data under retention
   controls demanding audit-grade durability.
 - A funded pilot requires HA + DR commitments stronger than "single

@@ -11,7 +11,12 @@ import {
 } from "@nestjs/common";
 import { Throttle } from "@nestjs/throttler";
 import type { Request } from "express";
-import { LoginRequest, LoginResponse, MeResponse } from "@ci-train/contracts";
+import {
+  ChangePasswordRequest,
+  LoginRequest,
+  LoginResponse,
+  MeResponse,
+} from "@ci-train/contracts";
 import { AuthService } from "./auth.service";
 import { ZodValidationPipe } from "../../common/zod-validation.pipe";
 import { Public } from "./decorators/public.decorator";
@@ -72,5 +77,25 @@ export class AuthController {
       user: session.user,
       session: { expiresAt: session.expiresAt.toISOString() },
     };
+  }
+
+  // Self-service password change. Throttled at the same rate as
+  // login (5 / 5 min per real-client IP) — currentPassword is
+  // a credential, so the same brute-force pressure applies.
+  @Post("change-password")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Throttle({ default: { limit: 5, ttl: 5 * 60_000 } })
+  @UsePipes(new ZodValidationPipe(ChangePasswordRequest))
+  async changePassword(
+    @Body() body: ChangePasswordRequest,
+    @CurrentSession() session: SessionContext | undefined,
+  ): Promise<void> {
+    if (!session) throw new UnauthorizedException();
+    await this.authService.changePassword(
+      session.user.id,
+      session.sessionId,
+      body.currentPassword,
+      body.newPassword,
+    );
   }
 }

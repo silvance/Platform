@@ -12,7 +12,8 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
-    "seed": "node dist/scripts/seed.js"
+    "seed": "node dist/scripts/seed.js",
+    "reset-password": "node dist/scripts/reset-password.js"
   },
   "dependencies": {
     "@ci-train/contracts": "workspace:*",

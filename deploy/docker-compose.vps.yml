@@ -60,8 +60,16 @@ services:
       # Shared with the web service so the BFF-forwarded-IP
       # throttler can validate inbound X-CI-Train-Client-IP headers.
       BFF_FORWARD_SECRET: ${BFF_FORWARD_SECRET}
-      SEED_INSTRUCTOR_EMAIL: ${SEED_INSTRUCTOR_EMAIL:-instructor@example.local}
-      SEED_TRAINEE_EMAIL: ${SEED_TRAINEE_EMAIL:-trainee@example.local}
+      # M15 names (preferred). Backwards-compat aliases below.
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-${SEED_INSTRUCTOR_EMAIL:-admin@example.local}}
+      SEED_USER_EMAIL: ${SEED_USER_EMAIL:-${SEED_TRAINEE_EMAIL:-user@example.local}}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-}
+      SEED_USER_PASSWORD: ${SEED_USER_PASSWORD:-}
+      # Backwards-compat (passed through so the seed's alias logic
+      # can resolve them when SEED_ADMIN_EMAIL / SEED_USER_EMAIL
+      # aren't set).
+      SEED_INSTRUCTOR_EMAIL: ${SEED_INSTRUCTOR_EMAIL:-}
+      SEED_TRAINEE_EMAIL: ${SEED_TRAINEE_EMAIL:-}
     volumes:
       - ${CITRAIN_DATA_ROOT:-/var/lib/citrain}/artifacts:/data/artifacts
     # Loopback only. Caddy on the host terminates TLS and forwards.

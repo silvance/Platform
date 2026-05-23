@@ -60,6 +60,14 @@ services:
       # Optional in local mode; when set, must match the web service
       # so the BFF-forwarded-IP throttler can validate the secret.
       BFF_FORWARD_SECRET: ${BFF_FORWARD_SECRET:-}
+      # M15 seed accounts. Passwords optional in local mode: leave
+      # blank → random passwords printed by the seed on first run.
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-${SEED_INSTRUCTOR_EMAIL:-admin@example.local}}
+      SEED_USER_EMAIL: ${SEED_USER_EMAIL:-${SEED_TRAINEE_EMAIL:-user@example.local}}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-}
+      SEED_USER_PASSWORD: ${SEED_USER_PASSWORD:-}
+      SEED_INSTRUCTOR_EMAIL: ${SEED_INSTRUCTOR_EMAIL:-}
+      SEED_TRAINEE_EMAIL: ${SEED_TRAINEE_EMAIL:-}
     volumes:
       # Named volume so artifacts survive container recreation. Override
       # to a host bind mount via deploy/env/local.env if you want the

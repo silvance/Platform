@@ -168,6 +168,70 @@ export class AuthService implements OnModuleInit {
     }
   }
 
+  // Revokes every session for a user EXCEPT the one referenced by
+  // `keepSessionId` (use this from a self-service password change so
+  // the user isn't logged out of the tab they're currently using).
+  // Pass `null` to revoke everything (use this from admin-initiated
+  // resets and the CLI recovery script).
+  //
+  // "Revoke" sets revokedAt rather than deleting rows — keeps
+  // session history for audit + makes the operation idempotent on
+  // retry. resolveSession() already filters revokedAt.
+  async revokeAllSessionsForUser(
+    userId: string,
+    keepSessionId: string | null,
+  ): Promise<{ revoked: number }> {
+    const result = await this.prisma.session.updateMany({
+      where: {
+        userId,
+        revokedAt: null,
+        ...(keepSessionId ? { NOT: { id: keepSessionId } } : {}),
+      },
+      data: { revokedAt: new Date() },
+    });
+    return { revoked: result.count };
+  }
+
+  // Self-service password change. Requires the user's current
+  // password — same trust model as `sudo`: an attacker with a
+  // hijacked but unauthenticated session can't silently rotate
+  // credentials. Throws UnauthorizedException on a bad current
+  // password (same response shape as login failure) so the
+  // controller doesn't have to know.
+  //
+  // Side-effect: revokes every OTHER active session for this user
+  // so a previously-leaked token can't outlive the rotation. The
+  // current session (the one the request came in on) is kept so the
+  // browser tab stays logged in.
+  async changePassword(
+    userId: string,
+    currentSessionId: string,
+    currentPlain: string,
+    newPlain: string,
+  ): Promise<{ revokedSessions: number }> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      // Shouldn't happen if the route is auth-guarded — but treat
+      // it as an auth failure rather than 404 to avoid leaking
+      // whether arbitrary user ids exist.
+      throw new UnauthorizedException("Invalid current password.");
+    }
+    const ok = await this.verifyPassword(user.passwordHash, currentPlain);
+    if (!ok) {
+      throw new UnauthorizedException("Invalid current password.");
+    }
+    const newHash = await this.hashPassword(newPlain);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash: newHash },
+    });
+    const { revoked } = await this.revokeAllSessionsForUser(
+      userId,
+      currentSessionId,
+    );
+    return { revokedSessions: revoked };
+  }
+
   // SHA-256 of the bearer token. The raw token never lands in the DB;
   // an attacker with DB read access cannot replay sessions.
   hashToken(token: string): string {
