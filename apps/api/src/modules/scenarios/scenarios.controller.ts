@@ -6,6 +6,7 @@ import {
   UnauthorizedException,
 } from "@nestjs/common";
 import {
+  LaneOverviewResponse,
   ScenarioDetail,
   ScenarioListQuery,
   ScenarioListResponse,
@@ -27,6 +28,19 @@ export class ScenariosController {
   ): Promise<ScenarioListResponse> {
     if (!session) throw new UnauthorizedException();
     return this.scenarios.list(session.user.role, session.user.id, query);
+  }
+
+  // M25 lane overview. Routed under /scenarios/lanes so it sits
+  // logically beside the /scenarios catalogue without colliding
+  // with the /scenarios/:slug route (NestJS sees "lanes" as a
+  // literal segment, not a slug param). Returns one summary row
+  // per Lane enum value with counts + the actor's progress.
+  @Get("lanes")
+  async lanes(
+    @CurrentSession() session: SessionContext | undefined,
+  ): Promise<LaneOverviewResponse> {
+    if (!session) throw new UnauthorizedException();
+    return this.scenarios.laneOverview(session.user.role, session.user.id);
   }
 
   @Get(":slug")

@@ -20,6 +20,9 @@ export const WINDOWS11_SCENARIOS: ScenarioSeed[] = [
     difficulty: 3,
     estimatedMinutes: 25,
     tags: ["dfir", "windows11", "windows_artifacts", "df_artifacts", "inference_discipline"],
+    lane: "windows_artifacts",
+    module: "Windows 11 specifics",
+    sequence: 3,
     brief: `
 # Brief
 
@@ -317,6 +320,9 @@ and execution-of-tool sit in different reporting buckets.
       "exfiltration",
       "inference_discipline",
     ],
+    lane: "windows_artifacts",
+    module: "Windows 11 specifics",
+    sequence: 4,
     brief: `
 # Brief
 
@@ -712,6 +718,9 @@ question turns on what SRUM does and does not prove.
       "inference_discipline",
       "recall",
     ],
+    lane: "windows_artifacts",
+    module: "Windows 11 specifics",
+    sequence: 5,
     brief: `
 # Brief
 
@@ -1022,6 +1031,9 @@ pixels cannot establish on their own.
       "inference_discipline",
       "wsl",
     ],
+    lane: "windows_artifacts",
+    module: "Windows 11 specifics",
+    sequence: 6,
     brief: `
 # Brief
 
@@ -1400,6 +1412,9 @@ virtual switch and appears on the wire as the host's IP.
       "insider_risk",
       "capstone",
     ],
+    lane: "windows_artifacts",
+    module: "Capstone",
+    sequence: 1,
     brief: `
 # Brief
 

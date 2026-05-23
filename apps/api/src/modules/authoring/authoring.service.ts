@@ -58,6 +58,7 @@ export class AuthoringService {
     if (filter.difficulty !== undefined) where.difficulty = filter.difficulty;
     if (filter.reviewStatus !== undefined) where.reviewStatus = filter.reviewStatus;
     if (filter.tag !== undefined) where.tags = { has: filter.tag };
+    if (filter.lane !== undefined) where.lane = filter.lane;
     if (filter.q !== undefined) {
       where.OR = [
         { title: { contains: filter.q, mode: "insensitive" } },
@@ -162,6 +163,9 @@ export class AuthoringService {
         status: body.status,
         source: "authored",
         authorUserId,
+        lane: body.lane,
+        module: body.module ?? null,
+        sequence: body.sequence,
         brief: {
           create: {
             markdownBody: body.brief.markdownBody,
@@ -196,6 +200,9 @@ export class AuthoringService {
     }
     if (body.tags !== undefined) data.tags = body.tags;
     if (body.status !== undefined) data.status = body.status;
+    if (body.lane !== undefined) data.lane = body.lane;
+    if (body.module !== undefined) data.module = body.module;
+    if (body.sequence !== undefined) data.sequence = body.sequence;
 
     const updated = await this.prisma.$transaction(async (tx) => {
       const row = await tx.scenario.update({
@@ -1039,6 +1046,10 @@ function toSummary(
     reviewStatus: string;
     reviewNotes: string | null;
     reviewedAt: Date | null;
+    // M25 curated-library placement.
+    lane: string;
+    module: string | null;
+    sequence: number;
   },
   questionCount: number,
 ): AdminScenarioSummary {
@@ -1056,6 +1067,9 @@ function toSummary(
     reviewStatus: row.reviewStatus as never,
     reviewNotes: row.reviewNotes,
     reviewedAt: row.reviewedAt ? row.reviewedAt.toISOString() : null,
+    lane: row.lane as never,
+    module: row.module,
+    sequence: row.sequence,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };

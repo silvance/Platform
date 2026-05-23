@@ -15,6 +15,7 @@ function base(over: Partial<ScenarioSeed> = {}): ScenarioSeed {
     difficulty: 1,
     estimatedMinutes: 5,
     tags: ["test"],
+    lane: "foundations",
     brief: "# Brief\n\nSomething.",
     artifacts: [
       {

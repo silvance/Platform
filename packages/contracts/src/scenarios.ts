@@ -136,6 +136,56 @@ export const ScenarioSlug = z
   );
 export type ScenarioSlug = z.infer<typeof ScenarioSlug>;
 
+// M25: curated challenge-library lanes. Mirrors the Lane Prisma
+// enum exactly — keep in sync with apps/api/prisma/schema.prisma.
+// The order here is the canonical user-facing display order for
+// the lane overview at /scenarios.
+export const Lane = z.enum([
+  "foundations",
+  "email_bec",
+  "windows_artifacts",
+  "removable_media_spillage",
+  "insider_risk",
+  "network_logs",
+  "rf_awareness",
+  "evidence_handling",
+  "report_writing",
+]);
+export type Lane = z.infer<typeof Lane>;
+
+export const LANE_LABELS: Record<Lane, string> = {
+  foundations: "Foundations",
+  email_bec: "Email & BEC",
+  windows_artifacts: "Windows Artifacts",
+  removable_media_spillage: "Removable Media / Spillage",
+  insider_risk: "Insider Risk",
+  network_logs: "Network & Logs",
+  rf_awareness: "RF Awareness",
+  evidence_handling: "Evidence Handling",
+  report_writing: "Report Writing",
+};
+
+export const LANE_DESCRIPTIONS: Record<Lane, string> = {
+  foundations:
+    "Core DF concepts every analyst needs first — hashes, MAC times, magic bytes, custody fundamentals.",
+  email_bec:
+    "Triage business-email-compromise and phishing attempts; read headers, attachments, and lure mechanics.",
+  windows_artifacts:
+    "Windows-specific artefacts: execution evidence, registry, recent files, Windows 11 additions.",
+  removable_media_spillage:
+    "USB / removable-media handling and the spillage scenarios that come with it.",
+  insider_risk:
+    "Risk-indicator triage for leaving employees and unusual access patterns. Anomaly-vs-finding discipline.",
+  network_logs:
+    "Reading access logs, flow records, and host-side network telemetry without over-claiming.",
+  rf_awareness:
+    "Awareness-level RF observation reporting. Not TSCM training.",
+  evidence_handling:
+    "Custody documents, descriptive vs speculative wording, and the corrective steps when a chain has gaps.",
+  report_writing:
+    "Turning what the artefacts prove into defensible written findings.",
+};
+
 // Trimmed shape for catalog listings — no brief body, smaller payloads.
 export const ScenarioListItem = z.object({
   id: z.string().uuid(),
@@ -149,6 +199,10 @@ export const ScenarioListItem = z.object({
   status: ScenarioStatus,
   source: ScenarioSource,
   version: z.number().int().positive(),
+  // M25 curated-library projection.
+  lane: Lane,
+  module: z.string().nullable(),
+  sequence: z.number().int().nonnegative(),
   // M22 per-user progress projection. Always present on listing
   // calls made by an authenticated user (which is every call this
   // endpoint serves, since the route is auth-guarded). Zero is
@@ -161,6 +215,23 @@ export const ScenarioListItem = z.object({
   updatedAt: z.string().datetime(),
 });
 export type ScenarioListItem = z.infer<typeof ScenarioListItem>;
+
+// M25 lane overview: one row per lane summarising counts and the
+// authenticated user's progress. Drives the new /scenarios page.
+export const LaneSummary = z.object({
+  lane: Lane,
+  label: z.string(),
+  description: z.string(),
+  publishedScenarioCount: z.number().int().nonnegative(),
+  completedScenarioCount: z.number().int().nonnegative(),
+  inProgressScenarioCount: z.number().int().nonnegative(),
+});
+export type LaneSummary = z.infer<typeof LaneSummary>;
+
+export const LaneOverviewResponse = z.object({
+  lanes: z.array(LaneSummary),
+});
+export type LaneOverviewResponse = z.infer<typeof LaneOverviewResponse>;
 
 export const ScenarioListResponse = z.object({
   scenarios: z.array(ScenarioListItem),
@@ -201,5 +272,7 @@ export const ScenarioListQuery = z.object({
   difficulty: z.coerce.number().int().min(1).max(5).optional(),
   tag: z.string().min(1).max(60).optional(),
   status: ScenarioStatus.optional(),
+  // M25: filter to a single lane.
+  lane: Lane.optional(),
 });
 export type ScenarioListQuery = z.infer<typeof ScenarioListQuery>;

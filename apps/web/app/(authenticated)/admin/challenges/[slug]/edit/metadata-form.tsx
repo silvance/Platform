@@ -1,7 +1,11 @@
 "use client";
 
 import { useActionState } from "react";
-import type { AdminScenarioDetail } from "@ci-train/contracts";
+import {
+  LANE_LABELS,
+  Lane,
+  type AdminScenarioDetail,
+} from "@ci-train/contracts";
 import type { ActionResult } from "./actions";
 
 interface Props {
@@ -83,6 +87,40 @@ export function MetadataForm({ scenario, skillAreas, action }: Props) {
           placeholder="e.g. bec, phishing, finance"
         />
       </label>
+
+      {/* M25 curated-library placement. */}
+      <div className="admin-form-row">
+        <label>
+          Lane
+          <select name="lane" defaultValue={scenario.lane}>
+            {Lane.options.map((l) => (
+              <option key={l} value={l}>
+                {LANE_LABELS[l]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Module (free text)
+          <input
+            name="module"
+            type="text"
+            maxLength={120}
+            defaultValue={scenario.module ?? ""}
+            placeholder="e.g. Header analysis"
+          />
+        </label>
+        <label>
+          Sequence
+          <input
+            name="sequence"
+            type="number"
+            min={0}
+            max={10000}
+            defaultValue={scenario.sequence}
+          />
+        </label>
+      </div>
       <fieldset
         style={{
           border: "1px solid var(--border)",

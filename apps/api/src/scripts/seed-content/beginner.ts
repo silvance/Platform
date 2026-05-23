@@ -23,6 +23,9 @@ export const BEGINNER_SCENARIOS: ScenarioSeed[] = [
     difficulty: 1,
     estimatedMinutes: 8,
     tags: ["beginner", "dfir", "hashes", "inference_discipline"],
+    lane: "foundations",
+    module: "Integrity & identification",
+    sequence: 1,
     brief: `
 # Brief
 
@@ -132,6 +135,9 @@ even by a single bit.
     difficulty: 1,
     estimatedMinutes: 8,
     tags: ["beginner", "dfir", "file_signatures", "inference_discipline"],
+    lane: "foundations",
+    module: "Integrity & identification",
+    sequence: 2,
     brief: `
 # Brief
 
@@ -224,6 +230,9 @@ The actual format is what's in the bytes.
     difficulty: 1,
     estimatedMinutes: 10,
     tags: ["beginner", "dfir", "timestamps", "windows_artifacts", "inference_discipline"],
+    lane: "foundations",
+    module: "Timestamps & timelines",
+    sequence: 1,
     brief: `
 # Brief
 
@@ -324,6 +333,9 @@ A few common patterns:
     difficulty: 1,
     estimatedMinutes: 8,
     tags: ["beginner", "dfir", "recycle_bin", "windows_artifacts", "inference_discipline"],
+    lane: "foundations",
+    module: "Windows basics",
+    sequence: 1,
     brief: `
 # Brief
 
@@ -443,6 +455,9 @@ resolved from the folder name (which is the SID itself).
     difficulty: 1,
     estimatedMinutes: 7,
     tags: ["beginner", "dfir", "browser_artifacts", "inference_discipline"],
+    lane: "foundations",
+    module: "Browser basics",
+    sequence: 1,
     brief: `
 # Brief
 
@@ -570,6 +585,9 @@ before the final response).
     difficulty: 1,
     estimatedMinutes: 8,
     tags: ["beginner", "logs", "network_logs"],
+    lane: "foundations",
+    module: "Reading logs",
+    sequence: 1,
     brief: `
 # Brief
 
@@ -673,6 +691,9 @@ Two HTTP status families that matter for triage:
     difficulty: 1,
     estimatedMinutes: 7,
     tags: ["beginner", "dfir", "hex"],
+    lane: "foundations",
+    module: "Integrity & identification",
+    sequence: 3,
     brief: `
 # Brief
 
@@ -777,6 +798,9 @@ Practice on the artifact.
     difficulty: 1,
     estimatedMinutes: 10,
     tags: ["beginner", "chain_of_custody", "army_ci", "report_writing", "inference_discipline"],
+    lane: "evidence_handling",
+    module: "Custody documents",
+    sequence: 1,
     brief: `
 # Brief
 

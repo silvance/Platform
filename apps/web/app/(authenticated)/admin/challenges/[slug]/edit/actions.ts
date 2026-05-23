@@ -9,6 +9,7 @@ import {
   CreateIndicatorSetRequest,
   CreateQuestionRequest,
   IndicatorItem,
+  Lane,
   ScenarioBriefDraft,
   ScenarioStatus,
   SkillArea,
@@ -62,6 +63,16 @@ export async function updateMetadataAction(
       .map((t) => t.trim())
       .filter((t) => t.length > 0);
 
+    const moduleRaw = formData.get("module");
+    const moduleValue =
+      typeof moduleRaw === "string" && moduleRaw.trim() !== ""
+        ? moduleRaw.trim()
+        : null;
+    const sequenceRaw = formData.get("sequence");
+    const sequence =
+      typeof sequenceRaw === "string" && sequenceRaw.trim() !== ""
+        ? Number.parseInt(sequenceRaw, 10)
+        : undefined;
     const body = UpdateScenarioRequest.parse({
       title: getString(formData, "title").trim(),
       summary: getString(formData, "summary").trim(),
@@ -70,6 +81,12 @@ export async function updateMetadataAction(
       skillAreas,
       tags,
       status: ScenarioStatus.parse(getString(formData, "status")),
+      // M25 curated-library fields. Lane is required at the API
+      // level once we declare an UpdateScenarioRequest that
+      // includes it; here we forward whatever the form has.
+      lane: Lane.parse(getString(formData, "lane")),
+      module: moduleValue,
+      sequence,
     });
     await api.authoring.update(token, slug, body);
   } catch (err) {

@@ -1,4 +1,4 @@
-import type { ArtifactKind, ScenarioStatus } from "@prisma/client";
+import type { ArtifactKind, Lane, ScenarioStatus } from "@prisma/client";
 
 // Shared seed-data shapes. Lives in its own file so the
 // scenarios array (large + ever-growing) doesn't have to import
@@ -73,4 +73,8 @@ export interface ScenarioSeed {
   // Keeps the launch surface curated without losing the
   // less-polished material.
   status?: ScenarioStatus;
+  // M25 curated-library placement.
+  lane: Lane;
+  module?: string;
+  sequence?: number;
 }
