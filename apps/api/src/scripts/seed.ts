@@ -409,14 +409,14 @@ async function main(): Promise<void> {
     const admin = await upsertUser(
       prisma,
       SEED_ADMIN_EMAIL,
-      "Seed Admin",
+      "Admin",
       "admin",
       SEED_ADMIN_PASSWORD,
     );
     const user = await upsertUser(
       prisma,
       SEED_USER_EMAIL,
-      "Seed User",
+      "User",
       "user",
       SEED_USER_PASSWORD,
     );
