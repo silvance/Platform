@@ -133,8 +133,8 @@ docker compose --env-file deploy/env/local.env \
 # Mode 2 — LAN / internal beta
 
 A dedicated machine on a local network hosting the stack for a small
-team of instructors and trainees. Same compose file as mode 1, with
-two operational differences:
+team of users + admins. Same compose file as mode 1, with two
+operational differences:
 
 - **Persistent volumes** are not wiped between restarts.
 - **Backup discipline** matters — this is real data now. See
@@ -147,7 +147,7 @@ two operational differences:
 - Static IP or DHCP reservation so other devices can reach it
   reliably.
 - LAN DNS entry (optional but recommended): e.g. `citrain.lan` → that
-  static IP. Without LAN DNS, trainees just hit
+  static IP. Without LAN DNS, users just hit
   `http://<static-ip>:3000`.
 
 ## Setup
@@ -173,7 +173,7 @@ docker compose --env-file deploy/env/local.env \
                up -d --build
 ```
 
-Trainees open `http://<host>:3000`.
+Users open `http://<host>:3000`.
 
 ## Optional — Caddy in front (LAN HTTPS)
 
@@ -182,7 +182,7 @@ Useful if you want the URL to be `https://citrain.lan` instead of
 
 - Change `api.cicyberlab.com` to e.g. `citrain.lan`.
 - Uncomment the `tls internal` line. Caddy will mint a self-signed
-  certificate; trainee browsers will need to accept it once.
+  certificate; user browsers will need to accept it once.
 - Add an additional block that fronts the web service:
   ```
   citrain.lan {
@@ -249,7 +249,7 @@ The public-beta topology for `cicyberlab.com`:
 | vCPU      | 2           |                                                      |
 | RAM       | 2 GB        | Argon2 password hashing wants memory; 2 GB is the floor. |
 | Disk      | 40 GB SSD   |                                                      |
-| Bandwidth | 1 TB/month  | Comfortable for beta scale (~150–300 trainees).      |
+| Bandwidth | 1 TB/month  | Comfortable for beta scale (~150–300 users).         |
 | Open ports| 22 / 80 / 443 | SSH source-restricted to admin IPs.                |
 
 ## DNS
@@ -401,8 +401,8 @@ already changed through the web UI or the recovery script stick.
 
 After the seed, sign in to the web app with `SEED_ADMIN_EMAIL` +
 `SEED_ADMIN_PASSWORD`, and from **Admin → Users** add additional
-trainees / admins as needed. Encourage every account to rotate
-their password via **Security** in the top nav on first login.
+users / admins as needed. Encourage every account to rotate their
+password via **Security** in the top nav on first login.
 
 ### Emergency password reset (forgot the admin password)
 
@@ -602,14 +602,14 @@ These hold in all three modes; what changes is the threat surface
 The single-node Mode 3 topology is acceptable for the
 personally-funded beta because:
 
-- The expected user volume (~150–300 trainees) fits comfortably in
+- The expected user volume (~150–300 users) fits comfortably in
   2 GB RAM.
 - Artifact totals stay under a few GB at full scenario coverage.
 - A reboot is acceptable downtime at this audience size.
 
 **Trigger conditions** for moving off this topology — any of:
 
-- Sustained user count crosses ~500 active trainees / month.
+- Sustained user count crosses ~500 active users / month.
 - Artifact volume crosses ~10 GB or contains data under retention
   controls demanding audit-grade durability.
 - A funded pilot requires HA + DR commitments stronger than "single
