@@ -6,7 +6,10 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { Prisma, type Role } from "@prisma/client";
-import type { AdminUserSummary } from "@ci-train/contracts";
+import type {
+  AdminStatsResponse,
+  AdminUserSummary,
+} from "@ci-train/contracts";
 import { PrismaService } from "../database/prisma.service";
 import { AuthService } from "../auth/auth.service";
 
@@ -269,6 +272,89 @@ export class UsersService {
       },
     });
     return this.toSummary(row);
+  }
+
+  // M21d helpers. Read-only; cheap aggregate queries; surfaced
+  // by the /admin/stats controller + the authenticated layout
+  // (header pending badge).
+
+  // Called on every authenticated layout render for an admin user
+  // to drive the header badge. Single indexed-int read.
+  async countPendingApprovals(): Promise<number> {
+    return this.prisma.user.count({ where: { approvedAt: null } });
+  }
+
+  async getStats(): Promise<AdminStatsResponse> {
+    // Parallel aggregates so the latency is dominated by the
+    // slowest call, not the sum of all of them.
+    const [
+      totalUsers,
+      adminUsers,
+      pendingUsers,
+      disabledUsers,
+      scenariosByStatus,
+      scenariosByReview,
+      attemptsCompleted,
+    ] = await Promise.all([
+      this.prisma.user.count(),
+      this.prisma.user.count({ where: { role: "admin" } }),
+      this.prisma.user.count({ where: { approvedAt: null } }),
+      this.prisma.user.count({ where: { disabled: true } }),
+      this.prisma.scenario.groupBy({
+        by: ["status"],
+        _count: { _all: true },
+      }),
+      this.prisma.scenario.groupBy({
+        by: ["reviewStatus"],
+        _count: { _all: true },
+      }),
+      this.prisma.scenarioProgress.count({
+        where: { completedAt: { not: null } },
+      }),
+    ]);
+
+    const byStatus = { published: 0, draft: 0, archived: 0 };
+    for (const row of scenariosByStatus) {
+      const k = row.status as keyof typeof byStatus;
+      if (k in byStatus) byStatus[k] = row._count._all;
+    }
+
+    // Collapse the 6 "something is wrong" review verdicts into
+    // a single `flagged` bucket for the dashboard card. The
+    // /admin/review page surfaces the breakdown.
+    const byReview = { needs_review: 0, approved: 0, flagged: 0 };
+    for (const row of scenariosByReview) {
+      const status = row.reviewStatus;
+      if (status === "needs_review" || status === "approved") {
+        byReview[status] = row._count._all;
+      } else {
+        byReview.flagged += row._count._all;
+      }
+    }
+
+    const totalScenarios =
+      byStatus.published + byStatus.draft + byStatus.archived;
+
+    return {
+      users: {
+        total: totalUsers,
+        byRole: {
+          admin: adminUsers,
+          user: totalUsers - adminUsers,
+        },
+        pendingApproval: pendingUsers,
+        disabled: disabledUsers,
+      },
+      scenarios: {
+        total: totalScenarios,
+        byStatus,
+        byReview,
+      },
+      attempts: {
+        completedAllTime: attemptsCompleted,
+      },
+      generatedAt: new Date().toISOString(),
+    };
   }
 
   private toSummary = (row: {

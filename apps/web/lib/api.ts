@@ -4,8 +4,10 @@ import {
   AdminResetPasswordRequest,
   AdminReviewListResponse,
   AdminScenarioDetail,
+  AdminScenarioListQuery,
   AdminScenarioListResponse,
   AdminScenarioSummary,
+  AdminStatsResponse,
   AdminUpdateUserRequest,
   AdminUserListResponse,
   AdminUserResponse,
@@ -228,9 +230,27 @@ export const api = {
         ),
       ),
   },
+  stats: {
+    get: async (token: string): Promise<AdminStatsResponse> =>
+      parse(AdminStatsResponse, await request("/admin/stats", { token })),
+  },
   authoring: {
-    list: async (token: string): Promise<AdminScenarioListResponse> =>
-      parse(AdminScenarioListResponse, await request("/admin/challenges", { token })),
+    list: async (
+      token: string,
+      query: AdminScenarioListQuery = {},
+    ): Promise<AdminScenarioListResponse> => {
+      const qp = new URLSearchParams();
+      if (query.status !== undefined) qp.set("status", query.status);
+      if (query.difficulty !== undefined) qp.set("difficulty", String(query.difficulty));
+      if (query.reviewStatus !== undefined) qp.set("reviewStatus", query.reviewStatus);
+      if (query.tag !== undefined) qp.set("tag", query.tag);
+      if (query.q !== undefined) qp.set("q", query.q);
+      const qs = qp.toString();
+      return parse(
+        AdminScenarioListResponse,
+        await request(`/admin/challenges${qs ? `?${qs}` : ""}`, { token }),
+      );
+    },
     get: async (token: string, slug: string): Promise<AdminScenarioDetail> =>
       parse(
         AdminScenarioDetail,
