@@ -16,6 +16,7 @@ import {
   deleteIndicatorSetAction,
   deleteQuestionAction,
   deleteScenarioAction,
+  setQuestionReviewAction,
   updateBriefAction,
   updateIndicatorSetAction,
   updateMetadataAction,
@@ -25,6 +26,7 @@ import {
 import { MetadataForm } from "./metadata-form";
 import { BriefForm } from "./brief-form";
 import { QuestionForm } from "./question-form";
+import { QuestionReviewNotes } from "./question-review-notes";
 import { IndicatorSetForm } from "./indicator-set-form";
 import { ArtifactUploadForm } from "./artifact-upload-form";
 
@@ -230,6 +232,7 @@ function QuestionEditorCard({
   indicatorSets: AuthoredIndicatorSet[];
 }) {
   if (question.type === "unsupported") {
+    const reviewAction = setQuestionReviewAction.bind(null, slug, question.id);
     return (
       <div className="card">
         <header style={{ display: "flex", gap: ".5rem", alignItems: "center" }}>
@@ -247,11 +250,17 @@ function QuestionEditorCard({
           The admin UI doesn't yet author{" "}
           <code>{question.underlyingType}</code>. Edit via the seed for now.
         </p>
+        {/* Unsupported-type questions can still carry review
+            notes — the unsupported variant doesn't include
+            reviewNotes in its contract shape, but the API still
+            stores them. Default to empty string. */}
+        <QuestionReviewNotes action={reviewAction} defaultValue="" />
       </div>
     );
   }
   const updateAction = updateQuestionAction.bind(null, slug, question.id);
   const deleteAction = deleteQuestionAction.bind(null, slug, question.id);
+  const reviewAction = setQuestionReviewAction.bind(null, slug, question.id);
   return (
     <details className="card" style={{ padding: "1rem 1.25rem" }}>
       <summary style={{ cursor: "pointer", listStyle: "revert" }}>
@@ -268,6 +277,10 @@ function QuestionEditorCard({
           indicatorSets={indicatorSets}
           action={updateAction}
           submitLabel="Save question"
+        />
+        <QuestionReviewNotes
+          action={reviewAction}
+          defaultValue={question.reviewNotes ?? ""}
         />
         <form action={deleteAction} style={{ marginTop: ".75rem" }}>
           <button type="submit" className="admin-btn admin-btn-danger">
