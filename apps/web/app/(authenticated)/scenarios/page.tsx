@@ -44,18 +44,44 @@ function parseScenarioFilters(
   };
 }
 
+// M22 difficulty-tab navigation. Reuses the existing ?difficulty=
+// filter so each tab is a real, bookmarkable, server-rendered URL
+// — clicking "Level 2" gets you /scenarios?difficulty=2 with its
+// own page state. The "All" tab clears the filter.
+const DIFFICULTY_TABS: Array<{
+  label: string;
+  blurb: string;
+  difficulty: number | null;
+}> = [
+  { label: "All", blurb: "Every difficulty",              difficulty: null },
+  { label: "Level 1", blurb: "Intro / Basics",            difficulty: 1 },
+  { label: "Level 2", blurb: "Beginner",                  difficulty: 2 },
+  { label: "Level 3", blurb: "Intermediate",              difficulty: 3 },
+  { label: "Level 4", blurb: "Advanced",                  difficulty: 4 },
+  { label: "Level 5", blurb: "Expert",                    difficulty: 5 },
+];
+
+function buildHref(
+  query: ScenarioListQuery,
+  difficulty: number | null,
+): string {
+  const params = new URLSearchParams();
+  if (difficulty !== null) params.set("difficulty", String(difficulty));
+  if (query.skillArea) params.set("skillArea", query.skillArea);
+  if (query.tag) params.set("tag", query.tag);
+  const qs = params.toString();
+  return qs ? `/scenarios?${qs}` : "/scenarios";
+}
+
 export default async function ScenariosPage({ searchParams }: Props) {
   const user = await requireUser();
   const token = await readToken();
 
   const sp = await searchParams;
-  // Per-field safeParse, not whole-object .parse(): a hand-typed URL like
-  // ?difficulty=99 or ?skillArea=nope must not crash the page. Invalid
-  // fields are dropped individually so a single bad query value doesn't
-  // silently wipe out the user's other valid filters.
   const { query, invalidFilterFields } = parseScenarioFilters(sp);
 
   const list = await api.scenarios.list(token!, query);
+  const activeDifficulty = query.difficulty ?? null;
 
   return (
     <main>
@@ -68,6 +94,32 @@ export default async function ScenariosPage({ searchParams }: Props) {
           </p>
         </div>
       </header>
+
+      <nav
+        aria-label="Filter by difficulty"
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: ".4rem",
+          marginBottom: "1rem",
+        }}
+      >
+        {DIFFICULTY_TABS.map((t) => {
+          const isActive = activeDifficulty === t.difficulty;
+          return (
+            <Link
+              key={t.label}
+              href={buildHref(query, t.difficulty)}
+              className="nav-link"
+              data-active={isActive}
+              style={{ paddingLeft: "0.85rem", paddingRight: "0.85rem" }}
+              title={t.blurb}
+            >
+              {t.label}
+            </Link>
+          );
+        })}
+      </nav>
 
       {invalidFilterFields.length > 0 ? (
         <div
@@ -106,11 +158,40 @@ export default async function ScenariosPage({ searchParams }: Props) {
   );
 }
 
+// M22 progress chip. Three states:
+//   completed     all questions correct (or no questions but row exists)
+//   in-progress   started, at least one question solved, not all
+//   (omitted)     never started
+function ProgressBadge({ scenario }: { scenario: ScenarioListItem }) {
+  const { completedQuestions: done, totalQuestions: total } = scenario;
+  if (total > 0 && done >= total) {
+    return <span className="chip chip-ok">✓ Completed</span>;
+  }
+  if (done > 0) {
+    return (
+      <span className="chip chip-partial">
+        In progress · {done}/{total}
+      </span>
+    );
+  }
+  return null;
+}
+
 function ScenarioCard({ scenario }: { scenario: ScenarioListItem }) {
   const hasAwarenessOnly = scenario.skillAreas.some(isAwarenessOnly);
   return (
     <>
-      <h3>{scenario.title}</h3>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          gap: ".5rem",
+        }}
+      >
+        <h3 style={{ margin: 0 }}>{scenario.title}</h3>
+        <ProgressBadge scenario={scenario} />
+      </div>
       <div className="summary">{scenario.summary}</div>
       <div>
         {scenario.skillAreas.map((a) => (

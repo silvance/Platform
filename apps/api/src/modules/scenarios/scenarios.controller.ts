@@ -26,7 +26,7 @@ export class ScenariosController {
     @Query(new ZodValidationPipe(ScenarioListQuery)) query: ScenarioListQuery,
   ): Promise<ScenarioListResponse> {
     if (!session) throw new UnauthorizedException();
-    return this.scenarios.list(session.user.role, query);
+    return this.scenarios.list(session.user.role, session.user.id, query);
   }
 
   @Get(":slug")
@@ -35,6 +35,6 @@ export class ScenariosController {
     @Param("slug", ScenarioSlugPipe) slug: string,
   ): Promise<ScenarioDetail> {
     if (!session) throw new UnauthorizedException();
-    return this.scenarios.getBySlug(session.user.role, slug);
+    return this.scenarios.getBySlug(session.user.role, session.user.id, slug);
   }
 }

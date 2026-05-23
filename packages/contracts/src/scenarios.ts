@@ -149,6 +149,14 @@ export const ScenarioListItem = z.object({
   status: ScenarioStatus,
   source: ScenarioSource,
   version: z.number().int().positive(),
+  // M22 per-user progress projection. Always present on listing
+  // calls made by an authenticated user (which is every call this
+  // endpoint serves, since the route is auth-guarded). Zero is
+  // "user has not solved any question on this scenario."
+  // `totalQuestions` equals 0 only for an in-progress draft an
+  // admin is previewing.
+  completedQuestions: z.number().int().nonnegative(),
+  totalQuestions: z.number().int().nonnegative(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
