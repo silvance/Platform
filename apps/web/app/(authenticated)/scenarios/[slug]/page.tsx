@@ -8,7 +8,6 @@ import { QuestionCard } from "@/components/questions/question-card";
 import {
   isAwarenessOnly,
   type AdminScenarioDetail,
-  type ArtifactListItem,
 } from "@ci-train/contracts";
 import { InlineReviewPanel } from "./inline-review-panel";
 
@@ -16,20 +15,12 @@ export const dynamic = "force-dynamic";
 
 interface Props {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-function readSingle(v: string | string[] | undefined): string | undefined {
-  if (Array.isArray(v)) return v[0];
-  return v;
-}
-
-export default async function ScenarioWorkspacePage({ params, searchParams }: Props) {
+export default async function ScenarioWorkspacePage({ params }: Props) {
   const user = await requireUser();
   const token = await readToken();
   const { slug } = await params;
-  const sp = await searchParams;
-  const focusedArtifactId = readSingle(sp["artifact"]);
 
   // Pull the scenario detail (brief + artifacts) and the caller's
   // progress in parallel.
@@ -61,16 +52,6 @@ export default async function ScenarioWorkspacePage({ params, searchParams }: Pr
 
   const showAwarenessBanner = scenario.skillAreas.some(isAwarenessOnly);
   const disclaimer = scenario.brief?.disclaimerMd ?? null;
-
-  // Artifact tab dispatch (unchanged from M3).
-  const validArtifactIds = new Set(scenario.artifacts.map((a) => a.id));
-  const activeArtifactId =
-    focusedArtifactId && validArtifactIds.has(focusedArtifactId)
-      ? focusedArtifactId
-      : null;
-  const activeArtifact: ArtifactListItem | null = activeArtifactId
-    ? scenario.artifacts.find((a) => a.id === activeArtifactId) ?? null
-    : null;
 
   const completedAll =
     progress.completedAt !== null && progress.totalQuestions > 0;
@@ -160,24 +141,33 @@ export default async function ScenarioWorkspacePage({ params, searchParams }: Pr
         </details>
       ) : null}
 
-      {/* Artifact tabs (unchanged from M3) */}
-      {scenario.artifacts.length > 0 ? (
-        <ArtifactTabs
-          slug={slug}
-          artifacts={scenario.artifacts}
-          activeArtifactId={activeArtifactId}
-        />
-      ) : null}
-
-      {activeArtifact ? (
-        <div style={{ marginBottom: "1.5rem" }}>
+      {/* Artifacts: each rendered inline, in declared order. No
+          tabs — the brief is collapsible above, the questions
+          are below, and every artifact is a sibling block in
+          between. */}
+      {scenario.artifacts.map((a) => (
+        <div key={a.id} style={{ marginBottom: "1.5rem" }}>
+          <h2
+            style={{
+              fontSize: "1rem",
+              margin: "0 0 .5rem 0",
+              color: "var(--muted-strong)",
+              display: "flex",
+              alignItems: "baseline",
+              gap: ".5rem",
+              flexWrap: "wrap",
+            }}
+          >
+            <span style={{ color: "var(--fg)" }}>{a.displayName}</span>
+            <span className="chip" style={{ fontSize: ".7rem" }}>{a.kind}</span>
+          </h2>
           <ArtifactViewer
             scenarioSlug={slug}
-            artifact={activeArtifact}
+            artifact={a}
             token={token!}
           />
         </div>
-      ) : null}
+      ))}
 
       <h2>Questions</h2>
       <section className="q-panel">
@@ -204,38 +194,3 @@ export default async function ScenarioWorkspacePage({ params, searchParams }: Pr
   );
 }
 
-function ArtifactTabs({
-  slug,
-  artifacts,
-  activeArtifactId,
-}: {
-  slug: string;
-  artifacts: ArtifactListItem[];
-  activeArtifactId: string | null;
-}) {
-  // The brief + questions are rendered unconditionally below the
-  // tabs, so the old "Brief + questions" tab that just cleared the
-  // artifact selection was redundant. Tabs are now strictly one per
-  // artifact; no tab is highlighted when no artifact is open.
-  return (
-    <nav className="artifact-tabs" aria-label="Scenario artifacts">
-      {artifacts.map((a) => (
-        <Link
-          key={a.id}
-          href={`/scenarios/${slug}?artifact=${encodeURIComponent(a.id)}`}
-          className={`tab ${activeArtifactId === a.id ? "tab-active" : ""}`}
-          title={`${a.mimeType} · ${formatBytes(a.sizeBytes)}`}
-        >
-          <span className="tab-name">{a.displayName}</span>
-          <span className="tab-kind">{a.kind}</span>
-        </Link>
-      ))}
-    </nav>
-  );
-}
-
-function formatBytes(n: number): string {
-  if (n < 1024) return `${n} B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-  return `${(n / 1024 / 1024).toFixed(1)} MB`;
-}
