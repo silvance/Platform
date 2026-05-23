@@ -230,6 +230,29 @@ export async function updateQuestionAction(
   return { ok: true };
 }
 
+// M21e: per-question review notes. Saves to the dedicated
+// review endpoint (not the question-update endpoint) so it's
+// independent of question content edits and visible only on
+// admin payloads.
+export async function setQuestionReviewAction(
+  slug: string,
+  questionId: string,
+  _prev: ActionResult | undefined,
+  formData: FormData,
+): Promise<ActionResult> {
+  const token = await readToken();
+  if (!token) return { ok: false, error: "Not signed in." };
+  const raw = formData.get("notes");
+  const notes = typeof raw === "string" ? raw : "";
+  try {
+    await api.authoring.setQuestionReview(token, slug, questionId, { notes });
+  } catch (err) {
+    return fail(err, "Failed to save review notes.");
+  }
+  revalidatePath(`/admin/challenges/${slug}/edit`);
+  return { ok: true };
+}
+
 export async function deleteQuestionAction(
   slug: string,
   questionId: string,
