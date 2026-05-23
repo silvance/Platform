@@ -197,6 +197,48 @@ export type AdminScenarioListResponse = z.infer<
   typeof AdminScenarioListResponse
 >;
 
+// M21d filter contract for /admin/challenges. Per-field
+// safeParse + coercion so URL-encoded query strings round-trip
+// through the same shape the web client uses programmatically.
+//
+// difficulty + reviewStatus + status: optional single values
+//   (single difficulty filter, not a range).
+// q: free-text search; the service matches against title + slug
+//   case-insensitive.
+export const AdminScenarioListQuery = z.object({
+  status: z.enum(["draft", "published", "archived"]).optional(),
+  difficulty: z
+    .union([z.string(), z.number()])
+    .optional()
+    .transform((v, ctx) => {
+      if (v === undefined) return undefined;
+      const n = typeof v === "number" ? v : Number.parseInt(v, 10);
+      if (!Number.isInteger(n) || n < 1 || n > 5) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "difficulty must be an integer 1..5",
+        });
+        return z.NEVER;
+      }
+      return n;
+    }),
+  reviewStatus: z
+    .enum([
+      "needs_review",
+      "approved",
+      "needs_rewrite",
+      "too_generic",
+      "unclear_question",
+      "answer_key_issue",
+      "debrief_issue",
+      "retire_candidate",
+    ])
+    .optional(),
+  tag: z.string().min(1).max(60).optional(),
+  q: z.string().min(1).max(120).optional(),
+});
+export type AdminScenarioListQuery = z.infer<typeof AdminScenarioListQuery>;
+
 // Question payload as seen by the *author* — carries correctness too.
 // This is the full editable shape; trainees see QuestionPayload, which
 // strips the answer key. We don't reuse the *Draft schemas here because

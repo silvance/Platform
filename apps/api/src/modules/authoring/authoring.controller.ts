@@ -10,6 +10,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   UnauthorizedException,
   UploadedFile,
   UseInterceptors,
@@ -20,6 +21,7 @@ import { join } from "node:path";
 import {
   AdminReviewListResponse,
   AdminScenarioDetail,
+  AdminScenarioListQuery,
   AdminScenarioListResponse,
   AdminScenarioSummary,
   ArtifactKind,
@@ -76,8 +78,20 @@ export class AuthoringController {
   ) {}
 
   @Get()
-  async list(): Promise<AdminScenarioListResponse> {
-    const scenarios = await this.authoring.list();
+  async list(
+    @Query() rawQuery: Record<string, string>,
+  ): Promise<AdminScenarioListResponse> {
+    // Per-field safeParse so a single bad query param returns 400
+    // with a precise message rather than silently dropping a
+    // filter the operator thought was active.
+    const parsed = AdminScenarioListQuery.safeParse(rawQuery);
+    if (!parsed.success) {
+      throw new BadRequestException({
+        message: "Invalid scenario filter.",
+        issues: parsed.error.issues,
+      });
+    }
+    const scenarios = await this.authoring.list(parsed.data);
     return { scenarios };
   }
 

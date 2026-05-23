@@ -2,6 +2,7 @@ export * from "./health.js";
 export * from "./hello.js";
 export * from "./auth.js";
 export * from "./users.js";
+export * from "./admin-stats.js";
 export * from "./scenarios.js";
 export * from "./eml.js";
 export * from "./questions.js";

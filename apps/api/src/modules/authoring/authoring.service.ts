@@ -10,6 +10,7 @@ import type { ArtifactKind, QuestionType as PrismaQuestionType } from "@prisma/c
 import {
   AdminReviewRow,
   AdminScenarioDetail,
+  AdminScenarioListQuery,
   AdminScenarioSummary,
   AuthoredArtifact,
   AuthoredIndicatorSet,
@@ -49,8 +50,22 @@ export class AuthoringService {
     @Inject(ARTIFACT_STORAGE) private readonly storage: ArtifactStorage,
   ) {}
 
-  async list(): Promise<AdminScenarioSummary[]> {
+  async list(
+    filter: AdminScenarioListQuery = {},
+  ): Promise<AdminScenarioSummary[]> {
+    const where: Prisma.ScenarioWhereInput = {};
+    if (filter.status !== undefined) where.status = filter.status;
+    if (filter.difficulty !== undefined) where.difficulty = filter.difficulty;
+    if (filter.reviewStatus !== undefined) where.reviewStatus = filter.reviewStatus;
+    if (filter.tag !== undefined) where.tags = { has: filter.tag };
+    if (filter.q !== undefined) {
+      where.OR = [
+        { title: { contains: filter.q, mode: "insensitive" } },
+        { slug: { contains: filter.q, mode: "insensitive" } },
+      ];
+    }
     const rows = await this.prisma.scenario.findMany({
+      where,
       orderBy: [{ status: "asc" }, { updatedAt: "desc" }],
       include: {
         _count: { select: { questions: true } },
