@@ -157,10 +157,18 @@ function makeFakePrismaForScenarioGet(opts: {
     updatedAt: new Date(),
     brief: null,
     artifacts: [],
+    // M22: getBySlug now reads _count.questions for the
+    // no-progress fallback.
+    _count: { questions: 0 },
   });
   return {
     api: {
       scenario: { findUnique: scenarioFindUnique },
+      // M22: getBySlug looks up the actor's progress row; the
+      // gate tests use a fresh-user scenario so this is null.
+      scenarioProgress: {
+        findUnique: jest.fn().mockResolvedValue(null),
+      },
     } as unknown as PrismaService,
     scenarioFindUnique,
   };
@@ -171,7 +179,7 @@ describe("ScenariosService.getBySlug — admin-vs-user draft gating", () => {
     const fake = makeFakePrismaForScenarioGet({ status: "draft" });
     const svc = new ScenariosService(fake.api);
 
-    await expect(svc.getBySlug("user", "draft-slug")).rejects.toBeInstanceOf(
+    await expect(svc.getBySlug("user", "test-user-id", "draft-slug")).rejects.toBeInstanceOf(
       NotFoundException,
     );
   });
@@ -180,7 +188,7 @@ describe("ScenariosService.getBySlug — admin-vs-user draft gating", () => {
     const fake = makeFakePrismaForScenarioGet({ status: "draft" });
     const svc = new ScenariosService(fake.api);
 
-    const payload = await svc.getBySlug("admin", "draft-slug");
+    const payload = await svc.getBySlug("admin", "test-admin-id", "draft-slug");
     expect(payload.slug).toBe("any-slug");
   });
 
@@ -188,7 +196,7 @@ describe("ScenariosService.getBySlug — admin-vs-user draft gating", () => {
     const fake = makeFakePrismaForScenarioGet({ status: "published" });
     const svc = new ScenariosService(fake.api);
 
-    const payload = await svc.getBySlug("user", "published-slug");
+    const payload = await svc.getBySlug("user", "test-user-id", "published-slug");
     expect(payload.slug).toBe("any-slug");
   });
 });

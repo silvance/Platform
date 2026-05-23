@@ -22,6 +22,7 @@ export class ScenariosService {
 
   async list(
     role: Role,
+    actorUserId: string,
     query: ScenarioListQuery,
   ): Promise<{ scenarios: ScenarioListItem[]; total: number }> {
     const where: Record<string, unknown> = {};
@@ -45,26 +46,66 @@ export class ScenariosService {
       where["tags"] = { has: query.tag };
     }
 
-    const [rows, total] = await this.prisma.$transaction([
+    // M22: pull the actor's progress rows in parallel with the
+    // scenario list. ScenarioProgress already denormalises both
+    // counters per (scenario, user) so we don't need to aggregate
+    // QuestionResponse here. Scenarios the actor has never started
+    // simply won't have a row in `progressRows` — we default to
+    // (0, questionCount) for those.
+    const [rows, total, progressRows] = await this.prisma.$transaction([
       this.prisma.scenario.findMany({
         where,
         orderBy: [{ difficulty: "asc" }, { title: "asc" }],
+        include: {
+          _count: { select: { questions: true } },
+        },
       }),
       this.prisma.scenario.count({ where }),
+      this.prisma.scenarioProgress.findMany({
+        where: { userId: actorUserId },
+        select: {
+          scenarioId: true,
+          completedQuestions: true,
+          totalQuestions: true,
+        },
+      }),
     ]);
 
+    const progressByScenarioId = new Map(
+      progressRows.map((p) => [p.scenarioId, p]),
+    );
+
     return {
-      scenarios: rows.map(toListItem),
+      scenarios: rows.map((row) => {
+        const p = progressByScenarioId.get(row.id);
+        return toListItem(
+          row,
+          p
+            ? {
+                completedQuestions: p.completedQuestions,
+                totalQuestions: p.totalQuestions,
+              }
+            : {
+                completedQuestions: 0,
+                totalQuestions: row._count.questions,
+              },
+        );
+      }),
       total,
     };
   }
 
-  async getBySlug(role: Role, slug: string): Promise<ScenarioDetail> {
+  async getBySlug(
+    role: Role,
+    actorUserId: string,
+    slug: string,
+  ): Promise<ScenarioDetail> {
     const row = await this.prisma.scenario.findUnique({
       where: { slug },
       include: {
         brief: true,
         artifacts: { orderBy: { ordinal: "asc" } },
+        _count: { select: { questions: true } },
       },
     });
     if (!row) throw new NotFoundException("Scenario not found.");
@@ -74,6 +115,13 @@ export class ScenariosService {
     if (isNonAdmin(role) && row.status !== "published") {
       throw new NotFoundException("Scenario not found.");
     }
+
+    const progress = await this.prisma.scenarioProgress.findUnique({
+      where: {
+        scenarioId_userId: { scenarioId: row.id, userId: actorUserId },
+      },
+      select: { completedQuestions: true, totalQuestions: true },
+    });
 
     const brief: ScenarioBriefPayload | null = row.brief
       ? {
@@ -95,7 +143,18 @@ export class ScenariosService {
     }));
 
     return {
-      ...toListItem(row),
+      ...toListItem(
+        row,
+        progress
+          ? {
+              completedQuestions: progress.completedQuestions,
+              totalQuestions: progress.totalQuestions,
+            }
+          : {
+              completedQuestions: 0,
+              totalQuestions: row._count.questions,
+            },
+      ),
       brief,
       artifacts,
     };
@@ -106,7 +165,10 @@ type ScenarioRow = Awaited<
   ReturnType<PrismaService["scenario"]["findMany"]>
 >[number];
 
-function toListItem(row: ScenarioRow): ScenarioListItem {
+function toListItem(
+  row: ScenarioRow,
+  progress: { completedQuestions: number; totalQuestions: number },
+): ScenarioListItem {
   return {
     id: row.id,
     slug: row.slug,
@@ -119,6 +181,8 @@ function toListItem(row: ScenarioRow): ScenarioListItem {
     status: row.status,
     source: row.source,
     version: row.version,
+    completedQuestions: progress.completedQuestions,
+    totalQuestions: progress.totalQuestions,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
