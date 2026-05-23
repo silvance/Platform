@@ -197,6 +197,105 @@ describe("validateScenarios", () => {
     ).toThrow(/text_match has no acceptableAnswers/);
   });
 
+  it("rejects unknown skillArea values (typos / non-enum)", () => {
+    expect(() =>
+      validateScenarios([base({ skillAreas: ["phising"] })]),
+    ).toThrow(/skillArea "phising" is not a valid SkillArea enum value/);
+  });
+
+  it("rejects empty skillAreas array", () => {
+    expect(() => validateScenarios([base({ skillAreas: [] })])).toThrow(
+      /at least one skillArea/,
+    );
+  });
+
+  it("rejects difficulty outside [1,5]", () => {
+    expect(() => validateScenarios([base({ difficulty: 0 })])).toThrow(
+      /difficulty must be an integer in \[1,5\]/,
+    );
+    expect(() => validateScenarios([base({ difficulty: 6 })])).toThrow(
+      /difficulty must be an integer in \[1,5\]/,
+    );
+    expect(() =>
+      validateScenarios([base({ difficulty: 2.5 as unknown as number })]),
+    ).toThrow(/difficulty must be an integer/);
+  });
+
+  it("rejects non-positive estimatedMinutes", () => {
+    expect(() =>
+      validateScenarios([base({ estimatedMinutes: 0 })]),
+    ).toThrow(/estimatedMinutes must be a positive integer/);
+    expect(() =>
+      validateScenarios([base({ estimatedMinutes: -5 })]),
+    ).toThrow(/estimatedMinutes must be a positive integer/);
+  });
+
+  it("rejects an invalid status value", () => {
+    expect(() =>
+      validateScenarios([
+        base({ status: "pending-review" as unknown as never }),
+      ]),
+    ).toThrow(/status "pending-review" is not a valid ScenarioStatus/);
+  });
+
+  it("accepts the three valid status values", () => {
+    for (const s of ["draft", "published", "archived"] as const) {
+      expect(() =>
+        validateScenarios([
+          base({ slug: `valid-status-${s}-001`, status: s }),
+        ]),
+      ).not.toThrow();
+    }
+  });
+
+  it("rejects an uncompilable regex in a text_match acceptableAnswer", () => {
+    expect(() =>
+      validateScenarios([
+        base({
+          questions: [
+            {
+              ordinal: 1,
+              type: "text_match",
+              weight: 1,
+              promptMd: "?",
+              expected: {
+                type: "text_match",
+                acceptableAnswers: ["[unclosed-character-class"],
+                regex: true,
+              },
+              debriefMd: "ok",
+            },
+          ],
+        }),
+      ]),
+    ).toThrow(/text_match regex "\[unclosed-character-class" does not compile/);
+  });
+
+  it("does NOT try to compile a text_match answer when regex is false", () => {
+    // The same string that would fail RegExp compilation is fine as a
+    // literal match — the grader treats it character-for-character.
+    expect(() =>
+      validateScenarios([
+        base({
+          questions: [
+            {
+              ordinal: 1,
+              type: "text_match",
+              weight: 1,
+              promptMd: "?",
+              expected: {
+                type: "text_match",
+                acceptableAnswers: ["[unclosed-character-class"],
+                regex: false,
+              },
+              debriefMd: "ok",
+            },
+          ],
+        }),
+      ]),
+    ).not.toThrow();
+  });
+
   it("rejects an indicator-set whose sourceArtifactDisplayName doesn't match any artifact", () => {
     expect(() =>
       validateScenarios([

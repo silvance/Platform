@@ -25,6 +25,25 @@ export class ContentValidationError extends Error {
   }
 }
 
+// Mirrored from the Prisma schema's SkillArea enum so the validator
+// can reject a typo (e.g. "phising" or "dfir") long before Prisma
+// would. Keep in sync with apps/api/prisma/schema.prisma.
+const VALID_SKILL_AREAS = new Set<string>([
+  "email_headers",
+  "bec",
+  "df_artifacts",
+  "removable_media",
+  "windows_artifacts",
+  "network_logs",
+  "account_compromise",
+  "rf_awareness",
+  "report_writing",
+  "inference_discipline",
+]);
+
+// Mirrored from the Prisma schema's ScenarioStatus enum.
+const VALID_STATUSES = new Set<string>(["draft", "published", "archived"]);
+
 export function validateScenarios(scenarios: ScenarioSeed[]): void {
   const errors: string[] = [];
   const seenSlugs = new Set<string>();
@@ -43,6 +62,46 @@ export function validateScenarios(scenarios: ScenarioSeed[]): void {
     if (!s.title?.trim()) errors.push(`${ctx} empty title`);
     if (!s.summary?.trim()) errors.push(`${ctx} empty summary`);
     if (!s.brief?.trim()) errors.push(`${ctx} empty brief`);
+
+    // skillAreas: must be a non-empty list of valid enum values.
+    // Catches typos (e.g. "phising", "dfir") before Prisma rejects
+    // them; also catches drift from the schema enum if anyone adds
+    // a value here without updating the migration.
+    if (!s.skillAreas || s.skillAreas.length === 0) {
+      errors.push(`${ctx} must have at least one skillArea`);
+    } else {
+      for (const sa of s.skillAreas) {
+        if (!VALID_SKILL_AREAS.has(sa)) {
+          errors.push(
+            `${ctx} skillArea "${sa}" is not a valid SkillArea enum value`,
+          );
+        }
+      }
+    }
+
+    // difficulty: bounded integer 1..5. The UI sorts / filters on
+    // this; a 0 or 9 would render but be operationally meaningless.
+    if (
+      !Number.isInteger(s.difficulty) ||
+      s.difficulty < 1 ||
+      s.difficulty > 5
+    ) {
+      errors.push(`${ctx} difficulty must be an integer in [1,5]`);
+    }
+
+    // estimatedMinutes: must be a positive integer when present.
+    // The shape requires it (no `?`) but defensive belt-and-braces.
+    if (
+      s.estimatedMinutes !== undefined &&
+      (!Number.isInteger(s.estimatedMinutes) || s.estimatedMinutes <= 0)
+    ) {
+      errors.push(`${ctx} estimatedMinutes must be a positive integer`);
+    }
+
+    // status: optional; if set, must be a valid ScenarioStatus.
+    if (s.status !== undefined && !VALID_STATUSES.has(s.status)) {
+      errors.push(`${ctx} status "${s.status}" is not a valid ScenarioStatus`);
+    }
 
     if (!s.artifacts || s.artifacts.length === 0) {
       errors.push(`${ctx} must have at least one artifact`);
@@ -162,8 +221,27 @@ export function validateScenarios(scenarios: ScenarioSeed[]): void {
         } else if (q.type === "text_match") {
           if (q.expected.type !== "text_match") {
             errors.push(`${qctx} expected.type does not match question type`);
-          } else if (q.expected.acceptableAnswers.length === 0) {
-            errors.push(`${qctx} text_match has no acceptableAnswers`);
+          } else {
+            if (q.expected.acceptableAnswers.length === 0) {
+              errors.push(`${qctx} text_match has no acceptableAnswers`);
+            }
+            // If the author declared regex matching, compile each
+            // acceptable answer up front. A failing regex doesn't
+            // throw at request time on the grading service — it
+            // silently returns "no match" — which would turn into a
+            // silently-unsolvable question. Fail loud here instead.
+            if (q.expected.regex) {
+              for (const pattern of q.expected.acceptableAnswers) {
+                try {
+                  new RegExp(pattern);
+                } catch (err) {
+                  const msg = err instanceof Error ? err.message : String(err);
+                  errors.push(
+                    `${qctx} text_match regex "${pattern}" does not compile: ${msg}`,
+                  );
+                }
+              }
+            }
           }
           if (q.textMatch && q.textMatch.acceptableAnswers.length === 0) {
             errors.push(`${qctx} text_match.acceptableAnswers is empty`);
