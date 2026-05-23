@@ -41,7 +41,7 @@ export function UserRow({ user, isSelf }: Props) {
   const banner = pickLatest(pickLatest(updateState, resetState), approveState);
 
   return (
-    <tr style={{ borderTop: "1px solid #1f2845", verticalAlign: "top" }}>
+    <tr style={{ borderTop: "1px solid var(--border)", verticalAlign: "top" }}>
       <td style={cellStyle}>
         <div style={{ fontWeight: 500 }}>{user.email}</div>
         <div style={{ color: "var(--muted)", fontSize: ".85rem" }}>
@@ -215,7 +215,7 @@ function DisabledControl({
         disabled={pending}
         style={{
           ...inlineButtonStyle,
-          background: currentlyDisabled ? "#0b1020" : "transparent",
+          background: currentlyDisabled ? "var(--bg-sunken)" : "transparent",
         }}
       >
         {currentlyDisabled ? "Re-enable" : "Disable"}
@@ -280,16 +280,16 @@ const cellStyle: React.CSSProperties = {
 };
 const selectStyle: React.CSSProperties = {
   padding: ".3rem .5rem",
-  background: "#0b1020",
-  border: "1px solid #2a3556",
+  background: "var(--bg-sunken)",
+  border: "1px solid var(--border-strong)",
   borderRadius: 6,
   color: "var(--fg)",
   fontSize: ".9rem",
 };
 const inlineButtonStyle: React.CSSProperties = {
-  background: "#0b1020",
+  background: "var(--bg-sunken)",
   color: "var(--fg)",
-  border: "1px solid #2a3556",
+  border: "1px solid var(--border-strong)",
   borderRadius: 6,
   padding: ".3rem .65rem",
   fontSize: ".85rem",

@@ -100,8 +100,8 @@ export default async function ScenarioWorkspacePage({ params, searchParams }: Pr
           <div style={{ flex: "1 1 200px", maxWidth: "300px", marginLeft: "auto" }}>
             <div
               style={{
-                background: "#0b1020",
-                border: "1px solid #1f2845",
+                background: "var(--bg-sunken)",
+                border: "1px solid var(--border)",
                 borderRadius: 999,
                 overflow: "hidden",
                 height: "8px",

@@ -150,7 +150,7 @@ export function QuestionForm({
       {type === "multi_choice" ? (
         <fieldset
           style={{
-            border: "1px solid #1f2845",
+            border: "1px solid var(--border)",
             borderRadius: 6,
             padding: ".55rem .85rem",
           }}
@@ -298,7 +298,7 @@ export function QuestionForm({
       {type === "select_indicators" ? (
         <fieldset
           style={{
-            border: "1px solid #1f2845",
+            border: "1px solid var(--border)",
             borderRadius: 6,
             padding: ".55rem .85rem",
           }}

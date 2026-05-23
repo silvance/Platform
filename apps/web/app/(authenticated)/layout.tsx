@@ -1,56 +1,22 @@
 import type { ReactNode } from "react";
-import Link from "next/link";
 import { requireUser } from "@/lib/session";
-import { LogoutButton } from "./logout-button";
+import { readTheme } from "@/lib/theme";
+import { AppHeader } from "./app-header";
 
-export default async function AuthenticatedLayout({ children }: { children: ReactNode }) {
+// Authenticated shell. Header is its own client-aware component
+// so the per-route active-state highlight can use usePathname
+// without dragging the whole layout into the client bundle.
+export default async function AuthenticatedLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
   const user = await requireUser();
+  const theme = await readTheme();
 
   return (
     <>
-      <header
-        style={{
-          borderBottom: "1px solid #1f2845",
-          padding: "1rem 1.25rem",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          maxWidth: 1080,
-          margin: "0 auto",
-        }}
-      >
-        <div style={{ display: "flex", gap: "1.25rem", alignItems: "center" }}>
-          <strong>CICyberLab</strong>
-          <nav style={{ display: "flex", gap: "1rem" }}>
-            <Link href="/scenarios" style={{ color: "var(--accent)" }}>
-              Challenges
-            </Link>
-            <Link href="/me/progress" style={{ color: "var(--accent)" }}>
-              My progress
-            </Link>
-            <Link href="/me/security" style={{ color: "var(--accent)" }}>
-              Security
-            </Link>
-            {user.role === "admin" ? (
-              <Link href="/admin" style={{ color: "var(--accent)" }}>
-                Admin
-              </Link>
-            ) : null}
-          </nav>
-        </div>
-        <div style={{ display: "flex", gap: ".75rem", alignItems: "center" }}>
-          <span style={{ color: "var(--muted)", fontSize: ".9rem" }}>
-            {user.displayName}
-            {user.role === "admin" ? (
-              <>
-                {" "}·{" "}
-                <span className="tag-ok">admin</span>
-              </>
-            ) : null}
-          </span>
-          <LogoutButton />
-        </div>
-      </header>
+      <AppHeader user={user} theme={theme} />
       {children}
     </>
   );
