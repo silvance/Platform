@@ -1,6 +1,15 @@
 import { UnauthorizedException } from "@nestjs/common";
 import { AuthService } from "./auth.service";
+import type { AccessCodesService } from "../access-codes/access-codes.service";
 import type { PrismaService } from "../database/prisma.service";
+
+// changePassword doesn't touch access codes; a bare stub satisfies
+// the AuthService constructor without dragging in the real service.
+function stubAccessCodes(): AccessCodesService {
+  return {
+    validateAndConsume: jest.fn().mockResolvedValue(true),
+  } as unknown as AccessCodesService;
+}
 
 // Focused integration-style spec for the M15 password-change paths.
 // Mocks just the prisma calls we touch — same shape the AuthService
@@ -24,7 +33,7 @@ function makeFakePrisma() {
 describe("AuthService.changePassword", () => {
   it("updates the hash and revokes other sessions when the current password is correct", async () => {
     const fake = makeFakePrisma();
-    const svc = new AuthService(fake.api);
+    const svc = new AuthService(fake.api, stubAccessCodes());
     const currentHash = await svc.hashPassword("correct password");
 
     fake.user.findUnique.mockResolvedValue({
@@ -59,7 +68,7 @@ describe("AuthService.changePassword", () => {
 
   it("throws UnauthorizedException and does not touch the DB when the current password is wrong", async () => {
     const fake = makeFakePrisma();
-    const svc = new AuthService(fake.api);
+    const svc = new AuthService(fake.api, stubAccessCodes());
     const currentHash = await svc.hashPassword("real");
 
     fake.user.findUnique.mockResolvedValue({
@@ -77,7 +86,7 @@ describe("AuthService.changePassword", () => {
 
   it("throws UnauthorizedException when the user row vanished (no user-id enumeration)", async () => {
     const fake = makeFakePrisma();
-    const svc = new AuthService(fake.api);
+    const svc = new AuthService(fake.api, stubAccessCodes());
 
     fake.user.findUnique.mockResolvedValue(null);
 
@@ -93,7 +102,7 @@ describe("AuthService.changePassword", () => {
 describe("AuthService.revokeAllSessionsForUser", () => {
   it("revokes every active session when keepSessionId is null", async () => {
     const fake = makeFakePrisma();
-    const svc = new AuthService(fake.api);
+    const svc = new AuthService(fake.api, stubAccessCodes());
     fake.session.updateMany.mockResolvedValue({ count: 5 });
 
     const result = await svc.revokeAllSessionsForUser("u1", null);
@@ -108,7 +117,7 @@ describe("AuthService.revokeAllSessionsForUser", () => {
 
   it("excludes the kept session id from the revoke set", async () => {
     const fake = makeFakePrisma();
-    const svc = new AuthService(fake.api);
+    const svc = new AuthService(fake.api, stubAccessCodes());
     fake.session.updateMany.mockResolvedValue({ count: 2 });
 
     await svc.revokeAllSessionsForUser("u1", "keep-me");

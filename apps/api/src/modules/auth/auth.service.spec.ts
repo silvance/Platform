@@ -1,4 +1,5 @@
 import { AuthService } from "./auth.service";
+import type { AccessCodesService } from "../access-codes/access-codes.service";
 import type { PrismaService } from "../database/prisma.service";
 
 // We test the pure helpers that don't touch the DB. Login/session flows
@@ -10,9 +11,13 @@ function peekDummyHash(svc: AuthService): string | null {
   return (svc as unknown as { dummyHash: string | null }).dummyHash;
 }
 
+// AccessCodesService isn't exercised by any of the pure-helper tests
+// below — a bare stub keeps the constructor happy.
+const stubAccessCodes = {} as unknown as AccessCodesService;
+
 describe("AuthService (unit)", () => {
   const fakePrisma = {} as unknown as PrismaService;
-  const svc = new AuthService(fakePrisma);
+  const svc = new AuthService(fakePrisma, stubAccessCodes);
 
   describe("password hashing", () => {
     it("hashes a password and verifies the same password", async () => {
@@ -65,7 +70,7 @@ describe("AuthService (unit)", () => {
 
     it("falls back to lazy init if onModuleInit was skipped", async () => {
       // Construct a fresh instance, deliberately skipping onModuleInit.
-      const fresh = new AuthService(fakePrisma);
+      const fresh = new AuthService(fakePrisma, stubAccessCodes);
       expect(peekDummyHash(fresh)).toBeNull();
       await expect(fresh.verifyAgainstDummy("anything")).resolves.toBe(false);
       expect(peekDummyHash(fresh)).toMatch(/^\$argon2id\$/);

@@ -26,6 +26,8 @@ const NAV_ITEMS: Array<{ href: string; label: string; admin?: boolean }> = [
   // find it. A top-level link makes the playthrough surface
   // unmissable.
   { href: "/admin/review", label: "Review", admin: true },
+  // M23: registration access-code management surface.
+  { href: "/admin/access-codes", label: "Codes", admin: true },
 ];
 
 export function AppHeader({ user, theme, pendingApprovalCount }: Props) {

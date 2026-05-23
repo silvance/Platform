@@ -62,12 +62,17 @@ export class AuthController {
     };
   }
 
-  // M17 self-registration. Public; account lands in pending-
-  // approval state regardless of outcome. Throttle is tighter than
-  // login (3 / 5 min) because every successful call writes to
-  // users; combined with the M14 per-real-client-IP keying, this
-  // makes bulk-spam registration impractical without distributed
-  // infrastructure.
+  // Self-registration. Public; gated by an admin-issued access
+  // code (M23). On a valid code the account is created auto-approved
+  // (role=user) and the caller can sign in immediately. On a bad
+  // code AuthService.register throws BadRequestException with the
+  // generic ACCESS_CODE_REJECT_MESSAGE — same message for missing,
+  // wrong, disabled, expired, and exhausted codes.
+  //
+  // Throttle is tighter than login (3 / 5 min) because every
+  // successful call writes to users; combined with the M14
+  // per-real-client-IP keying, this makes bulk-spam registration
+  // impractical without distributed infrastructure.
   @Public()
   @Post("register")
   @HttpCode(HttpStatus.OK)
@@ -78,13 +83,12 @@ export class AuthController {
       email: body.email,
       displayName: body.displayName,
       password: body.password,
+      accessCode: body.accessCode,
     });
     // Same response regardless of whether a row was created — no
     // account-enumeration via response shape or status code.
     return {
-      pendingApproval: true,
-      message:
-        "Registration received. An administrator will review your account; you'll be able to sign in once it's enabled.",
+      message: "Account ready. You can sign in now.",
     };
   }
 

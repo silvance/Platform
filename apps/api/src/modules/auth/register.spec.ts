@@ -1,10 +1,13 @@
-import { ForbiddenException, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, UnauthorizedException } from "@nestjs/common";
 import { AuthService } from "./auth.service";
+import type { AccessCodesService } from "../access-codes/access-codes.service";
 import type { PrismaService } from "../database/prisma.service";
 
-// M17 self-registration + pending-approval login gate. Mock just
-// the Prisma surface AuthService touches; same pattern as the M15
-// change-password spec.
+// M23 self-registration: gated by an admin-issued access code.
+// Valid code → create user with approvedAt=NOW so login works on
+// the next request. Bad code → BadRequestException with a single
+// generic message. Duplicate-email + valid code → silent no-op
+// (enumeration safety) and the code-use is refunded.
 
 function makeFakePrisma() {
   const user = {
@@ -16,21 +19,42 @@ function makeFakePrisma() {
     create: jest.fn(),
     updateMany: jest.fn(),
   };
+  const accessCode = {
+    update: jest.fn(),
+  };
+  // $transaction(callback) — we just hand back the tx object that
+  // looks like the same fake. The service's tx.user.findUnique and
+  // tx.user.create go through these same mocks.
+  const tx = { user, accessCode };
+  // AuthService uses BOTH $transaction(callback) (register path,
+  // M23) and $transaction([promises]) (login path, session writes).
+  // Handle either form.
+  const $transaction = jest.fn(
+    (arg: unknown[] | ((t: typeof tx) => Promise<unknown>)) => {
+      if (typeof arg === "function") return Promise.resolve(arg(tx));
+      return Promise.all(arg as Promise<unknown>[]);
+    },
+  );
   return {
-    api: {
-      user,
-      session,
-      $transaction: jest.fn((ops: unknown[]) => Promise.all(ops as Promise<unknown>[])),
-    } as unknown as PrismaService,
+    api: { user, session, $transaction } as unknown as PrismaService,
     user,
     session,
+    accessCode,
+    $transaction,
   };
 }
 
-describe("AuthService.register (M17)", () => {
-  it("creates a new account with approvedAt=null when the email is unknown", async () => {
+function makeAccessCodes(validateReturns: boolean): AccessCodesService {
+  return {
+    validateAndConsume: jest.fn().mockResolvedValue(validateReturns),
+  } as unknown as AccessCodesService;
+}
+
+describe("AuthService.register (M23 access-code gate)", () => {
+  it("creates a new account with approvedAt set when the code is valid and email is new", async () => {
     const fake = makeFakePrisma();
-    const svc = new AuthService(fake.api);
+    const codes = makeAccessCodes(true);
+    const svc = new AuthService(fake.api, codes);
 
     fake.user.findUnique.mockResolvedValue(null);
     fake.user.create.mockResolvedValue({ id: "u1" });
@@ -39,19 +63,59 @@ describe("AuthService.register (M17)", () => {
       email: "new@example.com",
       displayName: "New User",
       password: "long-enough-pwd-1",
+      accessCode: "JOIN-2026",
     });
 
     expect(fake.user.create).toHaveBeenCalledTimes(1);
     const data = fake.user.create.mock.calls[0][0].data;
     expect(data.email).toBe("new@example.com");
     expect(data.role).toBe("user");
-    expect(data.approvedAt).toBeNull();
+    expect(data.approvedAt).toBeInstanceOf(Date);
     expect(data.passwordHash).toMatch(/^\$argon2id\$/);
   });
 
-  it("is a no-op when the email is already registered (no enumeration leak)", async () => {
+  it("never sets role=admin even if some upstream caller tried (defensive — controller already strips, but service must not trust input)", async () => {
     const fake = makeFakePrisma();
-    const svc = new AuthService(fake.api);
+    const codes = makeAccessCodes(true);
+    const svc = new AuthService(fake.api, codes);
+    fake.user.findUnique.mockResolvedValue(null);
+    fake.user.create.mockResolvedValue({ id: "u1" });
+
+    await svc.register({
+      email: "new@example.com",
+      displayName: "New User",
+      password: "long-enough-pwd-1",
+      accessCode: "JOIN-2026",
+    });
+
+    const data = fake.user.create.mock.calls[0][0].data;
+    expect(data.role).toBe("user");
+  });
+
+  it("throws BadRequestException with a generic message when the code is invalid", async () => {
+    const fake = makeFakePrisma();
+    const codes = makeAccessCodes(false);
+    const svc = new AuthService(fake.api, codes);
+
+    await expect(
+      svc.register({
+        email: "new@example.com",
+        displayName: "New User",
+        password: "long-enough-pwd-1",
+        accessCode: "WRONG",
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    // No user write attempted.
+    expect(fake.user.create).not.toHaveBeenCalled();
+    // findUnique on user is also not called — code check runs first.
+    expect(fake.user.findUnique).not.toHaveBeenCalled();
+  });
+
+  it("is a no-op when the email is already registered (enumeration safety) and refunds the code use", async () => {
+    const fake = makeFakePrisma();
+    const codes = makeAccessCodes(true);
+    const svc = new AuthService(fake.api, codes);
 
     fake.user.findUnique.mockResolvedValue({ id: "u1" });
 
@@ -59,25 +123,23 @@ describe("AuthService.register (M17)", () => {
       email: "existing@example.com",
       displayName: "Anyone",
       password: "long-enough-pwd-1",
+      accessCode: "JOIN-2026",
     });
 
     // No row created — duplicate registrations are silent.
     expect(fake.user.create).not.toHaveBeenCalled();
+    // Code use was refunded so enumeration probes don't drain a
+    // usesLimit-capped code.
+    expect(fake.accessCode.update).toHaveBeenCalledTimes(1);
+    expect(fake.accessCode.update.mock.calls[0][0].data).toEqual({
+      usesCount: { decrement: 1 },
+    });
   });
 
-  it("hashes the password on BOTH branches so response timing doesn't leak existence", async () => {
-    // We can't directly measure timing in a unit test, but we can
-    // assert that the hashing call path runs in both branches —
-    // verified by checking it produces a real argon2 string for
-    // the new-account case and that no fast-path short-circuit
-    // returns before hashing on the existing-account case.
-    //
-    // The shape check on the create path (above test) already
-    // confirms the hash is argon2id. Here we just confirm the
-    // existing-account path doesn't throw and completes, which
-    // means it ran the hash + the lookup + the silent no-op.
+  it("hashes the password on both successful branches so response timing doesn't leak existence", async () => {
     const fake = makeFakePrisma();
-    const svc = new AuthService(fake.api);
+    const codes = makeAccessCodes(true);
+    const svc = new AuthService(fake.api, codes);
     fake.user.findUnique.mockResolvedValue({ id: "u1" });
 
     await expect(
@@ -85,15 +147,16 @@ describe("AuthService.register (M17)", () => {
         email: "existing@example.com",
         displayName: "X",
         password: "long-enough-pwd-1",
+        accessCode: "JOIN-2026",
       }),
     ).resolves.toBeUndefined();
   });
 });
 
-describe("AuthService.login — pending approval gate (M17)", () => {
+describe("AuthService.login — pending approval gate (kept for legacy pending rows)", () => {
   it("refuses login when approvedAt is null", async () => {
     const fake = makeFakePrisma();
-    const svc = new AuthService(fake.api);
+    const svc = new AuthService(fake.api, makeAccessCodes(true));
     const goodHash = await svc.hashPassword("real-password-x");
 
     fake.user.findUnique.mockResolvedValue({
@@ -110,13 +173,12 @@ describe("AuthService.login — pending approval gate (M17)", () => {
       svc.login("pending@example.com", "real-password-x", {}),
     ).rejects.toBeInstanceOf(ForbiddenException);
 
-    // No session created on a pending-approval login attempt.
     expect(fake.session.create).not.toHaveBeenCalled();
   });
 
   it("admits login when approvedAt is set", async () => {
     const fake = makeFakePrisma();
-    const svc = new AuthService(fake.api);
+    const svc = new AuthService(fake.api, makeAccessCodes(true));
     const goodHash = await svc.hashPassword("real-password-x");
 
     fake.user.findUnique.mockResolvedValue({
@@ -138,7 +200,7 @@ describe("AuthService.login — pending approval gate (M17)", () => {
 
   it("returns UnauthorizedException (not ForbiddenException) on a wrong password — never reaches the approval check", async () => {
     const fake = makeFakePrisma();
-    const svc = new AuthService(fake.api);
+    const svc = new AuthService(fake.api, makeAccessCodes(true));
     const goodHash = await svc.hashPassword("real-password-x");
 
     fake.user.findUnique.mockResolvedValue({
@@ -148,7 +210,7 @@ describe("AuthService.login — pending approval gate (M17)", () => {
       role: "user",
       disabled: false,
       passwordHash: goodHash,
-      approvedAt: null, // pending — but we shouldn't reach the gate
+      approvedAt: null,
     });
 
     await expect(

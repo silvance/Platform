@@ -102,8 +102,35 @@ model User {
   authoredScenarios Scenario[]         @relation("ScenarioAuthor")
   reviewedScenarios Scenario[]         @relation("ScenarioReviewer")
   progress          ScenarioProgress[]
+  createdAccessCodes AccessCode[]      @relation("AccessCodeCreator")
 
   @@map("users")
+}
+
+// M23: registration access codes. Admin creates short joining
+// codes (e.g. distributed via Slack / onboarding email) that gate
+// self-registration. A valid, active, non-expired, non-exhausted
+// code at /register auto-approves the new account (role=user) so
+// the user can log in immediately. Without a valid code, the
+// register endpoint refuses — no pending-approval queue.
+//
+// Codes are stored plaintext on purpose: the admin needs to be
+// able to re-read them to share with new cohorts. They appear
+// only in admin-only payloads; never on any user-facing surface.
+model AccessCode {
+  id           String   @id @default(uuid()) @db.Uuid
+  code         String   @unique
+  label        String
+  disabledAt   DateTime? @map("disabled_at")
+  expiresAt    DateTime? @map("expires_at")
+  usesCount    Int       @default(0) @map("uses_count")
+  usesLimit    Int?      @map("uses_limit")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  createdByUserId String? @map("created_by_user_id") @db.Uuid
+
+  createdBy User? @relation("AccessCodeCreator", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@map("access_codes")
 }
 
 // Sessions store only a SHA-256 hash of the token. The raw token is
