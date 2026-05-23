@@ -12,7 +12,7 @@ export default async function LoginPage() {
 
   return (
     <main>
-      <h1>ci-train</h1>
+      <h1>CICyberLab</h1>
       <p style={{ color: "var(--muted)", marginTop: 0 }}>Sign in to continue.</p>
       <LoginForm />
     </main>

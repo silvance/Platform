@@ -8,7 +8,7 @@ import {
 import { PrismaService } from "../database/prisma.service";
 import { Public } from "../auth/decorators/public.decorator";
 
-const SERVICE_NAME = "ci-train-api";
+const SERVICE_NAME = "cicyberlab-api";
 const API_VERSION = "0.1.0";
 
 @Public()

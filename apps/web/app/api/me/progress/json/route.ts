@@ -25,7 +25,7 @@ export async function GET(): Promise<Response> {
     status: 200,
     headers: {
       "content-type": "application/json; charset=utf-8",
-      "content-disposition": `attachment; filename="ci-train-progress-${stamp}.json"`,
+      "content-disposition": `attachment; filename="cicyberlab-progress-${stamp}.json"`,
       "x-content-type-options": "nosniff",
     },
   });

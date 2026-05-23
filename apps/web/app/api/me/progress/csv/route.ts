@@ -50,7 +50,7 @@ export async function GET(): Promise<Response> {
     status: 200,
     headers: {
       "content-type": "text/csv; charset=utf-8",
-      "content-disposition": `attachment; filename="ci-train-progress-${stamp}.csv"`,
+      "content-disposition": `attachment; filename="cicyberlab-progress-${stamp}.csv"`,
       "x-content-type-options": "nosniff",
     },
   });

@@ -32,7 +32,7 @@ async function bootstrap(): Promise<void> {
 
   await app.listen(port, host);
   const log = new Logger("Bootstrap");
-  log.log(`ci-train api listening on http://${host}:${port}/v1`);
+  log.log(`CICyberLab api listening on http://${host}:${port}/v1`);
   log.log(`trust proxy: ${describeTrust(trust)}`);
 }
 

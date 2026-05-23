@@ -20,7 +20,7 @@ export default async function AuthenticatedLayout({ children }: { children: Reac
         }}
       >
         <div style={{ display: "flex", gap: "1.25rem", alignItems: "center" }}>
-          <strong>ci-train</strong>
+          <strong>CICyberLab</strong>
           <nav style={{ display: "flex", gap: "1rem" }}>
             <Link href="/scenarios" style={{ color: "var(--accent)" }}>
               Challenges
