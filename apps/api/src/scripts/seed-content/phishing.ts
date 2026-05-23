@@ -20,9 +20,12 @@ export const PHISHING_SCENARIOS: ScenarioSeed[] = [
     brief: `
 # Brief
 
-A user forwarded a *"DHL delivery notification"* to the abuse mailbox
-asking whether it's legitimate. Triage and determine what the headers
-prove — and what they don't.
+A DA-personnel user forwarded a *"DHL delivery notification"* to
+the abuse mailbox asking whether it's legitimate. Triage and
+determine what the headers prove — and what they don't. If
+attributable to a foreign intelligence entity, the incident is
+reportable to your supporting ACI office in the *email-spoofing /
+spear-phishing* family of cyberspace indicators.
 
 ## Artifacts
 
@@ -257,11 +260,18 @@ A correct answer separates:
     brief: `
 # Brief
 
-An end user reported an email from an external recruiter with the
-attachment \`RESUME.pdf\`. They didn't open it. The attachment was
-extracted in a sandboxed read-only environment. Your job is to
-review the **metadata and content** of the file and decide what
-you can prove.
+A DA-personnel end user reported an email from an external
+recruiter with the attachment \`RESUME.pdf\`. They didn't open it.
+The attachment was extracted in a sandboxed read-only environment.
+Your job is to review the **metadata and content** of the file
+and decide what you can prove.
+
+If the lure tracks back to a foreign intelligence entity it sits
+in the *email-spoofing / spear-phishing* family of reportable
+cyberspace indicators. For personnel in Critical Program
+Information or science-and-technology roles, the same incident
+also bears on the specialised CIAR briefings their position
+already requires.
 
 ## Hard rule
 

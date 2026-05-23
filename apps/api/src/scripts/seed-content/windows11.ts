@@ -63,6 +63,15 @@ But the read has classic traps:
   letter mapping at the time of acquisition.
 - **host-context.json** — Windows build, BAM service state,
   acquisition timestamp.
+
+## Reporting framing
+
+For ACI reporting, name BAM findings at the level the artifact
+supports: the **account context** in which a binary ran, not
+the named user's personal action. Any subsequent
+unauthorized-software or unauthorized-AIS-access concern is
+reportable as a cyberspace activity / indicator; presence-of-tool
+and execution-of-tool sit in different reporting buckets.
 `.trim(),
     artifacts: [
       {
@@ -311,21 +320,26 @@ But the read has classic traps:
     brief: `
 # Brief
 
-A possible exfiltration. Two days ago, a developer (\`p.singh\`)
-gave 30-day notice. Yesterday evening the data-loss-prevention
-team alerted on a 380 MiB upload from her workstation to a
-cloud-storage service that isn't on the corporate allow-list.
-EDR coverage on the host is patchy — process-create is on,
-network telemetry is off.
+A possible exfiltration. Two days ago, a DA-civilian developer
+(\`p.singh\`) gave 30-day notice. Yesterday evening the
+data-loss-prevention team alerted on a 380 MiB upload from her
+workstation to a cloud-storage service that isn't on the unit
+allow-list. EDR coverage on the host is patchy — process-create
+is on, network telemetry is off.
 
-You've imaged the host and pulled the System Resource Usage
-Monitor (\`SRUDB.dat\`, ESE database at
-\`C:\\Windows\\System32\\sru\\\`). SRUM records per-app network
-bytes sent and received in **60-minute aggregation buckets**,
-attributed to the process image + user SID.
+The supporting ACI Special Agent in Charge has scoped the
+review and your workstation imaging was receipted on
+**DA Form 4137 #4137-2026-309-A**; the host's \`SRUDB.dat\` ESE
+database (at \`C:\\Windows\\System32\\sru\\\`) is one of the
+artifacts pulled. SRUM records per-app network bytes sent and
+received in **60-minute aggregation buckets**, attributed to the
+process image + user SID.
 
-The exec wants a finding by EOD. The case turns on what SRUM
-*does* and *does not* prove.
+The ACI SAC wants a defensible finding by EOD; a write-up that
+over-claims jeopardizes any subsequent counsel coordination. The
+incident sits in the *data-exfiltration / unauthorized-upload*
+family of reportable cyberspace activities — but the *which*
+question turns on what SRUM does and does not prove.
 
 ## What SRUM is good for
 
@@ -727,8 +741,9 @@ clear-headed about:
 3. **Where Recall data is admissible at all**: jurisdiction-
    and policy-dependent. Treat it like any other intimate
    activity log — narrowest possible scope, redact aggressively,
-   coordinate with legal before referencing in any external
-   product.
+   coordinate with OSJA / supporting trial counsel before
+   referencing in any external product, and apply the storage +
+   handling rules for digital-media evidence on the imaged DB.
 
 ## Artifacts
 
@@ -739,6 +754,12 @@ clear-headed about:
 - **recall-config.json** — Recall enable state, excluded apps,
   retention, paused-window log.
 - **host-context.json** — device + acquisition facts.
+
+If on-screen content includes classified or controlled material,
+the incident sits in the *unauthorized-disclosure* family of
+reportable counterintelligence concerns; whether it rises to
+*deliberate security compromise* turns on intent, which Recall
+pixels cannot establish on their own.
 `.trim(),
     artifacts: [
       {
@@ -1004,13 +1025,19 @@ clear-headed about:
     brief: `
 # Brief
 
-A Win11 workstation belonging to a developer (\`a.romero\`) is
-under review after an alert about anomalous SSH activity from
-the corporate egress. The host has WSL2 installed with two
-distros (\`Ubuntu-22.04\` and \`kali-linux\`). The user claims
-they "barely use WSL." The alert references SSH connections
-originating from the workstation's public-facing IP to an
-external address at \`198.51.100.23\`.
+A Win11 workstation belonging to a DA-civilian developer
+(\`a.romero\`) is under review after an alert about anomalous
+SSH activity from the unit egress. The host has WSL2 installed
+with two distros (\`Ubuntu-22.04\` and \`kali-linux\`). The user
+claims they "barely use WSL." The alert references SSH
+connections originating from the workstation's public-facing IP
+to an external address at \`198.51.100.23\`.
+
+The activity sits in the *unauthorized-AIS-access / unauthorized-
+egress* family of reportable cyberspace incidents; that's a
+reporting question, not the question you're working today. Today's
+question is *actor + intent*, which the host-side artifacts only
+partially address.
 
 You have host-side artifacts only — no in-VM acquisition has
 been performed yet. Your job is to determine **what the host
@@ -1285,7 +1312,7 @@ virtual switch and appears on the wire as the host's IP.
         debriefMd: [
           "**Helpful:**",
           "",
-          "- Live acquisition of the running distro captures volatile state (running processes, in-memory environment, current bash session). The user may have an in-progress session whose history isn't yet flushed.",
+          "- Live acquisition of the running distro captures volatile state (running processes, in-memory environment, current bash session). The user may have an in-progress session whose history isn't yet flushed. Sequence acquisitions so the receiving evidence custodian can document them on a single **DA Form 4137** with continuation pages for each artifact type.",
           "- Cold acquisition of the VHDX (with WSL stopped) gives you on-disk truth: bash history, persisted auth logs, SSH keys, etc. The two together cover the gap.",
           "",
           "**Not helpful:**",
@@ -1376,25 +1403,31 @@ virtual switch and appears on the wire as the host's IP.
     brief: `
 # Brief
 
-\`d.becker\` is a sales engineer who resigned two weeks ago.
-Friday is her last day; today is Wednesday. The recruiting team
-flagged her LinkedIn profile because the new role at a
-competitor starts in 9 days and the job description names
-products in our pipeline.
+\`d.becker\` is a DA-civilian sales engineer who submitted notice
+two weeks ago. Friday is her last day; today is Wednesday. The
+unit security manager forwarded a LinkedIn announcement
+indicating the new role at a competitor starts in 9 days and the
+job description names emerging-technology areas your unit works.
 
-Counsel has authorized a *non-intrusive* host review:
+The case sits at the intersection of the *theft / loss / diversion*
+and *data-exfiltration* families of reportable concerns and is
+being handled in the Army Insider Threat Program lane. The local
+OSJA / supporting trial counsel has authorized a non-intrusive
+host review:
 
-1. Determine whether evidence supports a claim of unauthorized
-   data movement off the corporate workstation.
+1. Determine whether the evidence supports a claim of
+   unauthorized data movement off the unit workstation.
 2. Quantify the confidence band honestly. Counsel will use the
-   report to decide whether to pursue a TRO; an over-claim
-   poisons the case.
+   report to decide whether to pursue further measures; an
+   over-claim poisons the case.
 3. List investigative gaps and what would close them.
 
 You have a curated subset of artifacts from Win11 host
-\`WS-AURORA-19\` covering the trailing 14 days. There is no
-EDR network telemetry on this host (an exception). Host-side
-process create is enabled. Perimeter NetFlow is available
+\`WS-AURORA-19\` covering the trailing 14 days. Each artifact
+extract was logged on **DA Form 4137 #4137-2026-411-A** with the
+DFE's hash + timestamps annotated on a continuation page. There
+is no EDR network telemetry on this host (an exception). Host-
+side process create is enabled. Perimeter NetFlow is available
 through the proxy team but has NOT been pulled for this case
 yet.
 
