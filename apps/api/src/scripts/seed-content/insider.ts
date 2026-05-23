@@ -25,8 +25,17 @@ export const INSIDER_SCENARIOS: ScenarioSeed[] = [
 
 An engineer at a partner firm — \`l.tran@partner.example\` — gave
 30 days' notice on 2026-09-01. HR flagged a high count of
-file-access events from her account in the week after, and asked
-your office to review.
+file-access events from her account in the week after, and the
+case was referred to your supporting ACI office for review in
+the Army Insider Threat Program lane. If substantiated, the
+activity could sit in the *unauthorized removal of sensitive
+material* and *unauthorized removable-media use* families of
+reportable concerns.
+
+> Anomaly is a reason to look. It is not a finding. First-Amendment-
+> protected activity, identity, and personal characteristics are
+> not, by themselves, suspicious — articulable facts about conduct
+> are what carry a referral.
 
 You have a slice of file-access events, removable-media mount
 events, VPN logons, and one page of role / project context.
@@ -260,6 +269,13 @@ finding by itself.
 
 A user's logons are clustering after midnight. The same week, their
 team is in the final two weeks of a release. Triage.
+
+> *Unwarranted* work outside of normal duty hours is a category of
+> potentially reportable behavior — but *unwarranted* is the
+> operative word. A release deadline, a documented on-call rotation,
+> or a known time-zone shift can fully explain the same pattern.
+> Rule out the benign explanations before treating the pattern as
+> an indicator.
 `.trim(),
     artifacts: [
       {
@@ -365,6 +381,13 @@ team is in the final two weeks of a release. Triage.
 A restricted finance document was opened by an engineering account
 the same minute a USB device was mounted on that workstation.
 Triage.
+
+The combination sits in two reportable families: *unauthorized USB
+use* (if the device is non-asset-register) and *attempted access
+inconsistent with duty requirements* (if the cross-team access is
+anomalous and unexplained). Both require articulable facts before
+referral; a single coincidental event is a reason to look further,
+not a finding.
 `.trim(),
     artifacts: [
       {

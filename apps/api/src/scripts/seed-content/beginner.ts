@@ -770,76 +770,115 @@ Practice on the artifact.
   // ─── 8. Chain of custody ─────────────────────────────────
   {
     slug: "chain-of-custody-basics-001",
-    title: "Chain of Custody: Spot the Gap",
+    title: "Chain of Custody: Read a DA Form 4137",
     summary:
-      "A custody log for a USB drive across three transfers. Decide whether the chain holds together — and what breaks it.",
+      "A DA Form 4137 (Evidence/Property Custody Document) for a USB drive across three transfers. Decide whether the chain holds together under AR 195-5.",
     skillAreas: ["report_writing", "inference_discipline", "df_artifacts"],
     difficulty: 1,
-    estimatedMinutes: 8,
-    tags: ["beginner", "chain_of_custody", "report_writing", "inference_discipline"],
+    estimatedMinutes: 10,
+    tags: ["beginner", "chain_of_custody", "army_ci", "ar_195_5", "da_form_4137", "report_writing", "inference_discipline"],
     brief: `
 # Brief
 
-A USB drive (\`Evidence #2026-114-A\`) passed through three hands
-before reaching your lab. The custody log is in the artifact.
+A USB drive collected from a workspace incident has reached an
+ACI evidence room. The accompanying **DA Form 4137 (Evidence/
+Property Custody Document)** is in the artifact. The drive moved
+through three hands before lab intake.
 
-Decide whether the chain holds up to scrutiny.
+Your job: read the form, decide whether the chain holds up, and
+call out exactly what (if anything) needs fixing before the lab
+examiner can begin.
 
-## What chain-of-custody is for
+> This exercise is a *review* — you're reading a custody
+> document the way an attorney or a supervising agent would.
+> It is not an evidence-custodian-training trainer; appointed
+> custodians follow the full requirements in AR 195-5 and unit
+> SOP.
 
-A custody chain is a documentary record proving that a piece of
-evidence has been continuously accounted for between collection
-and the present moment. Every transfer needs:
+## What the form should show at each transfer
 
-- Time of transfer
-- From whom
-- To whom (with both parties signing or otherwise attesting)
-- The condition of the evidence at transfer (intact / opened /
-  sealed)
+- **Date / time** of the transfer
+- **"Released by"** — name + signature of the releasing person
+- **"Received by"** — name + signature of the receiving person
+- **Purpose of change of custody**
 
-A gap in the chain — even a small one — is the kind of thing
-opposing counsel will pick at. The point isn't paperwork for its
-own sake; it's that you can answer "where was this between point
-A and point B?" with documentary evidence, not guesses.
+The receiving party signs only after physically inventorying the
+items against the document. A self-adhesive **DA Form 4002**
+(Evidence/Property Tag) is affixed to the item or sealed
+container at the earliest opportunity, and the seal carries the
+collector's initials.
+
+## What "a gap" actually means
+
+A chain gap isn't only a missing signature — it's any period in
+which the form cannot answer "who had this, and where was it?"
+with a named, attested human being (or, where an alternate
+custodian is on duty, the corresponding attested ledger entry).
+System-only records of access — keycard logs, door swipes — are
+*corroborating* and not, by themselves, a substitute for a
+custodian's signature.
+
+The point isn't paperwork for its own sake; it's that the form
+is the primary answer to "where was this between point A and
+point B?" — and opposing counsel will ask.
 `.trim(),
     artifacts: [
       {
         ordinal: 1,
-        displayName: "custody-log.txt",
+        displayName: "DA-4137-2026-114-A.txt",
         kind: "text",
         mimeType: "text/plain; charset=utf-8",
         bytes: utf8(
           [
-            "Evidence:  USB drive, item #2026-114-A",
-            "----------------------------------------",
+            "DA FORM 4137 — EVIDENCE/PROPERTY CUSTODY DOCUMENT  (text extract)",
+            "------------------------------------------------------------------",
             "",
-            "Transfer 1",
-            "  At:       2026-05-02 14:00 UTC",
-            "  From:     M. RIVERA  (collection at scene)",
-            "  To:       J. PARK     (transport custodian)",
-            "  Seal:     evidence bag #B-441, sealed in M. RIVERA's presence",
-            "  From sig: M. RIVERA  ✓",
-            "  To sig:   J. PARK    ✓",
+            "Receiving activity:   1st MI Bn (CI), ACI Evidence Room, Station 7",
+            "Document number:      4137-2026-114-A",
+            "Receiving custodian:  T. OKAFOR (Primary Evidence Custodian, ACI)",
+            "Case / RFA reference: 2026-114",
             "",
-            "Transfer 2",
-            "  At:       2026-05-02 18:40 UTC",
-            "  From:     J. PARK",
-            "  To:       (overnight evidence locker, station 7)",
-            "  Seal:     bag #B-441, intact",
-            "  From sig: J. PARK    ✓",
-            "  To sig:   (locker log entry, no individual signature)",
+            "Item 1",
+            "  Description:  USB mass-storage device, exFAT, black plastic",
+            "                housing, no external label",
+            "  VID/PID/SN:   0x0951:0x1666  SN observed AA-EXAMPLE-001",
+            "  Tag:          DA Form 4002 #B-441 affixed to sealed evidence bag",
+            "                #B-441; bag bears initials \"M.R.\" across the seal",
+            "                on three sides",
+            "  Marked by:    M. RIVERA at 2026-05-02 14:00 UTC (collection)",
             "",
-            "Transfer 3",
-            "  At:       2026-05-04 08:55 UTC",
-            "  From:     (overnight evidence locker, station 7)",
-            "  To:       T. OKAFOR  (lab intake)",
-            "  Seal:     bag #B-441, intact",
-            "  From sig: (locker log entry, no individual signature)",
-            "  To sig:   T. OKAFOR  ✓",
+            "Chain of Custody (item 1)",
+            "  Transfer 1  (Purpose: collection at scene → transport)",
+            "    Date/time:   2026-05-02 14:00 UTC",
+            "    Released by: M. RIVERA       sig: M. RIVERA  ✓",
+            "    Received by: SSG J. PARK     sig: J. PARK     ✓",
+            "    Notes:       Item sealed in evidence bag #B-441 in M. RIVERA's",
+            "                 presence; DA Form 4002 affixed at scene.",
             "",
-            "Note: items in the overnight locker are accessed only via a",
-            "      keycard-logged door. Door-access log for station 7 between",
-            "      Transfer 2 and Transfer 3 has not yet been pulled.",
+            "  Transfer 2  (Purpose: secure overnight; primary custodian off-shift)",
+            "    Date/time:   2026-05-02 18:40 UTC",
+            "    Released by: SSG J. PARK     sig: J. PARK     ✓",
+            "    Received by: (overnight evidence locker, Station 7)",
+            "                                  sig: (NONE — locker, not a person)",
+            "    Notes:       Bag #B-441 intact. NO acting custodian signed",
+            "                 for the item, and no evidence-ledger entry",
+            "                 documents an alternate custodian assuming",
+            "                 responsibility. Keycard door-access log for the",
+            "                 locker room is available but has NOT been pulled.",
+            "",
+            "  Transfer 3  (Purpose: release to lab intake for forensic exam)",
+            "    Date/time:   2026-05-04 08:55 UTC",
+            "    Released by: (overnight evidence locker, Station 7)",
+            "                                  sig: (NONE — locker, not a person)",
+            "    Received by: T. OKAFOR       sig: T. OKAFOR   ✓",
+            "    Notes:       Bag #B-441 intact on receipt; tag #B-441 verified",
+            "                 against form before signing.",
+            "",
+            "Open issues flagged at intake by T. OKAFOR:",
+            "  - Transfer 2 lacks a named acting custodian and an evidence-",
+            "    ledger entry showing an alternate assumed responsibility.",
+            "  - Door-access log for Station 7 over the 18:40Z 02 MAY → 08:55Z",
+            "    04 MAY window needs to be requested.",
             "",
           ].join("\n"),
         ),
@@ -851,31 +890,33 @@ A and point B?" with documentary evidence, not guesses.
         type: "multi_choice",
         weight: 2,
         promptMd:
-          "Which statements about the chain are accurate?",
+          "Reading the DA Form 4137 with a reviewer's eye, which statements are accurate?",
         options: [
-          { id: "fully-intact", label: "The chain is fully intact and unimpeachable as-is." },
-          { id: "locker-gap", label: "There's an unattested gap between Transfer 2 (into the locker) and Transfer 3 (out of the locker)." },
-          { id: "seal-broken", label: "The evidence seal was broken at some point." },
-          { id: "missing-collection", label: "The collection event itself is missing from the log." },
-          { id: "locker-log-helps", label: "Pulling the door-access log for station 7 would help close the locker gap." },
+          { id: "fully-intact", label: "The chain is fully intact and the form is ready to support lab examination as-is." },
+          { id: "locker-gap", label: "Transfer 2 has no human \"Received by\" signature, and the form does not document an alternate custodian assuming responsibility for the locker period." },
+          { id: "seal-broken", label: "The seal on evidence bag #B-441 was broken at some point during the chain." },
+          { id: "missing-collection", label: "The collection event itself is missing from the form." },
+          { id: "tag-affixed", label: "A DA Form 4002 (#B-441) was affixed to the sealed container at scene." },
+          { id: "door-log-helps", label: "The Station 7 door-access log would *corroborate* non-access during the locker window, but a keycard log is not, by itself, a substitute for a custodian signature." },
         ],
         allowMultiple: true,
         expected: {
           type: "multi_choice",
-          correctIds: ["locker-gap", "locker-log-helps"],
+          correctIds: ["locker-gap", "tag-affixed", "door-log-helps"],
           allowMultiple: true,
         },
         debriefMd: [
           "**Accurate:**",
           "",
-          "- Locker gap — the item sat in the overnight locker from 18:40 on May 2 to 08:55 on May 4. The locker entry isn't a personal signature; it's a system log. That's not zero accountability (the keycard log is itself evidence) but it's not the same as a person attesting.",
-          "- The keycard / door-access log is the right next step. If it shows no entries during the window, the gap closes cleanly. If it shows entries, each one becomes a person you need to talk to.",
+          "- The form records the item being placed in an overnight locker without naming an acting custodian and without a corresponding ledger entry. That's the documented gap.",
+          "- The DA Form 4002 tag is correctly affixed at scene.",
+          "- The keycard / door-access log is the right *corroborating* artifact. It either shows no access (the gap closes cleanly) or names every person who entered (each becomes a follow-up). It is not a substitute for a custodian signature, but it materially narrows the question.",
           "",
           "**Not accurate:**",
           "",
-          "- *Fully intact* — there's an unattested period that needs closing.",
-          "- *Seal broken* — the log explicitly records the bag as intact at every checkpoint.",
-          "- *Missing collection* — Transfer 1 covers it (RIVERA at scene → PARK).",
+          "- *Fully intact* — Transfer 2 has the named gap.",
+          "- *Seal broken* — every checkpoint records the bag as intact and the tag as verified at lab intake.",
+          "- *Missing collection* — Transfer 1 covers it (M. RIVERA at scene → SSG J. PARK).",
         ].join("\n"),
       },
       {
@@ -883,12 +924,12 @@ A and point B?" with documentary evidence, not guesses.
         type: "multi_choice",
         weight: 1,
         promptMd:
-          "Which single additional artifact would best close the gap between Transfer 2 and Transfer 3?",
+          "What is the single best corrective action to take BEFORE the lab examiner begins work?",
         options: [
-          { id: "door-log", label: "The keycard / door-access log for station 7 during the overnight window" },
-          { id: "another-sig", label: "A retroactive signature from J. PARK confirming nothing happened overnight" },
-          { id: "evidence-photo", label: "A photograph of the sealed bag taken on arrival at the lab" },
-          { id: "lab-supervisor-stmt", label: "A statement from the lab supervisor that the seal looked intact" },
+          { id: "door-log", label: "Request the Station 7 door-access log for the gap window and attach a Memorandum For Record (MFR) that describes the gap, the corroborating result from the door log, and what was done about it." },
+          { id: "retro-signature", label: "Have SSG J. PARK retroactively sign as \"Received by\" on Transfer 2 with the locker as the location." },
+          { id: "evidence-photo", label: "Take a photograph of the sealed bag now and attach it to the form." },
+          { id: "lab-supervisor-stmt", label: "Have the lab supervisor write a statement that the seal looked intact on receipt." },
         ],
         allowMultiple: false,
         expected: {
@@ -897,17 +938,17 @@ A and point B?" with documentary evidence, not guesses.
           allowMultiple: false,
         },
         debriefMd:
-          "The door-access / keycard log for station 7 during the overnight window. It either shows no swipes (gap closes — no one accessed the locker) or names every person who did (each becomes a follow-up interview). A retroactive signature is worse than no signature — the witness can only attest to what they observed, and they didn't observe the locker overnight. Photographs and statements about seal integrity say nothing about what happened *inside* the unattested window.",
+          "Pull the door-access log and document the locker-period accountability in a Memorandum For Record attached to the form. An MFR is the standard vehicle for explaining a gap and the corrective action taken — describe what happened, describe what was done about it, cite the corroborating artifact. A *retroactive* signature is worse than no signature: SSG J. PARK can only attest to what they personally observed, and they didn't observe the locker overnight. A photograph taken at lab intake and a lab-supervisor statement say nothing about the unattested window — they don't close the gap.",
       },
       {
         ordinal: 3,
         type: "confidence",
         weight: 1,
         promptMd:
-          "Confidence (1–5) that the evidence is now admissible AS-IS, without pulling the door-access log.",
-        expected: { type: "confidence", expectedRange: [2, 3] },
+          "Confidence (1–5) that the form, AS-IS (no door-access log pulled, no MFR attached), is sufficient to support a forensic examination whose results will be referenced in a future investigation report.",
+        expected: { type: "confidence", expectedRange: [1, 3] },
         debriefMd:
-          "Moderate-low. The chain is mostly clean — seals intact, two attested handoffs, system-log entries for the locker. A reasonable judge might admit it. But opposing counsel will absolutely raise the unattested locker window, and the cheap fix (pull the door log) closes the question definitively. Do it before the hearing.",
+          "**Low.** Two attested handoffs, an intact seal, and tag verification at intake mean the form isn't fatally broken — but the locker-window accountability gap is on the face of the document. A reviewing attorney or defense counsel will raise it. The corrective work is cheap (door log + MFR) and definitively closes the question; complete it before the examiner begins, not after the report is written.",
       },
     ],
   },

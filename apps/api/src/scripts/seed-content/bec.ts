@@ -20,12 +20,18 @@ export const BEC_SCENARIOS: ScenarioSeed[] = [
     brief: `
 # Brief
 
-At 14:07 local, the controller of a partner firm received an email
-purportedly from \`jane.doe@vendor.example\` — a familiar vendor
-finance contact — requesting that the routing details for an
-outstanding invoice be redirected to a new account.
+At 14:07 local, the controller of a partner firm working a unit
+acquisition received an email purportedly from
+\`jane.doe@vendor.example\` — a familiar vendor finance contact —
+requesting that the routing details for an outstanding invoice be
+redirected to a new account.
 
 You have been asked to triage the email and advise the controller.
+If the activity tracks back to a foreign intelligence entity, it
+is reportable to your supporting ACI office in the
+*social-engineering / spear-phishing* family of cyberspace
+indicators — particularly when the targeted activity touches an
+acquisition program.
 
 ## Open the artifacts
 
@@ -324,7 +330,9 @@ message includes a new bank routing + account number and asks HR
 to confirm via reply only.
 
 The artifacts include the raw email and a snippet of the employee
-directory. Triage and report.
+directory. Triage and report. When used against DA personnel, the
+pattern sits in the *email-spoofing / spear-phishing* family of
+reportable cyberspace indicators.
 
 > This challenge is a Tier-2 draft. Briefs and debriefs are
 > functional but lighter than the polished set.

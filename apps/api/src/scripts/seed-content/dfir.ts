@@ -19,15 +19,19 @@ export const DFIR_SCENARIOS: ScenarioSeed[] = [
     brief: `
 # Brief
 
-A USB mass-storage device was handed to your office by the property
-custodian after it was found in a shared workspace. Forensic imaging
-yielded the artifacts in this scenario. A carving pass recovered
-one DOCX-like document from **unallocated space** bearing
-\`(U//FOUO)\` marker text in the body. (All markings and content
-in this exercise are fictional and sanitized.)
+A USB mass-storage device was received by your supporting ACI
+evidence custodian on **DA Form 4137 #4137-2026-114-A** after it
+was found in a shared workspace. Forensic imaging yielded the
+artifacts in this scenario. A carving pass recovered one
+DOCX-like document from **unallocated space** bearing \`(U//FOUO)\`
+marker text in the body. (All markings and content in this
+exercise are fictional and sanitized.)
 
-The deputy SAC has asked for a one-paragraph finding **today**.
-Your task is to make sure the language you give them is defensible.
+The supporting ACI **Special Agent in Charge (SAC)** has asked
+for a one-paragraph finding **today** that they can roll into a
+SITREP. Your task is to make sure the language you give them is
+defensible — and that any potentially reportable counterintelligence
+category is named without over-claim.
 
 ## Artifacts
 
@@ -214,6 +218,8 @@ the attribution inferences.
           "",
           "- *Deliberate concealment* requires showing intent — deletion alone is consistent with everything from \"finished editing, dragged to trash, emptied\" to \"deliberate destruction.\" The artifacts can't distinguish.",
           "- *S. LOPEZ wrote it* over-relies on the DOCX core.xml `Author` field, which is metadata an author (or anyone with the file open in Word) can edit. It's a *lead*, not proof. The mount history shows LOPEZ mounted the device but doesn't establish authorship.",
+          "",
+          "**Reporting framing.** The presence of `(U//FOUO)` markers on a document on an unmanaged USB potentially implicates the *unauthorized disclosure* family of reportable counterintelligence incidents; whether it crosses into *deliberate security compromise* depends entirely on what follow-up shows about intent. The carved-bytes finding alone supports reporting the *incident*; it does not by itself support an attribution claim against any named individual.",
         ].join("\n"),
       },
       {
@@ -289,15 +295,20 @@ the attribution inferences.
 # Brief
 
 EDR alerted on a hash match for a known credential-dumping tool on
-\`WS-118\`. Triage. The artifacts on hand cover browser, filesystem,
-and a partial execution-artifact set. The user (M. WONG) is on
-leave and hasn't been interviewed.
+\`WS-118\`, a workstation in DA-personnel use. Triage. The artifacts
+on hand cover browser, filesystem, and a partial execution-artifact
+set. The user (M. WONG) is on leave and hasn't been interviewed.
 
-The CISO will ask the same first question in the standup tomorrow:
+Your supporting ACI Special Agent in Charge will ask the same first
+question in the standup tomorrow:
 
 > Did they actually run it?
 
-Build the answer you can defend.
+Build the answer you can defend. For ACI reporting, the *presence*
+of a non-approved tool and the *execution* of it sit in different
+buckets — the former is an unauthorized-software concern; the
+latter raises the possibility of an exfil / unauthorized-AIS-access
+incident. Don't conflate them.
 
 ## Artifacts
 
@@ -485,11 +496,13 @@ answer.
     brief: `
 # Brief
 
-Analyst has pulled excerpts of three Windows execution-adjacent
-artifacts for the same workstation + suspected binary. Your job is
-to read the rows correctly: each artifact records something subtly
-different about a binary's lifecycle, and conflating them is the
-single most common writeup error.
+A USACIDC digital forensic examiner (DFE) working in support of
+your ACI office has pulled excerpts of three Windows execution-
+adjacent artifacts for the same workstation + suspected binary.
+Your job is to read the rows correctly: each artifact records
+something subtly different about a binary's lifecycle, and
+conflating them is the single most common writeup error — one
+that gets called out in any subsequent legal review.
 
 ## Artifacts
 
