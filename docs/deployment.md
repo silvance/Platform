@@ -535,6 +535,32 @@ For mode 3, add `https://api.cicyberlab.com/v1/readyz` to an external
 uptime monitor (Uptime Robot, Better Uptime, healthchecks.io). Page
 on >3 consecutive failures.
 
+## User accounts: who gets in
+
+The platform supports two account-creation paths (M15 + M17):
+
+- **Admin-created** (`/admin/users`) — admins add users directly.
+  Accounts land auto-approved and can sign in immediately.
+- **Self-registration** (`/register`, M17) — anyone can submit a
+  registration. The new account lands in **pending-approval** state
+  (`approved_at IS NULL`) and **cannot sign in** until an admin
+  clicks Approve in `/admin/users`. Login from a pending account
+  returns 403 with a clear "pending admin approval" message; the
+  registration endpoint itself returns the same generic response
+  whether the email is new or already registered (no account
+  enumeration via response shape).
+
+The register endpoint is throttled to **3 attempts per 5 min per
+real-client IP** (tighter than login's 5/5min because every
+successful call writes to `users`), keyed via the same M14 BFF
+forwarded-IP channel. Bulk-spam registration is impractical from a
+single source without distributed infrastructure.
+
+Rejecting a pending account: use the existing **Disable** action in
+`/admin/users` — there's no separate "Reject" affordance because
+disable already covers it (a disabled-and-never-approved row stays
+inert).
+
 ## Security recap
 
 These hold in all three modes; what changes is the threat surface

@@ -46,6 +46,7 @@ export class UsersService {
         role: true,
         disabled: true,
         createdAt: true,
+        approvedAt: true,
         lastLoginAt: true,
       },
     });
@@ -62,6 +63,7 @@ export class UsersService {
         role: true,
         disabled: true,
         createdAt: true,
+        approvedAt: true,
         lastLoginAt: true,
       },
     });
@@ -83,6 +85,10 @@ export class UsersService {
           displayName: input.displayName,
           role: input.role,
           passwordHash,
+          // Admin-created accounts are auto-approved (the admin is
+          // the trust anchor). Only self-registered accounts land
+          // with approvedAt: null and need approve() before login.
+          approvedAt: new Date(),
         },
         select: {
           id: true,
@@ -91,6 +97,7 @@ export class UsersService {
           role: true,
           disabled: true,
           createdAt: true,
+          approvedAt: true,
           lastLoginAt: true,
         },
       });
@@ -155,6 +162,7 @@ export class UsersService {
         role: true,
         disabled: true,
         createdAt: true,
+        approvedAt: true,
         lastLoginAt: true,
       },
     });
@@ -197,6 +205,7 @@ export class UsersService {
         role: true,
         disabled: true,
         createdAt: true,
+        approvedAt: true,
         lastLoginAt: true,
       },
     });
@@ -219,6 +228,38 @@ export class UsersService {
     }
   }
 
+  // M17: admin-approve a self-registered (pending) account. Sets
+  // approvedAt = now; the user can sign in from the next request
+  // onward. Idempotent — approving an already-approved row is a
+  // no-op (the timestamp doesn't get re-bumped on re-approve, so
+  // the audit trail keeps the original approval time).
+  async approve(targetId: string): Promise<AdminUserSummary> {
+    const target = await this.prisma.user.findUnique({
+      where: { id: targetId },
+      select: { id: true, approvedAt: true },
+    });
+    if (!target) throw new NotFoundException("User not found.");
+    if (target.approvedAt !== null) {
+      // Already approved — re-read to return the canonical row.
+      return this.get(targetId);
+    }
+    const row = await this.prisma.user.update({
+      where: { id: targetId },
+      data: { approvedAt: new Date() },
+      select: {
+        id: true,
+        email: true,
+        displayName: true,
+        role: true,
+        disabled: true,
+        createdAt: true,
+        approvedAt: true,
+        lastLoginAt: true,
+      },
+    });
+    return this.toSummary(row);
+  }
+
   private toSummary = (row: {
     id: string;
     email: string;
@@ -226,6 +267,7 @@ export class UsersService {
     role: Role;
     disabled: boolean;
     createdAt: Date;
+    approvedAt: Date | null;
     lastLoginAt: Date | null;
   }): AdminUserSummary => ({
     id: row.id,
@@ -233,6 +275,7 @@ export class UsersService {
     displayName: row.displayName,
     role: row.role,
     disabled: row.disabled,
+    approvedAt: row.approvedAt ? row.approvedAt.toISOString() : null,
     createdAt: row.createdAt.toISOString(),
     lastLoginAt: row.lastLoginAt ? row.lastLoginAt.toISOString() : null,
   });

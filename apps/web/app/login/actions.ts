@@ -29,6 +29,18 @@ export async function loginAction(
     if (err instanceof ApiError && err.status === 401) {
       return { error: "Invalid email or password." };
     }
+    if (err instanceof ApiError && err.status === 403) {
+      // M17: the API distinguishes "wrong credentials" (401) from
+      // "credentials are valid but the account isn't approved yet"
+      // (403). Surface the API's message verbatim so the user
+      // knows it's a pending-approval issue, not a typo.
+      const body = err.body as { message?: unknown } | null;
+      const msg =
+        body && typeof body.message === "string"
+          ? body.message
+          : "Your account isn't approved yet.";
+      return { error: msg };
+    }
     if (err instanceof ApiError && err.status === 429) {
       return { error: "Too many attempts — slow down and try again." };
     }

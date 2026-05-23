@@ -62,6 +62,17 @@ model User {
   displayName  String   @map("display_name")
   role         Role
   disabled     Boolean  @default(false)
+  // M17: self-registration with admin approval.
+  //
+  //   approvedAt == null            → pending approval; sign-in refused
+  //   approvedAt != null + disabled → admin-approved then deactivated
+  //   approvedAt != null + active   → normal user
+  //
+  // Seeded + admin-created accounts are auto-approved (set at
+  // create time). Self-registered accounts land with
+  // approvedAt = null; an admin promotes them via
+  // /admin/users/:id/approve.
+  approvedAt   DateTime? @map("approved_at")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
   lastLoginAt  DateTime? @map("last_login_at")

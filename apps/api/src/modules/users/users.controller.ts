@@ -73,6 +73,15 @@ export class UsersController {
     return { user };
   }
 
+  @Post(":id/approve")
+  @HttpCode(HttpStatus.OK)
+  async approve(
+    @Param("id", new ParseUUIDPipe({ version: "4" })) id: string,
+  ): Promise<AdminUserResponse> {
+    const user = await this.users.approve(id);
+    return { user };
+  }
+
   @Post(":id/password")
   @HttpCode(HttpStatus.OK)
   @UsePipes(new ZodValidationPipe(AdminResetPasswordRequest))

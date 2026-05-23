@@ -19,6 +19,8 @@ import {
   HealthResponse,
   ImportPackResponse,
   LoginRequest,
+  RegisterRequest,
+  RegisterResponse,
   LoginResponse,
   MeProgressResponse,
   MeResponse,
@@ -132,6 +134,11 @@ export const api = {
     parse(HealthResponse, await request("/healthz")),
   login: async (body: LoginRequest): Promise<LoginResponse> =>
     parse(LoginResponse, await request("/auth/login", { method: "POST", body })),
+  register: async (body: RegisterRequest): Promise<RegisterResponse> =>
+    parse(
+      RegisterResponse,
+      await request("/auth/register", { method: "POST", body }),
+    ),
   logout: async (token: string): Promise<void> => {
     await request("/auth/logout", { method: "POST", token, expect: "empty" });
   },
@@ -182,6 +189,17 @@ export const api = {
         await request(`/admin/users/${encodeURIComponent(id)}/password`, {
           method: "POST",
           body,
+          token,
+        }),
+      ),
+    approve: async (
+      token: string,
+      id: string,
+    ): Promise<AdminUserResponse> =>
+      parse(
+        AdminUserResponse,
+        await request(`/admin/users/${encodeURIComponent(id)}/approve`, {
+          method: "POST",
           token,
         }),
       ),

@@ -112,6 +112,28 @@ export async function updateUserAction(
   return initialOk("User updated.");
 }
 
+export async function approveUserAction(
+  _prev: UserActionState,
+  formData: FormData,
+): Promise<UserActionState> {
+  const token = await readToken();
+  if (!token) return initialErr("Session expired. Reload and sign in again.");
+
+  const id = formData.get("id");
+  if (typeof id !== "string" || id.length === 0) {
+    return initialErr("Missing user id.");
+  }
+
+  try {
+    await api.users.approve(token, id);
+  } catch (err) {
+    return describeError(err, "Failed to approve user.");
+  }
+
+  revalidatePath("/admin/users");
+  return initialOk("User approved. They can now sign in.");
+}
+
 export async function resetPasswordAction(
   _prev: UserActionState,
   formData: FormData,

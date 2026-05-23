@@ -134,8 +134,18 @@ async function upsertUser(
   const passwordHash = await hash(plain, ARGON_OPTS);
   const user = await prisma.user.upsert({
     where: { email },
+    // M17: re-seeding an existing account preserves whatever
+    // approvedAt it already has (don't clobber a deliberate admin
+    // approval). New rows land auto-approved — seeded accounts
+    // are trusted by the deployer who ran the seed.
     update: { passwordHash, displayName, role, disabled: false },
-    create: { email, passwordHash, displayName, role },
+    create: {
+      email,
+      passwordHash,
+      displayName,
+      role,
+      approvedAt: new Date(),
+    },
   });
 
   if (existing) {

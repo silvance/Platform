@@ -1,4 +1,5 @@
 import {
+  ForbiddenException,
   Injectable,
   Logger,
   OnModuleInit,
@@ -62,6 +63,60 @@ export class AuthService implements OnModuleInit {
     return hash(plain, ARGON_OPTS);
   }
 
+  // M17 self-registration. Always returns void — the caller is the
+  // public endpoint which always echoes the same generic response
+  // regardless of whether a new row was created. This is by design:
+  // returning "email already registered" leaks account enumeration
+  // to anyone curl-ing the register endpoint.
+  //
+  // Outcomes:
+  //   - email is brand new      → create with approvedAt = null,
+  //                                role = "user", disabled = false.
+  //                                Login is gated on approvedAt
+  //                                being set by an admin.
+  //   - email already exists    → no-op. The existing row is
+  //                                untouched (no password rotation,
+  //                                no role change, no
+  //                                approvedAt flip). The endpoint
+  //                                still returns the same 200.
+  //
+  // The argon2 hash work runs in both branches so the response time
+  // doesn't differ between "new" and "existing" — same defense the
+  // login path uses with verifyAgainstDummy.
+  async register(input: {
+    email: string;
+    displayName: string;
+    password: string;
+  }): Promise<void> {
+    // Hash unconditionally — the work runs whether or not we'll use
+    // the hash, so the timing profile of register-new ≈ register-
+    // existing. If we computed only on the "new" branch an attacker
+    // could probe email existence by response time.
+    const passwordHash = await this.hashPassword(input.password);
+
+    const existing = await this.prisma.user.findUnique({
+      where: { email: input.email },
+      select: { id: true },
+    });
+    if (existing) {
+      // Silent no-op. We deliberately don't update password or
+      // displayName — that would let a registration form vandalise
+      // an admin-created account.
+      return;
+    }
+
+    await this.prisma.user.create({
+      data: {
+        email: input.email,
+        displayName: input.displayName,
+        passwordHash,
+        role: "user",
+        // approvedAt left null on purpose. Login refuses until set.
+        approvedAt: null,
+      },
+    });
+  }
+
   async verifyPassword(passwordHash: string, plain: string): Promise<boolean> {
     try {
       return await verify(passwordHash, plain, ARGON_OPTS);
@@ -99,6 +154,19 @@ export class AuthService implements OnModuleInit {
 
     if (!user || user.disabled || !passwordOk) {
       throw new UnauthorizedException("Invalid email or password.");
+    }
+
+    // M17: self-registered accounts are inert until an admin
+    // approves them. Surface a distinct error so the user gets a
+    // clear message rather than thinking their password is wrong.
+    // For our controlled-audience deployment the small marginal
+    // enumeration risk (the message confirms the email is
+    // registered) is acceptable; the UX win for legitimate
+    // not-yet-approved users is the more important property.
+    if (user.approvedAt === null) {
+      throw new ForbiddenException(
+        "Your account is pending admin approval. You'll be able to sign in once an admin enables it.",
+      );
     }
 
     const token = randomBytes(TOKEN_BYTES).toString("base64url");
