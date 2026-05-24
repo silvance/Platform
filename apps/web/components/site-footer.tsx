@@ -30,6 +30,10 @@ export function SiteFooter() {
       <Link href="/about" style={{ color: "var(--muted)" }}>
         About
       </Link>
+      <span aria-hidden style={{ opacity: 0.5 }}>·</span>
+      <Link href="/privacy" style={{ color: "var(--muted)" }}>
+        Privacy
+      </Link>
       {SUPPORT_URL ? (
         <>
           <span aria-hidden style={{ opacity: 0.5 }}>·</span>
