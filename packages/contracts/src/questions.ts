@@ -20,7 +20,12 @@ export type QuestionType = z.infer<typeof QuestionType>;
 export const MAX_PROMPT_MD_CHARS = 5_000;
 export const MAX_DEBRIEF_MD_CHARS = 10_000;
 export const MAX_MC_OPTIONS = 20;
-export const MAX_MC_OPTION_LABEL_CHARS = 200;
+// Multi-choice option labels often need to spell out the
+// difference between near-identical wordings; 200 chars wasn't
+// enough for some scenarios and silently dropped options at parse
+// time. 500 covers every realistic case while still capping
+// authoring-side abuse.
+export const MAX_MC_OPTION_LABEL_CHARS = 500;
 export const MAX_QUESTIONS_PER_SCENARIO = 50;
 // Indicator sets — M6.
 export const MAX_INDICATOR_ITEMS = 40;

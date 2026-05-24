@@ -81,7 +81,7 @@ export async function updateMetadataAction(
       skillAreas,
       tags,
       status: ScenarioStatus.parse(getString(formData, "status")),
-      // M25 curated-library fields. Lane is required at the API
+ // curated-library fields. Lane is required at the API
       // level once we declare an UpdateScenarioRequest that
       // includes it; here we forward whatever the form has.
       lane: Lane.parse(getString(formData, "lane")),

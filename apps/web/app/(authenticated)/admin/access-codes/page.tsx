@@ -6,7 +6,7 @@ import { CodeRow } from "./code-row";
 
 export const dynamic = "force-dynamic";
 
-// M23: registration access-code admin surface. Admin creates +
+// registration access-code admin surface. Admin creates +
 // disables codes; the literal `code` string is visible here (and
 // nowhere else) so the admin can re-share with cohorts.
 export default async function AccessCodesPage() {

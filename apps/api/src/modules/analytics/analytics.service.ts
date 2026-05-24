@@ -6,7 +6,7 @@ import type {
   ScenarioAnalytics,
 } from "@ci-train/contracts";
 
-// M26: per-scenario / per-question analytics for admins.
+// per-scenario / per-question analytics for admins.
 //
 // Single pass over scenarios + their questions + the
 // ScenarioProgress + QuestionResponse tables; no admin-only

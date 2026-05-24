@@ -5,9 +5,8 @@ import type { AdminStatsResponse } from "@ci-train/contracts";
 
 export const dynamic = "force-dynamic";
 
-// /admin landing. M21d adds a stats dashboard above the tile
-// grid — the operator's first glance answers "is anything
-// awaiting action?" before they have to click anywhere.
+// /admin landing. The stats dashboard at the top answers
+// "is anything awaiting action?" without clicking through.
 export default async function AdminPage() {
   await requireAdmin();
   const token = await readToken();
@@ -38,7 +37,7 @@ export default async function AdminPage() {
         </div>
       )}
 
-      <h2 style={{ marginTop: "2rem" }}>Surfaces</h2>
+      <h2 style={{ marginTop: "2rem" }}>Admin tools</h2>
       <div
         style={{
           display: "grid",
@@ -62,7 +61,7 @@ export default async function AdminPage() {
         <Link href="/admin/review" className="card" style={cardStyle}>
           <strong style={{ fontSize: "1.05rem" }}>Review</strong>
           <p style={pStyle}>
-            Playthrough log — mark scenarios approved / needs-rewrite / flagged,
+            Challenge review — mark scenarios approved / needs-rewrite / flagged,
             capture notes without leaving the page.
           </p>
         </Link>

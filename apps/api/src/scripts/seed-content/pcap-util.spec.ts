@@ -1,6 +1,6 @@
 import { buildPcap } from "./util";
 
-// M27: the PCAP byte builder is hand-rolled. Pin the file-header
+// the PCAP byte builder is hand-rolled. Pin the file-header
 // shape + per-packet record-header layout so a future tweak that
 // breaks the libpcap-classic format gets caught here rather than
 // in a Wireshark "file is corrupted" toast.

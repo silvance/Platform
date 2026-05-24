@@ -6,6 +6,7 @@ import { Markdown } from "@/components/markdown";
 import { ArtifactViewer } from "@/components/viewers/artifact-viewer";
 import { QuestionCard } from "@/components/questions/question-card";
 import {
+  SKILL_AREA_LABELS,
   isAwarenessOnly,
   type AdminScenarioDetail,
 } from "@ci-train/contracts";
@@ -74,10 +75,10 @@ export default async function ScenarioWorkspacePage({ params }: Props) {
               showAwarenessBanner && isAwarenessOnly(a) ? "chip-rf" : "chip-skill"
             }`}
           >
-            {a}
+            {SKILL_AREA_LABELS[a]}
           </span>
         ))}
-        <span className="chip chip-difficulty">difficulty {scenario.difficulty}/5</span>
+        <span className="chip chip-difficulty">Level {scenario.difficulty}</span>
         {scenario.estimatedMinutes !== null ? (
           <span className="chip">≈ {scenario.estimatedMinutes} min</span>
         ) : null}

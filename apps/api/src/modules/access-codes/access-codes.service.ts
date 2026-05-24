@@ -8,7 +8,7 @@ import { Prisma } from "@prisma/client";
 import { PrismaService } from "../database/prisma.service";
 import type { AccessCodeRecord } from "@ci-train/contracts";
 
-// M23: admin CRUD + the registration-time validate-and-consume
+// admin CRUD + the registration-time validate-and-consume
 // path for registration access codes.
 //
 // Codes are stored plaintext: the admin re-reads them to share

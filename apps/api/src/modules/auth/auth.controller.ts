@@ -63,7 +63,7 @@ export class AuthController {
   }
 
   // Self-registration. Public; gated by an admin-issued access
-  // code (M23). On a valid code the account is created auto-approved
+  // code. On a valid code the account is created auto-approved
   // (role=user) and the caller can sign in immediately. On a bad
   // code AuthService.register throws BadRequestException with the
   // generic ACCESS_CODE_REJECT_MESSAGE — same message for missing,

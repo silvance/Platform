@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
-import type { Role } from "@prisma/client";
+import { Prisma, type Role } from "@prisma/client";
 import { PrismaService } from "../database/prisma.service";
 import {
   Lane,
@@ -50,7 +50,7 @@ export class ScenariosService {
     if (query.tag) {
       where["tags"] = { has: query.tag };
     }
-    // M25 lane filter. When a lane is requested, sort by sequence
+ // lane filter. When a lane is requested, sort by sequence
     // within that lane (then title) so the page that just got the
     // list can render the recommended order directly.
     if (query.lane) {
@@ -109,7 +109,7 @@ export class ScenariosService {
     };
   }
 
-  // M25 lane overview for the /scenarios landing page. Returns one
+ // lane overview for the /scenarios landing page. Returns one
   // row per Lane enum value (in canonical enum order), with the
   // count of published scenarios in the lane plus the actor's
   // progress projection (how many they've completed, how many they
@@ -119,11 +119,13 @@ export class ScenariosService {
     role: Role,
     actorUserId: string,
   ): Promise<LaneOverviewResponse> {
-    // Non-admin users only ever see published scenarios; for admins
-    // we still scope the overview to published so the count matches
-    // what the lane page will show by default. Admins can deep-link
-    // to drafts via /admin/challenges if they need it.
-    const where = { status: "published" as const };
+    // Lane card counts must match what the user sees when they click
+    // through to the per-lane page. Non-admins see only published;
+    // admins see drafts + published (drafts hidden when archived).
+    // Same role-gate the catalogue list endpoint applies.
+    const where: Prisma.ScenarioWhereInput = isNonAdmin(role)
+      ? { status: "published" }
+      : { status: { in: ["draft", "published"] } };
 
     const [scenarios, progressRows] = await this.prisma.$transaction([
       this.prisma.scenario.findMany({
@@ -182,10 +184,6 @@ export class ScenariosService {
         inProgressScenarioCount: b.inProgress,
       };
     });
-
-    // role is part of the signature for future per-role filtering
-    // but doesn't change anything today — published is published.
-    void role;
     return { lanes };
   }
 

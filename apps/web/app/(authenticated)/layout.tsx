@@ -15,7 +15,7 @@ export default async function AuthenticatedLayout({
   const user = await requireUser();
   const theme = await readTheme();
 
-  // M21d: pre-fetch the pending-approval count for admins so the
+ // pre-fetch the pending-approval count for admins so the
   // header badge has it on the initial server render. Cheap query
   // (single indexed-int read); failures are non-fatal — the
   // header just renders without the badge if the stats endpoint

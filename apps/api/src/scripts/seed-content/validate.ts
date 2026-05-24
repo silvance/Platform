@@ -116,7 +116,7 @@ export function validateScenarios(scenarios: ScenarioSeed[]): void {
       errors.push(`${ctx} status "${s.status}" is not a valid ScenarioStatus`);
     }
 
-    // M25: lane is REQUIRED and must be a valid Lane enum value.
+ // lane is REQUIRED and must be a valid Lane enum value.
     // The runtime default in the DB is "foundations", but the
     // catalogue file is the source of truth for assignment; missing
     // lane here is a content-authoring bug, not a runtime fallback.

@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { SKILL_AREA_LABELS, type SkillArea } from "@ci-train/contracts";
 import { createScenarioAction, type CreateScenarioState } from "./actions";
 
 export function CreateScenarioForm({ skillAreas }: { skillAreas: readonly string[] }) {
@@ -77,7 +78,7 @@ export function CreateScenarioForm({ skillAreas }: { skillAreas: readonly string
           {skillAreas.map((a) => (
             <label key={a}>
               <input type="checkbox" name="skillArea" value={a} />
-              <code>{a}</code>
+              {SKILL_AREA_LABELS[a as SkillArea]}
             </label>
           ))}
         </div>

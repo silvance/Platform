@@ -73,7 +73,7 @@ export interface ScenarioSeed {
   // Keeps the launch surface curated without losing the
   // less-polished material.
   status?: ScenarioStatus;
-  // M25 curated-library placement.
+ // curated-library placement.
   lane: Lane;
   module?: string;
   sequence?: number;

@@ -6,6 +6,7 @@ import {
   Lane,
   LANE_DESCRIPTIONS,
   LANE_LABELS,
+  SKILL_AREA_LABELS,
   isAwarenessOnly,
   type ScenarioListItem,
 } from "@ci-train/contracts";
@@ -16,7 +17,7 @@ interface Props {
   params: Promise<{ slug: string }>;
 }
 
-// M25 per-lane page. Lists every published challenge in the lane in
+// per-lane page. Lists every published challenge in the lane in
 // recommended-sequence order, grouped by module (the free-text
 // subdivision the admin can set per scenario). Cards link out to
 // the existing /scenarios/[slug] solve view.
@@ -86,43 +87,52 @@ export default async function LanePage({ params }: Props) {
             marginTop: "1rem",
           }}
         >
-          {orderedGroups.map(([moduleName, items]) => (
-            <section key={moduleName}>
-              <h2
-                style={{
-                  fontSize: ".95rem",
-                  margin: "0 0 .5rem 0",
-                  color: "var(--muted-strong)",
-                  textTransform: "uppercase",
-                  letterSpacing: ".04em",
-                }}
-              >
-                {moduleName}
-              </h2>
-              <p
-                style={{
-                  margin: "0 0 .5rem 0",
-                  color: "var(--muted)",
-                  fontSize: ".82rem",
-                }}
-              >
-                Recommended order. Any challenge is unlocked; the order is a
-                guide, not a gate.
-              </p>
-              <ul
-                className="scenario-list"
-                style={{ listStyle: "none", padding: 0 }}
-              >
-                {items.map((s, idx) => (
-                  <li key={s.id} className="scenario-card">
-                    <Link href={`/scenarios/${s.slug}`}>
-                      <ScenarioCard scenario={s} ordinal={idx + 1} />
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))}
+          {(() => {
+            // Ordinals run continuously across modules within the
+            // lane: module A's last challenge is N, module B's first
+            // is N+1. Same number never repeats inside a single lane.
+            let ordinal = 0;
+            return orderedGroups.map(([moduleName, items]) => (
+              <section key={moduleName}>
+                <h2
+                  style={{
+                    fontSize: ".95rem",
+                    margin: "0 0 .5rem 0",
+                    color: "var(--muted-strong)",
+                    textTransform: "uppercase",
+                    letterSpacing: ".04em",
+                  }}
+                >
+                  {moduleName}
+                </h2>
+                <p
+                  style={{
+                    margin: "0 0 .5rem 0",
+                    color: "var(--muted)",
+                    fontSize: ".82rem",
+                  }}
+                >
+                  Recommended order. Any challenge is unlocked; the order is a
+                  guide, not a gate.
+                </p>
+                <ul
+                  className="scenario-list"
+                  style={{ listStyle: "none", padding: 0 }}
+                >
+                  {items.map((s) => {
+                    ordinal += 1;
+                    return (
+                      <li key={s.id} className="scenario-card">
+                        <Link href={`/scenarios/${s.slug}`}>
+                          <ScenarioCard scenario={s} ordinal={ordinal} />
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            ));
+          })()}
         </div>
       )}
     </main>
@@ -184,11 +194,11 @@ function ScenarioCard({
             key={a}
             className={`chip ${hasAwarenessOnly && isAwarenessOnly(a) ? "chip-rf" : "chip-skill"}`}
           >
-            {a}
+            {SKILL_AREA_LABELS[a]}
           </span>
         ))}
         <span className="chip chip-difficulty">
-          difficulty {scenario.difficulty}/5
+          Level {scenario.difficulty}
         </span>
         {scenario.estimatedMinutes !== null ? (
           <span className="chip">≈ {scenario.estimatedMinutes} min</span>

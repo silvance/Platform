@@ -3,7 +3,7 @@ import { AuthService } from "./auth.service";
 import type { AccessCodesService } from "../access-codes/access-codes.service";
 import type { PrismaService } from "../database/prisma.service";
 
-// M23 self-registration: gated by an admin-issued access code.
+// self-registration: gated by an admin-issued access code.
 // Valid code → create user with approvedAt=NOW so login works on
 // the next request. Bad code → BadRequestException with a single
 // generic message. Duplicate-email + valid code → silent no-op
@@ -27,7 +27,7 @@ function makeFakePrisma() {
   // tx.user.create go through these same mocks.
   const tx = { user, accessCode };
   // AuthService uses BOTH $transaction(callback) (register path,
-  // M23) and $transaction([promises]) (login path, session writes).
+ // ) and $transaction([promises]) (login path, session writes).
   // Handle either form.
   const $transaction = jest.fn(
     (arg: unknown[] | ((t: typeof tx) => Promise<unknown>)) => {
@@ -50,7 +50,7 @@ function makeAccessCodes(validateReturns: boolean): AccessCodesService {
   } as unknown as AccessCodesService;
 }
 
-describe("AuthService.register (M23 access-code gate)", () => {
+describe("AuthService.register (access-code gate)", () => {
   it("creates a new account with approvedAt set when the code is valid and email is new", async () => {
     const fake = makeFakePrisma();
     const codes = makeAccessCodes(true);

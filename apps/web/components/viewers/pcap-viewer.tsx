@@ -5,7 +5,7 @@ interface Props {
   proxyUrl: string;
 }
 
-// M27: PCAP files are download-only. We never try to render
+// PCAP files are download-only. We never try to render
 // packet contents inline — opening in Wireshark / tshark /
 // tcpdump is the analyst's job. The card shows file metadata,
 // a download link, and a one-line nudge about the expected

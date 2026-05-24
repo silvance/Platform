@@ -5,7 +5,7 @@ import type { LaneSummary } from "@ci-train/contracts";
 
 export const dynamic = "force-dynamic";
 
-// M25 challenge-library landing page. Replaces the flat all-cards
+// challenge-library landing page. Replaces the flat all-cards
 // list with a lane overview: one card per Lane, showing the count
 // of published challenges plus the user's progress in that lane.
 // Each card links to /scenarios/lanes/<slug>, which renders the
