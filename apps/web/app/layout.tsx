@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { Inter, JetBrains_Mono } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import { readTheme } from "@/lib/theme";
 import "./globals.css";
 
@@ -36,7 +37,13 @@ export default async function RootLayout({
       data-theme={theme}
       className={`${inter.variable} ${jetBrainsMono.variable}`}
     >
-      <body>{children}</body>
+      <body>
+        {children}
+        {/* Vercel Web Analytics. No-op unless Analytics is enabled
+            on the platform-web project in the Vercel dashboard.
+            Self-hosted / non-Vercel deploys silently emit nothing. */}
+        <Analytics />
+      </body>
     </html>
   );
 }
