@@ -193,6 +193,7 @@ function extForKind(displayName: string, kind: ArtifactKind): string {
     case "pdf":  return ".pdf";
     case "image": return ".png";
     case "eml":  return ".eml";
+    case "pcap": return ".pcap";
   }
 }
 

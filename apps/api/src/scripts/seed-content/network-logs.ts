@@ -1,5 +1,103 @@
-import { utf8 } from "./util";
+import { buildPcap, utf8, type PcapPacket } from "./util";
 import type { ScenarioSeed } from "./types";
+
+// Build the beacon-PCAP packets for the beacon-cadence scenario.
+// Three normal early packets (DNS query/answer + an HTTPS GET to
+// a recognisable destination) followed by five small TLS-like
+// connections to the same external IP at ~60-second intervals.
+// The cadence is the tell; everything else is noise.
+function buildBeaconPcapPackets(): PcapPacket[] {
+  const t0 = new Date("2026-11-12T13:00:00Z").getTime();
+  const packets: PcapPacket[] = [];
+
+  // ── normal background traffic ────────────────────────────────
+  // DNS query: client → resolver
+  packets.push({
+    timestamp: new Date(t0 + 0),
+    srcIp: "10.0.4.55",
+    dstIp: "10.0.4.1",
+    proto: "udp",
+    srcPort: 52301,
+    dstPort: 53,
+    payload: Buffer.from([
+      0x12, 0x34, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x03, 0x77, 0x77, 0x77, 0x04, 0x62, 0x69, 0x6e, 0x67, 0x03, 0x63, 0x6f,
+      0x6d, 0x00, 0x00, 0x01, 0x00, 0x01,
+    ]),
+  });
+  packets.push({
+    timestamp: new Date(t0 + 12),
+    srcIp: "10.0.4.1",
+    dstIp: "10.0.4.55",
+    srcMac: "02:00:00:00:00:fe",
+    dstMac: "02:00:00:00:00:01",
+    proto: "udp",
+    srcPort: 53,
+    dstPort: 52301,
+    payload: Buffer.from([
+      0x12, 0x34, 0x81, 0x80, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00,
+      0x03, 0x77, 0x77, 0x77, 0x04, 0x62, 0x69, 0x6e, 0x67, 0x03, 0x63, 0x6f,
+      0x6d, 0x00, 0x00, 0x01, 0x00, 0x01,
+      0xc0, 0x0c, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x3c, 0x00, 0x04,
+      0xcc, 0x4f, 0xc5, 0xc8,
+    ]),
+  });
+  // Benign HTTPS GET-shaped packet to a recognisable destination.
+  packets.push({
+    timestamp: new Date(t0 + 350),
+    srcIp: "10.0.4.55",
+    dstIp: "204.79.196.200", // www.bing.com (publicly attributed range)
+    proto: "tcp",
+    srcPort: 52302,
+    dstPort: 443,
+    tcpFlags: { syn: true, ack: false },
+    payload: Buffer.alloc(0),
+  });
+
+  // ── beacon: five ~200-byte TCP/443 packets at ~60s intervals ─
+  // Each packet carries a small payload meant to look like an
+  // encrypted heartbeat (random-looking bytes). Wireshark will
+  // render these as TCP segments to 198.51.100.77:443.
+  const beaconDst = "198.51.100.77";
+  const beaconPayload = Buffer.from(
+    "1703030014" + // TLS Application Data record header (type 23, ver 0303, len 20)
+      "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4",
+    "hex",
+  );
+  for (let i = 0; i < 5; i++) {
+    const ts = new Date(t0 + 60_000 * (i + 1));
+    packets.push({
+      timestamp: ts,
+      srcIp: "10.0.4.55",
+      dstIp: beaconDst,
+      proto: "tcp",
+      srcPort: 52310 + i,
+      dstPort: 443,
+      tcpSeq: 100 + i,
+      tcpAck: 1,
+      tcpFlags: { ack: true, psh: true },
+      payload: beaconPayload,
+    });
+    // A small synthetic ACK back from the beacon host so the
+    // capture isn't entirely one-sided.
+    packets.push({
+      timestamp: new Date(ts.getTime() + 50),
+      srcIp: beaconDst,
+      dstIp: "10.0.4.55",
+      srcMac: "02:00:00:00:00:fe",
+      dstMac: "02:00:00:00:00:01",
+      proto: "tcp",
+      srcPort: 443,
+      dstPort: 52310 + i,
+      tcpSeq: 200 + i,
+      tcpAck: 100 + i + beaconPayload.length,
+      tcpFlags: { ack: true },
+      payload: Buffer.alloc(0),
+    });
+  }
+
+  return packets;
+}
 
 // Network & logs lane. Each scenario takes a single short log
 // excerpt or flow-record sample and exercises one core reading
@@ -541,6 +639,274 @@ without independent confirmation.
         expected: { type: "confidence", expectedRange: [1, 2] },
         debriefMd:
           "**1 or 2.** The rows show probing, not exfiltration. There is no row indicating a UNION-based response containing data, no row indicating sensitive output, no row showing the attacker downloading material. The disciplined finding for this slice is *\"observed SQLi probe attempts from 203.0.113.45; no evidence of successful exploitation in this window.\"* Move higher only with backend confirmation (DB logs, WAF events, response-body evidence).",
+      },
+    ],
+  },
+
+  // ─── 4. PCAP triage: spotting a beacon ──────────────────────
+  {
+    slug: "network-pcap-beacon-001",
+    title: "PCAP Triage: Spot the Beacon Cadence",
+    summary:
+      "A small packet capture with mostly-normal traffic and a periodic outbound to an unfamiliar destination. Identify the beacon, name what the PCAP does and does not establish.",
+    skillAreas: ["network_logs", "df_artifacts", "inference_discipline"],
+    difficulty: 3,
+    estimatedMinutes: 25,
+    tags: ["network", "pcap", "beacon", "c2", "inference_discipline"],
+    lane: "network_logs",
+    module: "PCAP triage",
+    sequence: 1,
+    brief: `
+# Brief
+
+A small \`tcpdump\` capture from a workstation, taken during a
+~6-minute window after EDR raised a low-confidence "uncategorised
+outbound TLS" alert. The capture is in two artefacts:
+
+- \`capture-window.pcap\` — the raw libpcap binary. Open in
+  Wireshark / \`tshark\` / \`tcpdump\` if you have it.
+- \`tshark-summary.txt\` — a human-readable summary of the same
+  packets so the challenge can be solved entirely in the browser.
+
+Your job is to spot the **beacon**: a small, periodic outbound
+connection that repeats on a regular cadence. Beaconing is a
+common C2 fingerprint because the implant has to phone home for
+instructions; the periodic shape is harder to hide than the
+content (which is usually encrypted).
+
+What a small packet capture like this can and can't establish:
+
+- **Can**: who talked to whom, when, in what direction, how
+  often, how much, and the on-wire metadata (ports, IPs, TCP
+  flags, TLS record types if any).
+- **Can't**: the application-layer content of encrypted
+  conversations, the identity of the user at the keyboard, the
+  destination hostname (without DNS / SNI), or what process on
+  the host owned the socket.
+
+This is a *triage* exercise, not a full incident response. Don't
+promote a periodic shape to a confirmed C2 channel without
+host-side process attribution and destination identification.
+`.trim(),
+    artifacts: [
+      {
+        ordinal: 1,
+        displayName: "capture-window.pcap",
+        kind: "pcap",
+        mimeType: "application/vnd.tcpdump.pcap",
+        bytes: buildPcap(buildBeaconPcapPackets()),
+      },
+      {
+        ordinal: 2,
+        displayName: "tshark-summary.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "$ tshark -r capture-window.pcap -tad -n",
+            "  (one line per packet; truncated address/port columns)",
+            "",
+            "    1  2026-11-12 13:00:00.000  10.0.4.55       → 10.0.4.1        DNS  Standard query 0x1234 A www.bing.com",
+            "    2  2026-11-12 13:00:00.012  10.0.4.1        → 10.0.4.55       DNS  Standard query response 0x1234 A 204.79.197.200",
+            "    3  2026-11-12 13:00:00.350  10.0.4.55       → 204.79.196.200  TCP  52302 → 443 [SYN]",
+            "",
+            "    4  2026-11-12 13:01:00.000  10.0.4.55       → 198.51.100.77   TCP  52310 → 443 [PSH, ACK]  Len=25",
+            "    5  2026-11-12 13:01:00.050  198.51.100.77   → 10.0.4.55       TCP  443 → 52310 [ACK]",
+            "",
+            "    6  2026-11-12 13:02:00.000  10.0.4.55       → 198.51.100.77   TCP  52311 → 443 [PSH, ACK]  Len=25",
+            "    7  2026-11-12 13:02:00.050  198.51.100.77   → 10.0.4.55       TCP  443 → 52311 [ACK]",
+            "",
+            "    8  2026-11-12 13:03:00.000  10.0.4.55       → 198.51.100.77   TCP  52312 → 443 [PSH, ACK]  Len=25",
+            "    9  2026-11-12 13:03:00.050  198.51.100.77   → 10.0.4.55       TCP  443 → 52312 [ACK]",
+            "",
+            "   10  2026-11-12 13:04:00.000  10.0.4.55       → 198.51.100.77   TCP  52313 → 443 [PSH, ACK]  Len=25",
+            "   11  2026-11-12 13:04:00.050  198.51.100.77   → 10.0.4.55       TCP  443 → 52313 [ACK]",
+            "",
+            "   12  2026-11-12 13:05:00.000  10.0.4.55       → 198.51.100.77   TCP  52314 → 443 [PSH, ACK]  Len=25",
+            "   13  2026-11-12 13:05:00.050  198.51.100.77   → 10.0.4.55       TCP  443 → 52314 [ACK]",
+            "",
+            "Notes from collection:",
+            "  - 10.0.4.55 is the workstation under review (WS-1108, console user j.delacruz).",
+            "  - 10.0.4.1 is the corporate DNS resolver / gateway.",
+            "  - 198.51.100.77 has not been resolved on this host's DNS log during",
+            "    the capture window; the destination is reached by direct IP.",
+            "  - Payload bytes on the 198.51.100.77 packets start with the TLS",
+            "    application-data record header (0x17 0x03 0x03 …), 20 bytes of",
+            "    opaque (encrypted) data, no observable handshake in this slice.",
+            "",
+          ].join("\n"),
+        ),
+      },
+      {
+        ordinal: 3,
+        displayName: "host-context.json",
+        kind: "json",
+        mimeType: "application/json; charset=utf-8",
+        bytes: utf8(
+          JSON.stringify(
+            {
+              host: "WS-1108",
+              user: "CORP\\j.delacruz",
+              edr_alert: {
+                opened_utc: "2026-11-12T13:08:00Z",
+                rule: "uncategorised-outbound-tls",
+                confidence: "low",
+              },
+              dns_resolver_log_for_window: "no query for 198.51.100.77 attributed to WS-1108",
+              network_segment: "corp-user / 10.0.4.0/24",
+              note: "Direct-IP connections at TCP/443 are not by themselves a finding; some legitimate apps embed IPs. Cadence + destination novelty + no DNS lookup are the suggestive combination.",
+            },
+            null,
+            2,
+          ) + "\n",
+        ),
+      },
+    ],
+    indicatorSets: [
+      {
+        slug: "pcap-beacon-indicators",
+        displayName: "Indicators bearing on the beacon suspicion",
+        sourceArtifactDisplayName: "tshark-summary.txt",
+        items: [
+          {
+            id: "five-cycle-cadence",
+            label:
+              "Five outbound packets to 198.51.100.77:443 from WS-1108 at ~60-second intervals (13:01:00, 13:02:00, 13:03:00, 13:04:00, 13:05:00).",
+          },
+          {
+            id: "uniform-payload-size",
+            label:
+              "Each outbound packet carries the same small payload size (25 bytes, TLS-record-header-shaped).",
+          },
+          {
+            id: "no-dns-resolution",
+            label:
+              "The host's DNS resolver log shows no query for 198.51.100.77 during the capture window — the destination was reached by direct IP.",
+          },
+          {
+            id: "syn-bing",
+            label:
+              "An earlier SYN to 204.79.196.200:443 on a different ephemeral port, consistent with a browser session to a familiar destination.",
+          },
+          {
+            id: "dns-bing",
+            label:
+              "A DNS query/response pair for `www.bing.com` at the start of the window.",
+          },
+        ],
+      },
+    ],
+    questions: [
+      {
+        ordinal: 1,
+        type: "select_indicators",
+        weight: 2,
+        indicatorSetSlug: "pcap-beacon-indicators",
+        promptMd:
+          "Select the indicators that **directly support** treating the 198.51.100.77 connections as a beacon worth pivoting on.",
+        expected: {
+          type: "select_indicators",
+          correctIds: ["five-cycle-cadence", "uniform-payload-size", "no-dns-resolution"],
+        },
+        debriefMd: [
+          "**Supporting:**",
+          "",
+          "- *Five-cycle cadence* — clean 60-second period across five exchanges is the canonical beacon shape.",
+          "- *Uniform payload size* — encrypted heartbeats from an implant are typically small and identical-sized; real user traffic varies in size.",
+          "- *No DNS resolution* — direct-IP destinations bypass DNS-based blocklists and skip leaving a name in the resolver log. Combined with the cadence, this is suggestive.",
+          "",
+          "**Distractors:**",
+          "",
+          "- *SYN to 204.79.196.200* — that's a normal connection to a recognisable destination; it's part of the background traffic, not the beacon.",
+          "- *DNS query for bing.com* — same, normal background; doesn't increase confidence in the beacon claim.",
+        ].join("\n"),
+      },
+      {
+        ordinal: 2,
+        type: "multi_choice",
+        weight: 1,
+        promptMd:
+          "Which statements are supported by the PCAP + summary as written?",
+        options: [
+          {
+            id: "destination-known",
+            label:
+              "The host-resolved hostname for 198.51.100.77 can be read from the PCAP.",
+          },
+          {
+            id: "user-attribution",
+            label:
+              "The PCAP names the local process / user that owned the beacon socket.",
+          },
+          {
+            id: "encrypted-content",
+            label:
+              "Application-layer content of the beacon packets is encrypted (TLS application-data record header observed); the PCAP doesn't carry plaintext.",
+          },
+          {
+            id: "shape-only",
+            label:
+              "The PCAP supports describing the **shape** of the traffic (cadence, size, destination IP) but is not by itself an attribution to a process, user, or destination identity.",
+          },
+        ],
+        allowMultiple: true,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["encrypted-content", "shape-only"],
+          allowMultiple: true,
+        },
+        debriefMd: [
+          "PCAPs answer the *who-talked-to-whom-and-when* question (and metadata around it). They do **not** carry hostname-from-IP (need DNS), process attribution (need host-side EDR / Sysmon), or decrypted application content (need TLS keys or unencrypted protocols).",
+          "",
+          "On the encrypted-content point: the visible TLS application-data record header is observable on the wire; the plaintext inside isn't.",
+        ].join("\n"),
+      },
+      {
+        ordinal: 3,
+        type: "multi_choice",
+        weight: 1,
+        promptMd:
+          "What's the best next step to convert this triage observation into a finding?",
+        options: [
+          {
+            id: "edr-process",
+            label:
+              "Host-side EDR / Sysmon network-connect query for WS-1108 at the beacon timestamps — names the local process.",
+          },
+          {
+            id: "passive-dns",
+            label:
+              "Passive-DNS / threat-intel lookup for 198.51.100.77 — surfaces any prior attribution to known infrastructure.",
+          },
+          {
+            id: "longer-capture",
+            label:
+              "Capture a longer PCAP window from the same host to confirm the cadence continues.",
+          },
+          {
+            id: "block-everything",
+            label:
+              "Add 198.51.100.77 to the perimeter blocklist immediately, without further investigation.",
+          },
+        ],
+        allowMultiple: true,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["edr-process", "passive-dns", "longer-capture"],
+          allowMultiple: true,
+        },
+        debriefMd:
+          "Process identity + destination attribution + sustained cadence-confirmation together convert a triage observation into a defensible finding. Blocklist-first without investigation tips off the implant (if any) and loses visibility; do it only after the process / destination work is in flight.",
+      },
+      {
+        ordinal: 4,
+        type: "confidence",
+        weight: 1,
+        promptMd:
+          "Confidence (1–5) that the 198.51.100.77 traffic is malicious C2 based ONLY on these artefacts.",
+        expected: { type: "confidence", expectedRange: [2, 3] },
+        debriefMd:
+          "**2 or 3.** The cadence + direct-IP + uniform payload + no-DNS combination is suspicious enough to pursue. It is not by itself proof: legitimate apps (some VPN clients, telemetry agents, push-notification services) also beacon. Convert to a confidence-5 finding via host-side process identification and destination attribution.",
       },
     ],
   },
