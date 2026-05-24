@@ -1,6 +1,7 @@
 import { z, ZodError } from "zod";
 import {
   AccessCodeListResponse,
+  AnalyticsResponse,
   CreateAccessCodeRequest,
   CreateAccessCodeResponse,
   DisableAccessCodeResponse,
@@ -240,6 +241,10 @@ export const api = {
   stats: {
     get: async (token: string): Promise<AdminStatsResponse> =>
       parse(AdminStatsResponse, await request("/admin/stats", { token })),
+  },
+  analytics: {
+    get: async (token: string): Promise<AnalyticsResponse> =>
+      parse(AnalyticsResponse, await request("/admin/analytics", { token })),
   },
   accessCodes: {
     list: async (token: string): Promise<AccessCodeListResponse> =>

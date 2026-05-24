@@ -10,3 +10,4 @@ export * from "./authoring.js";
 export * from "./packs.js";
 export * from "./review.js";
 export * from "./access-codes.js";
+export * from "./analytics.js";
