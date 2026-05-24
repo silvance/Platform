@@ -21,8 +21,8 @@ const jetBrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CICyberLab",
-  description: "CICyberLab — CI Cyber / Digital Forensics training platform",
+  title: "CI Cyber Lab",
+  description: "CI Cyber Lab — CI Cyber / Digital Forensics training platform",
 };
 
 export default async function RootLayout({

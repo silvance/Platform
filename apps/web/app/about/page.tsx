@@ -3,7 +3,7 @@ import { SiteFooter } from "@/components/site-footer";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
-  title: "About — CICyberLab",
+  title: "About — CI Cyber Lab",
 };
 
 const SUPPORT_URL = process.env.SUPPORT_URL?.trim() || null;
@@ -20,13 +20,13 @@ export default function AboutPage() {
       >
         <div style={{ fontSize: ".9rem", marginBottom: "1rem" }}>
           <Link href="/" style={{ color: "var(--accent)" }}>
-            ← CICyberLab
+            ← CI Cyber Lab
           </Link>
         </div>
-        <h1 style={{ marginBottom: ".5rem" }}>About CICyberLab</h1>
+        <h1 style={{ marginBottom: ".5rem" }}>About CI Cyber Lab</h1>
 
         <p>
-          I built CICyberLab to train new CI Digital Threat Investigators
+          I built CI Cyber Lab to train new CI Digital Threat Investigators
           (CDTIs). The ramp into the work is steep — you have to learn to read
           forensic artefacts, write findings that survive cross-examination,
           and stay calibrated about what the evidence does and doesn't
@@ -73,7 +73,7 @@ export default function AboutPage() {
             Support hosting costs
           </h2>
           <p style={{ color: "var(--muted)", margin: 0 }}>
-            CICyberLab is an independent, unclassified training project
+            CI Cyber Lab is an independent, unclassified training project
             maintained in my personal capacity. Optional contributions help
             offset domain, hosting, and infrastructure costs. Contributions
             do not provide access, influence challenge content, or create any
