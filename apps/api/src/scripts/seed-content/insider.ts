@@ -1510,4 +1510,732 @@ accounts.
       },
     ],
   },
+
+  // ─── CAC failure + unfamiliar process: owner-routing drill ──
+  {
+    slug: "insider-cac-failure-unfamiliar-process-001",
+    title: "Help-Desk Walk-In: Failing CAC, Unfamiliar Process",
+    summary:
+      "A contractor with a non-working CAC asks the J6 help desk for a temporary local account so he can finish a deliverable. Read the ticket, separate the routine from the off-pattern, and route to the right owners.",
+    skillAreas: ["account_compromise", "report_writing", "inference_discipline"],
+    difficulty: 2,
+    estimatedMinutes: 18,
+    tags: ["insider_risk", "owner_routing", "cac", "ar25_2", "ar381_12", "inference_discipline"],
+    lane: "insider_risk",
+    module: "Identity verification & owner routing",
+    sequence: 1,
+    brief: `
+# Brief
+
+A walk-in arrives at the J6 service desk on a Friday afternoon.
+He identifies himself as **W. Pham**, a contractor supporting
+Program Gamma under contract **W91XYZ-25-D-0044**, and says his
+CAC stopped working at the badge reader this morning. He is
+asking the help-desk technician to **create a local non-CAC
+account** on a workstation in the team room so he can finish a
+deliverable due to the contracting officer's representative
+(COR) by close of business.
+
+The technician hesitates and forwards the ticket to your queue
+with a short note. Your job is to triage: separate what is a
+routine CAC-lifecycle issue (handled outside cyber) from what
+is a cyber-boundary touch that needs an ISSM call, and from
+what — if anything — has the shape of an identity-proofing
+bypass attempt that needs the supporting ACI office in the
+loop.
+
+> A failing CAC is, by itself, an extremely common help-desk
+> issue. The owner-routing question is sharpened by the **request
+> that accompanies it**, the **requester's recent history**, and
+> the **process being skipped**. Read each independently before
+> combining them.
+
+This is a routing exercise. There is no malicious-actor finding
+hidden in the artefacts; the exercise is to demonstrate that you
+can put each observation in front of the correct owner under
+the existing Army cybersecurity / counterintelligence framework.
+
+## Artefacts
+
+- **help-desk-ticket.txt** — the original ticket text and the
+  technician's forwarding note.
+- **requester-context.json** — what the IDM / contracts system
+  knows about W. Pham (sponsor, clearance level, CAC status from
+  RAPIDS, prior support tickets).
+- **recent-ticket-history.csv** — Pham's help-desk tickets over
+  the last 30 days.
+- **owner-reference.txt** — short reference card listing the
+  Army owners typically involved in this class of ticket.
+`.trim(),
+    artifacts: [
+      {
+        ordinal: 1,
+        displayName: "help-desk-ticket.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "Ticket: SD-2026-11-21-04417",
+            "Opened: 2026-11-21 14:08 local (Friday)",
+            "Channel: walk-in, J6 service desk (Bldg 4250)",
+            "Requester: PHAM, W. (claimed; CAC not readable at counter)",
+            "Visit purpose (verbatim, recorded by tech):",
+            "  \"My CAC stopped scanning this morning. I have a deliverable",
+            "  due to my COR by 1700 today. Can you spin me up a local",
+            "  account on one of the team-room workstations so I can",
+            "  finish it? It only needs to last until Monday — I'll go to",
+            "  RAPIDS first thing then.\"",
+            "",
+            "Tech forwarding note (J. Adekunle, GS-7):",
+            "  \"He doesn't have a visitor escort with him. I asked him to",
+            "  step over to RAPIDS to verify the CAC; he said the line is",
+            "  too long and that the COR is waiting. He offered to have",
+            "  another contractor on his team 'just log him in real quick'",
+            "  on a shared workstation. I declined and routed the ticket",
+            "  to you for direction. He is sitting in the lobby.\"",
+            "",
+          ].join("\n"),
+        ),
+      },
+      {
+        ordinal: 2,
+        displayName: "requester-context.json",
+        kind: "json",
+        mimeType: "application/json; charset=utf-8",
+        bytes: utf8(
+          JSON.stringify(
+            {
+              identity: {
+                claimed_name: "W. Pham",
+                idm_record_present: true,
+                cac_in_rapids: "issued 2025-03; valid through 2027-03",
+                cac_recent_status: "no revocation recorded; PIN-failure counter at 2 of 3",
+                clearance: "SECRET, in-scope, valid",
+              },
+              employment: {
+                employer: "Gamma Tech Services, LLC",
+                contract_number: "W91XYZ-25-D-0044",
+                cor: "MAJ R. Okonkwo (Program Gamma)",
+                sponsor_on_file: "Gamma Program PMO, last verified 2026-10-02",
+              },
+              accesses: {
+                niprnet: "yes (Gamma project SharePoint, dev jumpbox)",
+                local_admin: "no",
+                privileged_groups: "none",
+              },
+              note:
+                "Local non-CAC accounts on DODIN-Army networks require a documented exception per AR 25-2 and a privileged-access justification when on shared / team-room hardware. The standard remediation for an unreadable CAC is a RAPIDS visit (PIN reset or chip replacement) — not a local account workaround.",
+            },
+            null,
+            2,
+          ) + "\n",
+        ),
+      },
+      {
+        ordinal: 3,
+        displayName: "recent-ticket-history.csv",
+        kind: "csv",
+        mimeType: "text/csv; charset=utf-8",
+        bytes: utf8(
+          [
+            "date,channel,summary,outcome",
+            "2026-10-29,phone,CAC PIN locked after travel,resolved at RAPIDS same day",
+            "2026-11-10,email,Requested local-admin rights on team-room WS for \"installing a tool\",denied — referred to KO + PMO via change-control process",
+            "2026-11-17,walk-in,Asked to have his account added to the J6 helpdesk-admins group \"to save a step\",denied — outside scope of contract privileges",
+            "2026-11-21,walk-in,Failing CAC + request for local non-CAC account (current ticket),open",
+          ].join("\n") + "\n",
+        ),
+      },
+      {
+        ordinal: 4,
+        displayName: "owner-reference.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "Owner-routing reference card (training extract)",
+            "-----------------------------------------------",
+            "",
+            "RAPIDS / LRA / TASS",
+            "  - CAC PIN unlock, certificate re-issue, chip replacement.",
+            "  - Verifies sponsor and identity-proofing for new CAC issuance.",
+            "  - Not a cyber-incident owner; an identity-lifecycle owner.",
+            "",
+            "Unit ISSM (per AR 25-2)",
+            "  - Owns local cybersecurity service provider coordination,",
+            "    account-creation exception requests, privileged-access",
+            "    management decisions, and cyberspace-incident reporting.",
+            "  - The right owner for ANY request that asks cyber controls",
+            "    to be bypassed or relaxed (e.g. local account in lieu of",
+            "    CAC; non-routine group membership; shared credential use).",
+            "",
+            "Supporting ACI office (per AR 381-12)",
+            "  - Owns counterintelligence indicators including elicitation,",
+            "    attempted access inconsistent with duty requirements, and",
+            "    patterns of small probing requests across multiple",
+            "    venues. Insider concerns that don't yet rise to the level",
+            "    of a finding still flow here as referrals.",
+            "",
+            "KO / COR (Contracting)",
+            "  - Owns contract performance issues. If a contractor's",
+            "    deliverable is at risk because they can't log on, the COR",
+            "    and KO own the deliverable-extension or substitution",
+            "    decision — not cyber.",
+            "",
+            "USACIDC",
+            "  - Criminal-investigative authority for offences against",
+            "    DODIN-Army systems. Engaged downstream by ISSM / ACI",
+            "    when a referral develops into a criminal lead.",
+            "",
+          ].join("\n"),
+        ),
+      },
+    ],
+    indicatorSets: [
+      {
+        slug: "cac-routing-indicators",
+        displayName: "Observations to triage and route",
+        items: [
+          {
+            id: "cac-not-reading",
+            label:
+              "The CAC will not scan at the help-desk counter; PIN-failure counter sits at 2 of 3 in RAPIDS.",
+            evidenceRef: "requester-context.json",
+          },
+          {
+            id: "request-local-account",
+            label:
+              "The requester is asking for a **local non-CAC account** on a team-room workstation in lieu of going to RAPIDS.",
+            evidenceRef: "help-desk-ticket.txt",
+          },
+          {
+            id: "request-borrowed-login",
+            label:
+              "The requester offered to have another contractor on his team \"just log him in real quick\" on a shared workstation — i.e. credential / session sharing.",
+            evidenceRef: "help-desk-ticket.txt",
+          },
+          {
+            id: "no-visitor-escort",
+            label:
+              "He is a walk-in without a visitor escort, but his IDM / contract record is present and his clearance is in-scope.",
+            evidenceRef: "requester-context.json",
+          },
+          {
+            id: "small-probing-pattern",
+            label:
+              "Recent ticket history shows a pattern of requests that each ask for a small relaxation of controls (local-admin, helpdesk-admins group, now a local account) — each denied for routine reasons.",
+            evidenceRef: "recent-ticket-history.csv",
+          },
+          {
+            id: "cor-deadline-pressure",
+            label:
+              "He is invoking a same-day deliverable to the COR as the reason to skip the normal RAPIDS process.",
+            evidenceRef: "help-desk-ticket.txt",
+          },
+        ],
+      },
+    ],
+    questions: [
+      {
+        ordinal: 1,
+        type: "multi_choice",
+        weight: 2,
+        promptMd:
+          "Which statements about this ticket are **facts** at the point of triage?",
+        options: [
+          {
+            id: "cac-unreadable",
+            label:
+              "The CAC failed to scan at the help-desk counter and the RAPIDS-side PIN-failure counter shows 2 of 3.",
+          },
+          {
+            id: "asked-local-account",
+            label:
+              "The requester explicitly asked for a local non-CAC account on a team-room workstation.",
+          },
+          {
+            id: "is-impersonator",
+            label:
+              "The walk-in is not actually W. Pham — someone is impersonating the real contractor.",
+          },
+          {
+            id: "is-witting-insider",
+            label:
+              "The requester is a witting insider attempting to exfiltrate Program Gamma data.",
+          },
+          {
+            id: "is-just-frustrated",
+            label:
+              "This is solely a frustrated contractor under deadline pressure with no security implication.",
+          },
+        ],
+        allowMultiple: true,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["cac-unreadable", "asked-local-account"],
+          allowMultiple: true,
+        },
+        debriefMd: [
+          "**Fact:**",
+          "",
+          "- CAC unreadable at the counter; RAPIDS shows the PIN-failure counter mid-way. This is a routine identity-lifecycle observation.",
+          "- The local-account request is something the technician documented in the ticket as a verbatim quote.",
+          "",
+          "**Not fact (yet):**",
+          "",
+          "- *Impersonation* — there is no evidence the walk-in isn't Pham; the IDM record matches, clearance is in-scope. RAPIDS in-person verification would close this question definitively, but assuming impersonation now is unsupported.",
+          "- *Witting insider* — the pattern is suggestive enough to refer (see below), but a referral is a lead, not a finding.",
+          "- *Solely frustration* — equally unsupported. Frustration is a plausible explanation; it does not displace the routing obligation.",
+        ].join("\n"),
+      },
+      {
+        ordinal: 2,
+        type: "select_indicators",
+        weight: 2,
+        indicatorSetSlug: "cac-routing-indicators",
+        promptMd:
+          "Pick the observations that **belong on the cyber / counterintelligence track** (i.e. should reach the ISSM and/or the supporting ACI office), rather than being a pure identity-lifecycle / contract-performance matter.",
+        expected: {
+          type: "select_indicators",
+          correctIds: [
+            "request-local-account",
+            "request-borrowed-login",
+            "small-probing-pattern",
+          ],
+        },
+        debriefMd: [
+          "**On the cyber / CI track:**",
+          "",
+          "- Request for a local non-CAC account: that is asking for an explicit cybersecurity-control exception. ISSM under AR 25-2 owns the exception decision; routine help-desk staff do not.",
+          "- Request for a shared / borrowed login: credential sharing on DODIN-Army systems is a clear cyber boundary issue and cannot be done as a courtesy.",
+          "- Pattern of small probing requests across multiple venues (local-admin, helpdesk-admins, now local account) is one of the named elicitation-shaped patterns the supporting ACI office screens for under AR 381-12 — even when each individual ticket has a plausible cover story.",
+          "",
+          "**Not on the cyber / CI track:**",
+          "",
+          "- *Failing CAC at the counter* — pure RAPIDS / LRA matter.",
+          "- *No visitor escort but valid IDM + clearance* — a facility-process question, not a cyber one; building security or the sponsor would address it.",
+          "- *COR deadline pressure* — contract performance is the COR / KO's problem, not the help desk's, and not a justification for relaxing controls.",
+        ].join("\n"),
+      },
+      {
+        ordinal: 3,
+        type: "multi_choice",
+        weight: 2,
+        promptMd:
+          "Pick the **correct owner routing** for this ticket. Multiple owners may apply.",
+        options: [
+          {
+            id: "to-rapids",
+            label:
+              "Send the requester to RAPIDS for in-person verification, PIN reset, and (if needed) chip replacement.",
+          },
+          {
+            id: "to-issm",
+            label:
+              "Refer the local-account / borrowed-login request to the unit ISSM as a cybersecurity-exception decision under AR 25-2.",
+          },
+          {
+            id: "to-aci",
+            label:
+              "Refer the pattern of small probing requests (across multiple venues) to the supporting ACI office under AR 381-12 as an articulable-conduct lead, with a non-attributive description of the requests — not as a finding.",
+          },
+          {
+            id: "to-cor",
+            label:
+              "Notify the COR + KO that the contractor cannot meet today's deliverable through cyber-permitted means, so the deliverable schedule (not the controls) gets adjusted.",
+          },
+          {
+            id: "spin-up-account",
+            label:
+              "Spin up the local non-CAC account on the team-room workstation as a one-time courtesy, document it, and let it expire Monday.",
+          },
+          {
+            id: "call-cidc",
+            label:
+              "Open a USACIDC criminal-investigative case immediately on the strength of this ticket.",
+          },
+        ],
+        allowMultiple: true,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["to-rapids", "to-issm", "to-aci", "to-cor"],
+          allowMultiple: true,
+        },
+        debriefMd: [
+          "**Right routes (all four):**",
+          "",
+          "- RAPIDS owns CAC-lifecycle remediation. That's where the CAC question goes.",
+          "- The unit ISSM owns cybersecurity exceptions under AR 25-2. The local-account / borrowed-login asks are exception requests; only the ISSM is authorised to grant or deny them, and \"no\" is by far the most likely defensible answer here.",
+          "- The supporting ACI office owns the pattern observation under AR 381-12 (Army Insider Threat Program; TARP). Send it as a referral — the pattern of three small relaxation requests across three venues, the way the deadline was used as leverage — not as a substantiated finding.",
+          "- The COR + KO own contract performance. Tell them today; they own the deliverable-extension or substitution decision.",
+          "",
+          "**Wrong:**",
+          "",
+          "- *Spinning up the local account as a courtesy* is exactly the failure mode the policy exists to prevent. \"Just this once, just till Monday\" is how a documented cyber-exception process gets bypassed by goodwill.",
+          "- *USACIDC* is a downstream owner. No criminal predicate has been articulated; opening a case off a help-desk routing question is a misuse of that authority.",
+        ].join("\n"),
+      },
+      {
+        ordinal: 4,
+        type: "confidence",
+        weight: 1,
+        promptMd:
+          "Confidence (1–5) that this ticket should be closed today **without** notifying the unit ISSM.",
+        expected: { type: "confidence", expectedRange: [1, 2] },
+        debriefMd:
+          "**1 or 2.** The local-account ask is a cybersecurity-exception request; closing it as a routine help-desk no without informing the ISSM means the ISSM never sees the *pattern* the ticket history exposes. The point of routing is not that any one ticket is alarming on its own — it is that the right owner gets to see all of their tickets.\n\n**Owners.** RAPIDS for the CAC. Unit ISSM under AR 25-2 for the local-account / borrowed-login exception ask. Supporting ACI office under AR 381-12 for the pattern-of-probing-requests referral. COR + KO for the contract-performance reschedule. The help desk's job is to keep its lane and send each piece to the lane that owns it.",
+      },
+    ],
+  },
+
+  // ─── Quarterly recertification: orphan privileged account ───
+  {
+    slug: "insider-recertification-orphan-admin-001",
+    title: "Recertification: An Orphan Privileged Account",
+    summary:
+      "A quarterly access review surfaces a Domain Admin equivalent account with no documented owner, a long dormancy, and a recent burst of failed logons. Decide what category — or categories — this belongs in.",
+    skillAreas: ["account_compromise", "df_artifacts", "report_writing", "inference_discipline"],
+    difficulty: 3,
+    estimatedMinutes: 22,
+    tags: ["insider_risk", "owner_routing", "privileged_access", "recertification", "ar25_2", "inference_discipline"],
+    lane: "insider_risk",
+    module: "Account governance",
+    sequence: 1,
+    brief: `
+# Brief
+
+You are doing the quarterly privileged-account recertification
+for a brigade-equivalent unit's Active Directory forest. The
+recert tooling has surfaced a single row that nobody on the
+account-review team can immediately explain.
+
+The account — \`svc-rebuild-admin\` — is a member of a group
+nested into **Domain Admins**. It has no documented owner in
+the privileged-access register, the user who created it has
+been off the rolls for over a year, and the workstation it
+last successfully authenticated from has been physically
+decommissioned. There has been no successful logon in 13
+months. In the last 30 days, however, the account has accrued
+a number of failed-logon events from a single developer
+workstation that *does* still exist.
+
+> The hard step here is **not** producing a one-sentence
+> verdict. It is recognising that the row sits in more than one
+> reportable category at the same time, and routing it
+> accordingly. "Hygiene problem" and "possible compromise" are
+> not mutually exclusive — a privileged orphan account is both,
+> and a defensible response treats it as both.
+
+You will read:
+
+- The single recertification row, as the tooling presents it.
+- A 30-day slice of authentication events for the account.
+- A short reference on the local privileged-access policy and
+  what "orphan" means in the recert taxonomy.
+`.trim(),
+    artifacts: [
+      {
+        ordinal: 1,
+        displayName: "recert-row.json",
+        kind: "json",
+        mimeType: "application/json; charset=utf-8",
+        bytes: utf8(
+          JSON.stringify(
+            {
+              account: "CORP\\svc-rebuild-admin",
+              account_type: "user (not gMSA)",
+              created_utc: "2024-06-12T19:44:00Z",
+              created_by: "CORP\\b.maddox (DEPARTED 2024-11-30 — account disabled, then deleted 2025-03-01)",
+              direct_group_memberships: [
+                "rebuild-ops",
+              ],
+              nested_into: [
+                "Domain Admins (via rebuild-ops → tier0-ops → Domain Admins)",
+              ],
+              documented_owner_in_pam_register: null,
+              last_password_change_utc: "2024-06-12T19:44:30Z",
+              last_successful_logon_utc: "2025-04-04T03:11:00Z",
+              last_successful_logon_host: "OLD-DC-RETIRE (decommissioned 2025-05; chassis turned in 2025-06)",
+              recent_failed_logon_count_30d: 14,
+              recent_failed_logon_source_hosts: ["WS-DEV-217"],
+              recert_attestation_status: "no owner has attested in two prior cycles",
+            },
+            null,
+            2,
+          ) + "\n",
+        ),
+      },
+      {
+        ordinal: 2,
+        displayName: "auth-events-30d.csv",
+        kind: "csv",
+        mimeType: "text/csv; charset=utf-8",
+        bytes: utf8(
+          [
+            "ts_utc,event,source_host,workstation_user,result,error_code",
+            "2026-10-27T13:02:11Z,4625 failed logon,WS-DEV-217,t.albright,failure,0xC000006A (bad password)",
+            "2026-10-27T13:02:14Z,4625 failed logon,WS-DEV-217,t.albright,failure,0xC000006A (bad password)",
+            "2026-10-29T09:18:50Z,4625 failed logon,WS-DEV-217,t.albright,failure,0xC000006A (bad password)",
+            "2026-11-02T17:44:01Z,4625 failed logon,WS-DEV-217,t.albright,failure,0xC000006A (bad password)",
+            "2026-11-02T17:44:03Z,4625 failed logon,WS-DEV-217,t.albright,failure,0xC000006A (bad password)",
+            "2026-11-08T11:21:00Z,4625 failed logon,WS-DEV-217,t.albright,failure,0xC000006A (bad password)",
+            "2026-11-12T08:55:11Z,4625 failed logon,WS-DEV-217,t.albright,failure,0xC000006A (bad password)",
+            "2026-11-12T08:55:13Z,4625 failed logon,WS-DEV-217,t.albright,failure,0xC000006A (bad password)",
+            "2026-11-15T20:02:22Z,4625 failed logon,WS-DEV-217,t.albright,failure,0xC000006A (bad password)",
+            "2026-11-18T07:31:01Z,4625 failed logon,WS-DEV-217,t.albright,failure,0xC000006A (bad password)",
+            "2026-11-18T07:31:04Z,4625 failed logon,WS-DEV-217,t.albright,failure,0xC000006A (bad password)",
+            "2026-11-19T16:42:45Z,4625 failed logon,WS-DEV-217,t.albright,failure,0xC000006A (bad password)",
+            "2026-11-19T16:42:47Z,4625 failed logon,WS-DEV-217,t.albright,failure,0xC000006A (bad password)",
+            "2026-11-21T10:15:00Z,4625 failed logon,WS-DEV-217,t.albright,failure,0xC000006A (bad password)",
+          ].join("\n") + "\n",
+        ),
+      },
+      {
+        ordinal: 3,
+        displayName: "pam-policy-note.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "Local privileged-access policy (training extract)",
+            "-------------------------------------------------",
+            "",
+            "* Every privileged AD account MUST have a documented owner",
+            "  in the PAM register, re-attested each quarter. An account",
+            "  with no owner across two consecutive cycles is, by",
+            "  definition, an \"orphan\" under the recert taxonomy.",
+            "",
+            "* Service accounts must be group-managed service accounts",
+            "  (gMSAs) where the host supports them; plain user accounts",
+            "  named with an `svc-` prefix are tolerated only with an",
+            "  ISSM-signed exception on file. There is no exception on",
+            "  file for `svc-rebuild-admin`.",
+            "",
+            "* Orphan privileged accounts are a finding in their own",
+            "  right under AR 25-2 (privileged account management) and",
+            "  must be remediated regardless of whether any current",
+            "  malicious activity is suspected.",
+            "",
+            "* Repeated failed-logon attempts against a privileged",
+            "  account from a workstation that does not own the account",
+            "  are a separate, independently-reportable cybersecurity",
+            "  event — they meet the threshold for a credential-access",
+            "  attempt regardless of whether they succeed.",
+            "",
+            "* T. Albright (the WS-DEV-217 console user) is a current",
+            "  developer in good standing with no privileged-group",
+            "  membership and no documented business reason to be",
+            "  testing credentials against `svc-rebuild-admin`.",
+            "",
+          ].join("\n"),
+        ),
+      },
+    ],
+    indicatorSets: [
+      {
+        slug: "orphan-admin-indicators",
+        displayName: "Observations from the recertification row + 30-day auth slice",
+        items: [
+          {
+            id: "no-owner",
+            label:
+              "The account has no documented owner in the PAM register and has not been attested in two consecutive recert cycles.",
+            evidenceRef: "recert-row.json",
+          },
+          {
+            id: "creator-departed",
+            label:
+              "The creating account belongs to a user who departed in late 2024; the creating account itself has been deleted.",
+            evidenceRef: "recert-row.json",
+          },
+          {
+            id: "nested-into-da",
+            label:
+              "The account is nested into Domain Admins (rebuild-ops → tier0-ops → Domain Admins) — a tier-0 privilege escalation through group-nesting that's easy to miss on a flat membership read.",
+            evidenceRef: "recert-row.json",
+          },
+          {
+            id: "stale-since-2025-04",
+            label:
+              "Last successful logon was over a year ago, from a host that was physically decommissioned shortly after.",
+            evidenceRef: "recert-row.json",
+          },
+          {
+            id: "no-issm-exception",
+            label:
+              "An `svc-` prefix user account (not a gMSA) requires an ISSM-signed exception on file. None exists for this account.",
+            evidenceRef: "pam-policy-note.txt",
+          },
+          {
+            id: "failed-bursts-from-dev-ws",
+            label:
+              "Fourteen failed-logon attempts in the last 30 days against this account, all sourced from a single developer workstation (WS-DEV-217), often in same-minute pairs — a shape consistent with manual or scripted password guessing.",
+            evidenceRef: "auth-events-30d.csv",
+          },
+          {
+            id: "no-business-reason",
+            label:
+              "T. Albright (the WS-DEV-217 console user) has no privileged-group membership and no documented business reason to be authenticating as `svc-rebuild-admin`.",
+            evidenceRef: "pam-policy-note.txt",
+          },
+        ],
+      },
+    ],
+    questions: [
+      {
+        ordinal: 1,
+        type: "multi_choice",
+        weight: 2,
+        promptMd:
+          "Which statements are **facts** at this point?",
+        options: [
+          {
+            id: "is-orphan-by-definition",
+            label:
+              "`svc-rebuild-admin` meets the local definition of an orphan privileged account.",
+          },
+          {
+            id: "has-da-equivalent-access",
+            label:
+              "The account has Domain Admin-equivalent access, via group-nesting through `rebuild-ops` and `tier0-ops`.",
+          },
+          {
+            id: "credential-being-guessed",
+            label:
+              "Someone is actively guessing this account's password from WS-DEV-217.",
+          },
+          {
+            id: "compromise-occurred",
+            label:
+              "The account has been compromised.",
+          },
+          {
+            id: "albright-malicious",
+            label:
+              "T. Albright is wittingly attempting to escalate privilege.",
+          },
+        ],
+        allowMultiple: true,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["is-orphan-by-definition", "has-da-equivalent-access"],
+          allowMultiple: true,
+        },
+        debriefMd: [
+          "**Fact:**",
+          "",
+          "- The account meets the policy definition of an orphan (no owner across two cycles) and has tier-0 access through group nesting. Both are read directly from the row.",
+          "",
+          "**Not fact (yet):**",
+          "",
+          "- *Credential being guessed* — the failure shape is **consistent with** password guessing, but a benign explanation exists (a forgotten scheduled task, a CI runner still wired to the old service identity, a developer mistakenly typing the wrong account name in a PowerShell session). Don't promote pattern-match to conclusion.",
+          "- *Compromise occurred* — no successful logon is recorded. A failed-logon spree is a credential-access attempt, not a successful compromise.",
+          "- *Albright malicious* — the events are sourced from his workstation; that names a host, not a person, and certainly not an intent. Albright could be the actor, could be someone else at his keyboard, or could be a process running under his console session he didn't know about.",
+        ].join("\n"),
+      },
+      {
+        ordinal: 2,
+        type: "select_indicators",
+        weight: 2,
+        indicatorSetSlug: "orphan-admin-indicators",
+        promptMd:
+          "Pick the observations that **most directly support** treating the recent failed logons as an active credential-access attempt worth a same-day response (rather than a long-standing hygiene-only matter).",
+        expected: {
+          type: "select_indicators",
+          correctIds: [
+            "nested-into-da",
+            "failed-bursts-from-dev-ws",
+            "no-business-reason",
+          ],
+        },
+        debriefMd: [
+          "**Most directly supporting:**",
+          "",
+          "- Domain Admin-equivalent reach makes any successful credential guess catastrophically expensive. Failed attempts against tier-0 are not a routine misfire — they're a same-day response.",
+          "- The burst pattern (14 attempts, several in same-minute pairs) is the shape of intentional credential testing, not the long-tail noise of a forgotten background process.",
+          "- No business reason for the WS-DEV-217 console user to authenticate as this account anchors the attempt as off-pattern even before identifying the actor.",
+          "",
+          "**Hygiene-relevant but not same-day-urgent on their own:**",
+          "",
+          "- *No owner / no attestation* — that is a standing AR 25-2 finding regardless of the failed logons.",
+          "- *Creator departed* — important context for the hygiene finding; doesn't by itself elevate to same-day.",
+          "- *Stale since 2025-04* — explains why nobody noticed; doesn't move the urgency dial alone.",
+          "- *No ISSM exception* — a paperwork-level finding under PAM policy; the cyber-event urgency is separate.",
+        ].join("\n"),
+      },
+      {
+        ordinal: 3,
+        type: "multi_choice",
+        weight: 2,
+        promptMd:
+          "Pick the **reportable categories** this row falls into and the correct owner routing.",
+        options: [
+          {
+            id: "hygiene-finding-issm",
+            label:
+              "Privileged-account-management finding under AR 25-2: orphan tier-0 account with no documented owner. Owner: unit ISSM, regardless of what the failed-logon investigation finds.",
+          },
+          {
+            id: "credential-access-issm",
+            label:
+              "Credential-access attempt against a tier-0 account. Owner: unit ISSM as cybersecurity-incident lead under AR 25-2 cyberspace-reportable categories; cybersecurity service provider engaged as appropriate.",
+          },
+          {
+            id: "ci-referral-aci",
+            label:
+              "Referral to the supporting ACI office under AR 381-12 if the WS-DEV-217 investigation surfaces facts (not assumptions) consistent with insider behaviour by a witting or unwitting human actor.",
+          },
+          {
+            id: "usacidc-on-criminal-predicate",
+            label:
+              "USACIDC engagement only **if and when** the investigation develops a criminal predicate (e.g. confirmed unauthorized access, attempted intrusion attributable to a person).",
+          },
+          {
+            id: "close-as-clean-up",
+            label:
+              "Treat as a clean-up item: delete the account and move on, since there's no successful logon to investigate.",
+          },
+          {
+            id: "blame-albright-and-discipline",
+            label:
+              "Refer T. Albright to his supervisor for disciplinary action on the strength of the workstation attribution.",
+          },
+        ],
+        allowMultiple: true,
+        expected: {
+          type: "multi_choice",
+          correctIds: [
+            "hygiene-finding-issm",
+            "credential-access-issm",
+            "ci-referral-aci",
+            "usacidc-on-criminal-predicate",
+          ],
+          allowMultiple: true,
+        },
+        debriefMd: [
+          "**The point of the question:** the same row reasonably sits in multiple categories. Routing it as only one is the common new-analyst error.",
+          "",
+          "- *Hygiene under AR 25-2* — orphan tier-0 with no exception is a standing finding regardless of anything else.",
+          "- *Credential-access incident under AR 25-2* — the failed-logon pattern is independently reportable; the ISSM is the lead.",
+          "- *ACI referral under AR 381-12* — appropriate **once the WS-DEV-217 investigation produces facts** about who or what was driving the attempts. Don't send ACI a person's name on the strength of a workstation attribution alone.",
+          "- *USACIDC* — downstream criminal-investigative authority; engaged only when the investigation develops an articulable criminal predicate.",
+          "",
+          "**Wrong:**",
+          "",
+          "- *Delete-and-move-on* destroys the very artefact (the live account, with its current credentials and the failed-logon trail) the credential-access investigation needs to identify the actor and the entry technique. Disable + preserve, don't delete, until the investigation closes.",
+          "- *Discipline Albright* on workstation attribution alone confuses a host observation with a human conclusion — the same error pattern the witting-insider scenario warned against.",
+        ].join("\n"),
+      },
+      {
+        ordinal: 4,
+        type: "confidence",
+        weight: 1,
+        promptMd:
+          "Confidence (1–5) that this row can be safely closed as **hygiene-only** without raising the credential-access incident track.",
+        expected: { type: "confidence", expectedRange: [1, 2] },
+        debriefMd:
+          "**1 or 2.** Hygiene is necessary but not sufficient here. Closing the row as a tidy-up loses the credential-access signal and the chance to identify the actor while the failed-logon source is still live. The defensible posture is: open the AR 25-2 hygiene finding and the AR 25-2 credential-access incident as two separate, parallel work items, with the ACI referral held pending facts from the WS-DEV-217 investigation.",
+      },
+    ],
+  },
 ];
