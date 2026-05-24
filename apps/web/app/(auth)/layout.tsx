@@ -1,4 +1,7 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
+
+const SUPPORT_URL = process.env.SUPPORT_URL?.trim() || null;
 
 // Two-column shell for /login + /register. Stacks vertically on
 // narrow screens via the .auth-shell media query.
@@ -21,9 +24,27 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
             <li>Admin tools for content, accounts, and challenge review.</li>
           </ul>
         </div>
-        <p className="auth-footer-note">
-          © {new Date().getFullYear()} CICyberLab. Fictional, sanitized
-          examples for training only.
+        <p
+          className="auth-footer-note"
+          style={{ display: "flex", flexWrap: "wrap", gap: ".75rem", alignItems: "center" }}
+        >
+          <span>
+            © {new Date().getFullYear()} CICyberLab. Fictional, sanitized
+            examples for training only.
+          </span>
+          <Link href="/about" style={{ color: "inherit", opacity: 0.8 }}>
+            About
+          </Link>
+          {SUPPORT_URL ? (
+            <a
+              href={SUPPORT_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: "inherit", opacity: 0.8 }}
+            >
+              Support hosting costs
+            </a>
+          ) : null}
         </p>
       </aside>
       <main className="auth-form-panel">{children}</main>
