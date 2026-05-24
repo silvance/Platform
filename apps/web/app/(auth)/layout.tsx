@@ -35,6 +35,9 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
           <Link href="/about" style={{ color: "inherit", opacity: 0.8 }}>
             About
           </Link>
+          <Link href="/privacy" style={{ color: "inherit", opacity: 0.8 }}>
+            Privacy
+          </Link>
           {SUPPORT_URL ? (
             <a
               href={SUPPORT_URL}
