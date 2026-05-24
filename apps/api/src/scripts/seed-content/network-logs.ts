@@ -470,7 +470,7 @@ Reasonable signals that the noise is benign:
           "Confidence (1–5) that the `dyn-vp.io` activity is malicious based ONLY on these DNS rows.",
         expected: { type: "confidence", expectedRange: [2, 3] },
         debriefMd:
-          "**2 or 3.** The pattern is suspicious enough that an analyst should pivot. It is not yet proof: legitimate services occasionally rotate dynamic domains, and a single resolved name + one revisit is a thin record. Convert it into a confidence-5 finding via host-side process attribution and outbound-connection corroboration.",
+          "**2 or 3.** The pattern is suspicious enough that an analyst should pivot. It is not yet proof: legitimate services occasionally rotate dynamic domains, and a single resolved name + one revisit is a thin record. Convert it into a confidence-5 finding via host-side process attribution and outbound-connection corroboration.\n\n**Owner.** Initial response goes through the unit ISSM under AR 25-2; supporting ACI is involved if attribution links the activity to a foreign intelligence entity.",
       },
     ],
   },
@@ -906,7 +906,7 @@ host-side process attribution and destination identification.
           "Confidence (1–5) that the 198.51.100.77 traffic is malicious C2 based ONLY on these artefacts.",
         expected: { type: "confidence", expectedRange: [2, 3] },
         debriefMd:
-          "**2 or 3.** The cadence + direct-IP + uniform payload + no-DNS combination is suspicious enough to pursue. It is not by itself proof: legitimate apps (some VPN clients, telemetry agents, push-notification services) also beacon. Convert to a confidence-5 finding via host-side process identification and destination attribution.",
+          "**2 or 3.** The cadence + direct-IP + uniform payload + no-DNS combination is suspicious enough to pursue. It is not by itself proof: legitimate apps (some VPN clients, telemetry agents, push-notification services) also beacon. Convert to a confidence-5 finding via host-side process identification and destination attribution.\n\n**Owner.** Unit ISSM owns the incident-response track under AR 25-2 (cybersecurity service provider coordination as needed); supporting ACI is involved if attribution links the activity to a foreign intelligence entity.",
       },
     ],
   },

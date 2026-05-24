@@ -245,6 +245,8 @@ Distinguish:
           "A **3 or 4** reflects calibrated reasoning given the available evidence: technical auth failures + Reply-To/Return-Path divergence + lookalike domain registration cluster strongly toward BEC, but proving the attacker accessed the vendor's account vs. simply impersonating it externally requires more work.",
           "",
           "A **1 or 2** ignores the multiple corroborating signals already in the artifacts.",
+          "",
+          "**Owners.** Financial-fraud routing on an Army-contracted vendor relationship runs through the cognizant contracting officer (KO) and the resource manager; the unit ISSM owns mail-gateway / DMARC follow-up under AR 25-2; the supporting ACI office is involved if attribution links the campaign to a foreign intelligence entity.",
         ].join("\n"),
       },
       {
@@ -427,7 +429,7 @@ reportable cyberspace indicators.
           "On a 1–5 scale, how confident are you that this is impersonation rather than a legitimate request from Alex?",
         expected: { type: "confidence", expectedRange: [4, 5] },
         debriefMd:
-          "SPF fail + DMARC fail + Reply-To divergence + lookalike Return-Path together is a strong cluster. Out-of-band confirmation (call Alex on a known number) is still the operational requirement, but the technical signal supports a high-confidence determination of impersonation.",
+          "SPF fail + DMARC fail + Reply-To divergence + lookalike Return-Path together is a strong cluster. Out-of-band confirmation (call Alex on a known number) is still the operational requirement, but the technical signal supports a high-confidence determination of impersonation.\n\n**Owners.** HR + payroll + the unit ISSM (DMARC follow-up for the spoofed domain); supporting ACI if the campaign attributes to a foreign intelligence entity rather than ordinary financial fraud.",
       },
       {
         ordinal: 3,

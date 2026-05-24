@@ -223,6 +223,8 @@ the attribution inferences.
           "- *S. LOPEZ wrote it* over-relies on the DOCX core.xml `Author` field, which is metadata an author (or anyone with the file open in Word) can edit. It's a *lead*, not proof. The mount history shows LOPEZ mounted the device but doesn't establish authorship.",
           "",
           "**Reporting framing.** The presence of `(SECRET)` markers on a document on an unmanaged USB implicates the *unauthorized disclosure* family of reportable counterintelligence incidents; whether it crosses into *deliberate security compromise* depends entirely on what follow-up shows about intent. The carved-bytes finding alone supports reporting the *incident*; it does not by itself support an attribution claim against any named individual.",
+          "",
+          "**Owners.** Three routes can be running concurrently: the unit ISSM owns the cybersecurity-incident track (spillage handling on the affected systems); the supporting ACI office owns the CI track once attribution starts to take shape; USACIDC enters the picture only if intent indicators surface that take it from CI inquiry to criminal investigation. Imaging + chain of custody happens regardless.",
         ].join("\n"),
       },
       {
@@ -485,7 +487,7 @@ answer.
           "Confidence (1–5) that the user **did NOT execute** util-x.exe, based ONLY on these artifacts.",
         expected: { type: "confidence", expectedRange: [2, 4] },
         debriefMd:
-          "**3 (or thereabouts).** Prefetch is enabled on this host, the listing is complete, there's no entry for util-x.exe, and Sysmon ProcessCreate in the window shows no util-x.exe. That's suggestive of non-execution, but a **5** would over-claim. Investigative next steps before finalizing: check Amcache + Shimcache + UserAssist, expand the Sysmon window, confirm the file wasn't renamed before execution, and interview the user. Hold the writeup at \"no evidence of execution observed,\" not \"the user did not execute.\"",
+          "**3 (or thereabouts).** Prefetch is enabled on this host, the listing is complete, there's no entry for util-x.exe, and Sysmon ProcessCreate in the window shows no util-x.exe. That's suggestive of non-execution, but a **5** would over-claim. Investigative next steps before finalizing: check Amcache + Shimcache + UserAssist, expand the Sysmon window, confirm the file wasn't renamed before execution, and interview the user. Hold the writeup at \"no evidence of execution observed,\" not \"the user did not execute.\"\n\n**Owner.** Initial incident handling is the unit ISSM (Army cybersecurity reporting chain). ACI involvement is contingent on what attribution surfaces — a credential-dumping tool hash on a DA-personnel host is not by itself a CI matter; the FIE-linked attribution makes it one.",
       },
     ],
   },
@@ -669,7 +671,7 @@ that gets called out in any subsequent legal review.
           "Confidence (1–5) that the Amcache timestamp `2026-09-03T14:08:25Z` is the **execution** time.",
         expected: { type: "confidence", expectedRange: [1, 2] },
         debriefMd:
-          "**1 or 2.** Amcache's timestamp is first-seen, not execution. On this case it happens to fall close to the download time (also 2026-09-03T14:08:23Z in the parallel artifact set) — that's the OS noticing the new file, not the user running it. The execution timestamp is the one in Prefetch, the day after.",
+          "**1 or 2.** Amcache's timestamp is first-seen, not execution. On this case it happens to fall close to the download time (also 2026-09-03T14:08:23Z in the parallel artifact set) — that's the OS noticing the new file, not the user running it. The execution timestamp is the one in Prefetch, the day after.\n\n**Owner.** The DFE's output goes back to the ISSM as input to the cybersecurity-incident response on the host; ACI consumes the same output for any CI-linked attribution work that follows.",
       },
     ],
   },
