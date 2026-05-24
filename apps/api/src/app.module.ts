@@ -15,6 +15,7 @@ import { ArtifactsModule } from "./modules/artifacts/artifacts.module";
 import { AttemptsModule } from "./modules/attempts/attempts.module";
 import { AuthoringModule } from "./modules/authoring/authoring.module";
 import { AccessCodesModule } from "./modules/access-codes/access-codes.module";
+import { AnalyticsModule } from "./modules/analytics/analytics.module";
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { AccessCodesModule } from "./modules/access-codes/access-codes.module";
     AttemptsModule,
     AuthoringModule,
     AccessCodesModule,
+    AnalyticsModule,
     HealthModule,
     HelloModule,
   ],
