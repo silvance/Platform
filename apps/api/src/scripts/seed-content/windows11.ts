@@ -696,7 +696,7 @@ question turns on what SRUM does and does not prove.
           "Confidence (1–5) that p.singh **personally caused** the 398 MiB outbound flow to `store.cb-archive.example` at ~20:00Z on 2026-10-14, based ONLY on these artifacts.",
         expected: { type: "confidence", expectedRange: [3, 4] },
         debriefMd:
-          "**3–4.** The volume + per-user SRUM bucket + DNS cache + DLP destination + a custom-looking uploader binary spawning under her shell session at 20:01Z is a coherent story, but several gaps remain: SRUM attributes the bytes to `firefox.exe`, not to `cb-uploader.exe`; no process-to-socket correlation captures *which* process owned the TLS connection; user could have left her session unlocked. A *5* would require either perimeter NetFlow + host socket map correlation or an EDR network-connect record naming the process. Stop at 3–4 until that comes in.",
+          "**3–4.** The volume + per-user SRUM bucket + DNS cache + DLP destination + a custom-looking uploader binary spawning under her shell session at 20:01Z is a coherent story, but several gaps remain: SRUM attributes the bytes to `firefox.exe`, not to `cb-uploader.exe`; no process-to-socket correlation captures *which* process owned the TLS connection; user could have left her session unlocked. A *5* would require either perimeter NetFlow + host socket map correlation or an EDR network-connect record naming the process. Stop at 3–4 until that comes in.\n\n**Don't yet claim:** that *cb-uploader.exe* owned the upload (SRUM contradicts), that the upload contained sensitive material (SRUM is byte-counts, not payload), or personal action by the named user (session-vs-keyboard not yet established). **Owners:** unit ISSM owns incident handling under AR 25-2; supporting ACI under AR 381-12 para 4-6 (Army Insider Threat Program).",
       },
     ],
   },
@@ -1915,7 +1915,7 @@ yet.
           "Confidence (1–5) that the **12-02 OneDrive upload sequence** (7z archive + three files to corporate OneDrive + handoff email) is **on its own** sufficient to support an unauthorized-exfil claim.",
         expected: { type: "confidence", expectedRange: [1, 2] },
         debriefMd:
-          "**1 or 2.** The 12-02 sequence reads as a sanctioned handoff — corporate-tenant OneDrive, an email naming the same files, ops-team recipients, password coordination with a named colleague. Without contradicting facts (the email is a fabrication, the recipients deny it, the OneDrive share permits external access, etc.), citing the 12-02 sequence as exfil evidence would be over-claiming.",
+          "**1 or 2.** The 12-02 sequence reads as a sanctioned handoff — corporate-tenant OneDrive, an email naming the same files, ops-team recipients, password coordination with a named colleague. Without contradicting facts (the email is a fabrication, the recipients deny it, the OneDrive share permits external access, etc.), citing the 12-02 sequence as exfil evidence would be over-claiming.\n\n**Don't yet claim:** that the 12-03 rclone activity was exfil to an unsanctioned destination (destination unknown until NetFlow is pulled), that the USB carried corporate material (not yet imaged), or that the 12-02 sequence is itself part of the exfil pattern (reads as sanctioned handoff). **Owners:** unit ISSM owns incident handling under AR 25-2; supporting ACI under AR 381-12 para 4-6 owns the insider-threat referral; OSJA / supporting trial counsel govern downstream measures.",
       },
     ],
   },

@@ -246,7 +246,7 @@ A correct answer separates:
           "On a 1–5 scale, how confident are you this is a phishing attempt and not a misconfigured legitimate notification?",
         expected: { type: "confidence", expectedRange: [4, 5] },
         debriefMd:
-          "A **4 or 5** is appropriate. The combination of lookalike domain + auth-pass for that lookalike + body link on the same lookalike + injection from a shared-hosting web app is not a misconfiguration profile — it's the standard profile of a phishing campaign that bought a lookalike domain and provisioned it correctly. Below **4** under-weights the converging signals.",
+          "A **4 or 5** is appropriate. The combination of lookalike domain + auth-pass for that lookalike + body link on the same lookalike + injection from a shared-hosting web app is not a misconfiguration profile — it's the standard profile of a phishing campaign that bought a lookalike domain and provisioned it correctly. Below **4** under-weights the converging signals.\n\n**Owners.** Unit ISSM owns mail-gateway tuning + DMARC follow-up for the spoofed parent domain; supporting ACI office is involved if attribution links the campaign to a foreign intelligence entity.",
       },
     ],
   },
@@ -461,7 +461,7 @@ Separate:
           "Confidence (1–5) that the macro WOULD successfully execute and download the payload on a typical hardened workstation in your AOR.",
         expected: { type: "confidence", expectedRange: [1, 3] },
         debriefMd:
-          "**Lower** confidence — anywhere from 1 to 3 — is appropriate. Whether the macro actually fires depends on Office macro policy, Protected View / Mark-of-the-Web, EDR, and network-egress filtering. Static review can show the macro is *wired*; whether it *runs* is a runtime question that needs a sandbox + a different team, and is not answerable from the artifacts here.",
+          "**Lower** confidence — anywhere from 1 to 3 — is appropriate. Whether the macro actually fires depends on Office macro policy, Protected View / Mark-of-the-Web, EDR, and network-egress filtering. Static review can show the macro is *wired*; whether it *runs* is a runtime question that needs a sandbox + a different team, and is not answerable from the artifacts here.\n\n**Owners.** Unit ISSM owns mail-gateway and EDR-policy tuning under AR 25-2; supporting ACI is involved if the lure targets a critical-program / S&T role (paras 5-4/5-5 of AR 381-12 give the briefing scope) or if attribution links the campaign to a foreign intelligence entity.",
       },
     ],
   },
@@ -564,7 +564,7 @@ the mismatch proves and what it doesn't.
           "Confidence (1–5) that this is a CEO-fraud attempt rather than a legitimate (if unusual) request from Pat.",
         expected: { type: "confidence", expectedRange: [4, 5] },
         debriefMd:
-          "High confidence is warranted. Gift-card-for-offsite via email with Reply-To to an external mailbox is the canonical CEO-fraud script. The verification call costs nothing and is the correct next step regardless of confidence.",
+          "High confidence is warranted. Gift-card-for-offsite via email with Reply-To to an external mailbox is the canonical CEO-fraud script. The verification call costs nothing and is the correct next step regardless of confidence.\n\n**Owners.** Unit ISSM owns mail-gateway / DMARC follow-up; the supporting ACI office is involved if attribution links the campaign to a foreign intelligence entity rather than ordinary financial fraud.",
       },
     ],
   },
@@ -657,7 +657,7 @@ user is asking whether it's safe to reply.
         promptMd: "Confidence (1–5) that this is impersonation.",
         expected: { type: "confidence", expectedRange: [4, 5] },
         debriefMd:
-          "High. The actual address is on a free webmail domain with a chosen local-part that mimics the executive. The display name is the giveaway.",
+          "High. The actual address is on a free webmail domain with a chosen local-part that mimics the executive. The display name is the giveaway.\n\n**Owners.** Unit ISSM owns mail-gateway tuning; supporting ACI is involved if attribution links the campaign to a foreign intelligence entity.",
       },
     ],
   },
@@ -748,7 +748,7 @@ expiry. Look closely at the sender domain.
         promptMd: "Confidence (1–5) that this is phishing rather than a legitimate Workday notification.",
         expected: { type: "confidence", expectedRange: [4, 5] },
         debriefMd:
-          "High. Real Workday password notifications come from `workday.com` (or a tenant-specific subdomain of it). A subdomain-stacked URL on a freshly-registered lookalike base domain is the canonical credential-phish pattern.",
+          "High. Real Workday password notifications come from `workday.com` (or a tenant-specific subdomain of it). A subdomain-stacked URL on a freshly-registered lookalike base domain is the canonical credential-phish pattern.\n\n**Owners.** Unit ISSM owns the gateway / DMARC follow-up; the unit's HR/IAM team owns the legitimate Workday password-reset channel; supporting ACI is involved if attribution links the campaign to a foreign intelligence entity.",
       },
     ],
   },
@@ -840,7 +840,7 @@ Do not scan the QR code with a personal phone.
         promptMd: "Confidence (1–5) this is a social-engineering operation targeting employees.",
         expected: { type: "confidence", expectedRange: [3, 5] },
         debriefMd:
-          "**3 or 4** is well-calibrated. The cluster (unsigned flyer, urgency framing, off-brand TLD, hr-benefits-portal subdomain) strongly suggests phishing, but a printed flyer in a break-room could also be a clumsy legitimate vendor. The verification step (call HR, who will confirm they didn't post it) resolves the question — and is cheap.",
+          "**3 or 4** is well-calibrated. The cluster (unsigned flyer, urgency framing, off-brand TLD, hr-benefits-portal subdomain) strongly suggests phishing, but a printed flyer in a break-room could also be a clumsy legitimate vendor. The verification step (call HR, who will confirm they didn't post it) resolves the question — and is cheap.\n\n**Owners.** Unit ISSM owns mail-/web-gateway tuning; building / facility security owns flyer-removal in the physical space; supporting ACI is involved if attribution links the campaign to a foreign intelligence entity.",
       },
     ],
   },

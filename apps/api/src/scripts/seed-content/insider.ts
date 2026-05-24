@@ -366,7 +366,8 @@ team is in the final two weeks of a release. Triage.
         weight: 1,
         promptMd: "Confidence (1–5) that this pattern is insider risk.",
         expected: { type: "confidence", expectedRange: [1, 2] },
-        debriefMd: "Low. The context fully explains the timing.",
+        debriefMd:
+          "Low. The context fully explains the timing.\n\n**Owners.** If the off-hours pattern *did* survive a sanity check (it doesn't here), the insider angle goes to the supporting ACI office under AR 381-12 para 4-6 (Army Insider Threat Program); the access-control / account-hygiene angle goes to the unit ISSM under AR 25-2.",
       },
     ],
   },
@@ -483,7 +484,7 @@ not a finding.
         promptMd: "Confidence (1–5) that this is data exfil.",
         expected: { type: "confidence", expectedRange: [2, 3] },
         debriefMd:
-          "Suspicious but not concluded. The temporal overlap is meaningful (mount within 30s of open is not a coincidence) — but inference here without the EDR or portal record is premature.",
+          "Suspicious but not concluded. The temporal overlap is meaningful (mount within 30s of open is not a coincidence) — but inference here without the EDR or portal record is premature.\n\n**Owners.** The cybersecurity-incident angle (unauthorized USB use, cross-team access) goes to the unit ISSM under AR 25-2 item 7 of the cyberspace reportable list; the insider angle goes to the supporting ACI office under AR 381-12 para 4-6.",
       },
     ],
   },
