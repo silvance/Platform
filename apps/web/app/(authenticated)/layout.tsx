@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { readToken, requireUser } from "@/lib/session";
 import { readTheme } from "@/lib/theme";
 import { api, ApiError } from "@/lib/api";
+import { SiteFooter } from "@/components/site-footer";
 import { AppHeader } from "./app-header";
 
 // Authenticated shell. Header is its own client-aware component
@@ -46,6 +47,7 @@ export default async function AuthenticatedLayout({
         pendingApprovalCount={pendingApprovalCount}
       />
       {children}
+      <SiteFooter />
     </>
   );
 }
