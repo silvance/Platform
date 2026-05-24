@@ -77,7 +77,7 @@ const BASE_ROW = {
   source: "authored",
   importedPackHash: null,
   tags: ["a"],
-  // M25 curated-library defaults — every row mocked through these
+ // curated-library defaults — every row mocked through these
   // tests carries a lane so the toListItem mapper has something to
   // serialise.
   lane: "foundations" as const,
@@ -211,7 +211,7 @@ describe("ScenariosService (unit)", () => {
     });
   });
 
-  describe("laneOverview (M25)", () => {
+  describe("laneOverview", () => {
     it("returns one row per Lane enum value with counts of published scenarios", async () => {
       const { prisma } = makeFakePrisma([
         { ...BASE_ROW, id: "1", slug: "a", lane: "foundations" },

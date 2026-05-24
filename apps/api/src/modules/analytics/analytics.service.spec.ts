@@ -1,7 +1,7 @@
 import { AnalyticsService } from "./analytics.service";
 import type { PrismaService } from "../database/prisma.service";
 
-// M26: focused test of the aggregation math. Mock just the
+// focused test of the aggregation math. Mock just the
 // Prisma surface area the service touches; same pattern as the
 // other -.service.spec files in this repo.
 

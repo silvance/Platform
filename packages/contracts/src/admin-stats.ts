@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-// M21d admin overview stats. Read-only summary intended for
+// admin overview stats. Read-only summary intended for
 // the /admin landing cards and the header pending-approval
 // badge. Admin-only; the controller is role-guarded.
 

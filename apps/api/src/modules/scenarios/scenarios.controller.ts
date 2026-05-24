@@ -30,7 +30,7 @@ export class ScenariosController {
     return this.scenarios.list(session.user.role, session.user.id, query);
   }
 
-  // M25 lane overview. Routed under /scenarios/lanes so it sits
+ // lane overview. Routed under /scenarios/lanes so it sits
   // logically beside the /scenarios catalogue without colliding
   // with the /scenarios/:slug route (NestJS sees "lanes" as a
   // literal segment, not a slug param). Returns one summary row

@@ -26,7 +26,7 @@ A USB mass-storage device was received by your supporting ACI
 evidence custodian on **DA Form 4137 #4137-2026-114-A** after it
 was found in a shared workspace. Forensic imaging yielded the
 artifacts in this scenario. A carving pass recovered one
-DOCX-like document from **unallocated space** bearing \`(U//FOUO)\`
+DOCX-like document from **unallocated space** bearing \`(SECRET)\`
 marker text in the body. (All markings and content in this
 exercise are fictional and sanitized.)
 
@@ -116,7 +116,7 @@ the attribution inferences.
             "Document excerpt — carved from unallocated space",
             "-----------------------------------------------",
             "",
-            "(U//FOUO)  Q3 OPERATIONS SUMMARY — DRAFT",
+            "(SECRET)  Q3 OPERATIONS SUMMARY — DRAFT",
             "",
             "(U) This document summarizes the unit's Q3 operational tempo and",
             "highlights two interagency engagements that may shift in Q4. All",
@@ -127,9 +127,9 @@ the attribution inferences.
             "  Cross-functional coordination with two partner offices proceeded",
             "  on schedule.",
             "",
-            "(U) [...content elided...]",
+            "(S) [...content elided...]",
             "",
-            "(U//FOUO)  Distribution restricted to those with operational need-",
+            "(SECRET)  Distribution restricted to those with operational need-",
             "to-know. Do not forward outside the originating element.",
             "",
           ].join("\n"),
@@ -181,7 +181,7 @@ the attribution inferences.
         slug: "usb-carved-indicators",
         displayName: "Indicators bearing on attribution",
         items: [
-          { id: "marking-present", label: "Document body contains `(U//FOUO)` markings", evidenceRef: "document-excerpt.txt" },
+          { id: "marking-present", label: "Document body contains `(SECRET)` markings", evidenceRef: "document-excerpt.txt" },
           { id: "author-field-S-LOPEZ", label: "DOCX core.xml `Author` field reads `S.LOPEZ`", evidenceRef: "carving-tool-output.txt" },
           { id: "carved-from-unalloc", label: "Recovered from unallocated space (no current filesystem entry)", evidenceRef: "carving-tool-output.txt" },
           { id: "mount-history-multiple", label: "Workstation mount history shows multiple users mounted this device", evidenceRef: "workstation-mount-history.csv" },
@@ -198,7 +198,7 @@ the attribution inferences.
         promptMd:
           "From the carving output and the mount history, which of the following can you state as **fact** in the deputy SAC's writeup?",
         options: [
-          { id: "doc-was-on-device", label: "A document bearing `(U//FOUO)` markers was, at some point, written to this device." },
+          { id: "doc-was-on-device", label: "A document bearing `(SECRET)` markers was, at some point, written to this device." },
           { id: "doc-was-deleted-deliberately", label: "Someone deliberately deleted the document to conceal it." },
           { id: "device-mounted-multiple-ws", label: "This device was mounted on at least three workstations in mid-August." },
           { id: "s-lopez-wrote-it", label: "S. LOPEZ wrote the document on this device." },
@@ -222,7 +222,7 @@ the attribution inferences.
           "- *Deliberate concealment* requires showing intent — deletion alone is consistent with everything from \"finished editing, dragged to trash, emptied\" to \"deliberate destruction.\" The artifacts can't distinguish.",
           "- *S. LOPEZ wrote it* over-relies on the DOCX core.xml `Author` field, which is metadata an author (or anyone with the file open in Word) can edit. It's a *lead*, not proof. The mount history shows LOPEZ mounted the device but doesn't establish authorship.",
           "",
-          "**Reporting framing.** The presence of `(U//FOUO)` markers on a document on an unmanaged USB potentially implicates the *unauthorized disclosure* family of reportable counterintelligence incidents; whether it crosses into *deliberate security compromise* depends entirely on what follow-up shows about intent. The carved-bytes finding alone supports reporting the *incident*; it does not by itself support an attribution claim against any named individual.",
+          "**Reporting framing.** The presence of `(SECRET)` markers on a document on an unmanaged USB implicates the *unauthorized disclosure* family of reportable counterintelligence incidents; whether it crosses into *deliberate security compromise* depends entirely on what follow-up shows about intent. The carved-bytes finding alone supports reporting the *incident*; it does not by itself support an attribution claim against any named individual.",
         ].join("\n"),
       },
       {
@@ -249,7 +249,7 @@ the attribution inferences.
           "",
           "**Not leads (independently of attribution):**",
           "",
-          "- The `(U//FOUO)` markings establish the *nature* of the document, not who put it there.",
+          "- The `(SECRET)` markings establish the *nature* of the document, not who put it there.",
           "- The absence of a free-space wipe establishes the *state of the device*, not authorship.",
           "- The fact that the doc was carved from unallocated space is part of why the question is *attribution-uncertain* in the first place.",
         ].join("\n"),
@@ -1119,15 +1119,16 @@ subkey carrying:
 
 A DA-civilian analyst (\`r.becker\`) has just told you they
 opened a Word document on an unclassified workstation that
-*appeared* to carry a \`(U//FOUO)\` marker in the body. They
+*appeared* to carry a \`(SECRET)\` marker in the body. They
 closed the file immediately, didn't print, didn't email it
 anywhere, and walked over to your office to report.
 
-This is a **possible spillage**. The unclassified workstation is
-not authorised for that material. The next hour matters: the
-right sequence preserves evidence, contains the spread, and
-keeps the response defensible. The wrong sequence destroys
-evidence, contaminates witnesses, or — worst — fails to contain.
+This is a **possible classified spillage**. The unclassified
+workstation is not authorised for SECRET material. The next hour
+matters: the right sequence preserves evidence, contains the
+spread, and keeps the response defensible. The wrong sequence
+destroys evidence, contaminates witnesses, or — worst — fails to
+contain.
 
 The objective of this exercise is to pick the right steps. It is
 not to substitute for unit spillage SOP or the responsible
@@ -1254,12 +1255,12 @@ spillage happens, both of those are in the loop early.
           {
             id: "neutral-defer",
             label:
-              "\"A marker consistent with controlled-use language was observed on the document. Classification determination is the responsibility of the original-classification authority and is being coordinated. We are preserving the workstation under chain of custody.\"",
+              "\"A classified marker was observed on the document. Classification determination is the responsibility of the original-classification authority and is being coordinated. The workstation is being preserved under chain of custody.\"",
           },
           {
             id: "self-classify",
             label:
-              "\"The document is classified as (U//FOUO) and an unauthorised disclosure has occurred.\"",
+              "\"The document is classified SECRET and an unauthorised disclosure has occurred.\"",
           },
           {
             id: "minimise",

@@ -1,7 +1,7 @@
 import { AccessCodesService } from "./access-codes.service";
 import type { PrismaService } from "../database/prisma.service";
 
-// M23: validate-and-consume covers all the rejection paths the
+// validate-and-consume covers all the rejection paths the
 // registration flow collapses into a single 400.
 
 function makeFakeTx() {

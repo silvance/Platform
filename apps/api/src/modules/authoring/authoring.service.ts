@@ -1046,7 +1046,7 @@ function toSummary(
     reviewStatus: string;
     reviewNotes: string | null;
     reviewedAt: Date | null;
-    // M25 curated-library placement.
+ // curated-library placement.
     lane: string;
     module: string | null;
     sequence: number;

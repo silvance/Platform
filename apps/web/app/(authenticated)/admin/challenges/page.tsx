@@ -20,7 +20,7 @@ function readSingle(v: string | string[] | undefined): string | undefined {
   return v;
 }
 
-// M21d: per-field safeParse so a single bad URL param doesn't
+// per-field safeParse so a single bad URL param doesn't
 // wipe the rest of the filter set. Returns the salvaged query
 // plus the dropped field names.
 function parseFilters(
@@ -154,7 +154,7 @@ export default async function AdminChallengesPage({ searchParams }: Props) {
                   <td>
                     <span className={`admin-status-${s.status}`}>{s.status}</span>
                   </td>
-                  <td>{s.difficulty}/5</td>
+                  <td>Level {s.difficulty}</td>
                   <td>{s.questionCount}</td>
                   <td style={{ fontSize: ".82rem" }}>
                     <span className={chipClassFor(s.reviewStatus)}>
@@ -260,11 +260,11 @@ function FilterBar({
           className="select"
         >
           <option value="">Any</option>
-          <option value="1">1 / 5</option>
-          <option value="2">2 / 5</option>
-          <option value="3">3 / 5</option>
-          <option value="4">4 / 5</option>
-          <option value="5">5 / 5</option>
+          <option value="1">Level 1</option>
+          <option value="2">Level 2</option>
+          <option value="3">Level 3</option>
+          <option value="4">Level 4</option>
+          <option value="5">Level 5</option>
         </select>
       </label>
       <label style={{ display: "flex", flexDirection: "column", gap: ".25rem" }}>

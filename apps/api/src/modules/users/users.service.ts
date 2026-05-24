@@ -274,7 +274,7 @@ export class UsersService {
     return this.toSummary(row);
   }
 
-  // M21d helpers. Read-only; cheap aggregate queries; surfaced
+ // helpers. Read-only; cheap aggregate queries; surfaced
   // by the /admin/stats controller + the authenticated layout
   // (header pending badge).
 

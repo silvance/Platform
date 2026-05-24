@@ -69,7 +69,7 @@ export const CreateScenarioRequest = z.object({
   tags: z.array(ScenarioTag).max(20).default([]),
   status: ScenarioStatus.default("draft"),
   brief: ScenarioBriefDraft,
-  // M25 curated-library placement. Lane defaults to foundations at
+ // curated-library placement. Lane defaults to foundations at
   // the API layer so a create request that omits the field still
   // lands the scenario in a known bucket; the admin can re-bucket
   // later. Module is free-text; sequence orders within the lane.
@@ -196,7 +196,7 @@ export const AdminScenarioSummary = z.object({
   ]),
   reviewNotes: z.string().nullable(),
   reviewedAt: z.string().datetime().nullable(),
-  // M25 curated-library placement.
+ // curated-library placement.
   lane: Lane,
   module: z.string().nullable(),
   sequence: z.number().int().nonnegative(),
@@ -212,7 +212,7 @@ export type AdminScenarioListResponse = z.infer<
   typeof AdminScenarioListResponse
 >;
 
-// M21d filter contract for /admin/challenges. Per-field
+// filter contract for /admin/challenges. Per-field
 // safeParse + coercion so URL-encoded query strings round-trip
 // through the same shape the web client uses programmatically.
 //
@@ -251,7 +251,7 @@ export const AdminScenarioListQuery = z.object({
     .optional(),
   tag: z.string().min(1).max(60).optional(),
   q: z.string().min(1).max(120).optional(),
-  // M25 lane filter for the admin challenge list.
+ // lane filter for the admin challenge list.
   lane: Lane.optional(),
 });
 export type AdminScenarioListQuery = z.infer<typeof AdminScenarioListQuery>;

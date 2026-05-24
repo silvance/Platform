@@ -20,7 +20,7 @@ import { CurrentSession } from "../auth/decorators/current-user.decorator";
 import type { SessionContext } from "../auth/auth.service";
 import { ZodValidationPipe } from "../../common/zod-validation.pipe";
 
-// M23: admin CRUD for registration access codes. Mirrors the
+// admin CRUD for registration access codes. Mirrors the
 // UsersController pattern — controller-level @Roles("admin") plus
 // the global RolesGuard short-circuits anything that isn't an
 // admin session.

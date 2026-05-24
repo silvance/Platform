@@ -44,7 +44,7 @@ export function ReviewRow({ row }: Props) {
         </div>
         <div style={tagRowStyle}>
           <span className={`admin-status-${row.status}`}>{row.status}</span>
-          <span className="chip chip-difficulty">d {row.difficulty}/5</span>
+          <span className="chip chip-difficulty">Level {row.difficulty}</span>
           <span style={countStyle}>{row.artifactCount} art</span>
           <span style={countStyle}>{row.questionCount} q</span>
           {row.questionsWithNotes > 0 ? (

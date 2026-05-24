@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { Lane } from "./scenarios.js";
 
-// M26: per-scenario / per-question analytics for admins.
+// per-scenario / per-question analytics for admins.
 //
 // The platform stores ONE QuestionResponse row per (progress,
 // question), with `attemptCount` denormalised and `completedAt`

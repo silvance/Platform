@@ -18,6 +18,21 @@ export const SkillArea = z.enum([
 ]);
 export type SkillArea = z.infer<typeof SkillArea>;
 
+// Display labels for skill-area chips in the UI. The enum keys
+// are storage values; users see the right-hand strings.
+export const SKILL_AREA_LABELS: Record<SkillArea, string> = {
+  email_headers: "Email Headers",
+  bec: "BEC",
+  df_artifacts: "DF Artifacts",
+  removable_media: "Removable Media",
+  windows_artifacts: "Windows Artifacts",
+  network_logs: "Network Logs",
+  account_compromise: "Account Compromise",
+  rf_awareness: "RF Awareness",
+  report_writing: "Report Writing",
+  inference_discipline: "Reasoning Discipline",
+};
+
 // rf_awareness is an *awareness-only* module per project scope. UI code
 // uses this to render the escalation disclaimer at the top of the brief
 // and debrief; the seed/import paths use it to require a disclaimer.
@@ -32,7 +47,6 @@ export const ScenarioStatus = z.enum(["draft", "published", "archived"]);
 export type ScenarioStatus = z.infer<typeof ScenarioStatus>;
 
 // Keep in sync with `enum ArtifactKind` in apps/api/prisma/schema.prisma.
-// M3 added text, csv, json, pdf, image. M4 adds eml. M27 adds pcap.
 export const ArtifactKind = z.enum([
   "text",
   "csv",
@@ -55,8 +69,6 @@ export function defaultMimeFor(kind: ArtifactKind): string {
     case "pdf":  return "application/pdf";
     case "image": return "application/octet-stream"; // overridden by stored mime
     case "eml":  return "message/rfc822";
-    // M27: libpcap (classic) format. Wireshark / tshark / tcpdump
-    // all open this content type natively.
     case "pcap": return "application/vnd.tcpdump.pcap";
   }
 }
@@ -143,7 +155,7 @@ export const ScenarioSlug = z
   );
 export type ScenarioSlug = z.infer<typeof ScenarioSlug>;
 
-// M25: curated challenge-library lanes. Mirrors the Lane Prisma
+// curated challenge-library lanes. Mirrors the Lane Prisma
 // enum exactly — keep in sync with apps/api/prisma/schema.prisma.
 // The order here is the canonical user-facing display order for
 // the lane overview at /scenarios.
@@ -206,7 +218,7 @@ export const ScenarioListItem = z.object({
   status: ScenarioStatus,
   source: ScenarioSource,
   version: z.number().int().positive(),
-  // M25 curated-library projection.
+ // curated-library projection.
   lane: Lane,
   module: z.string().nullable(),
   sequence: z.number().int().nonnegative(),
@@ -223,7 +235,7 @@ export const ScenarioListItem = z.object({
 });
 export type ScenarioListItem = z.infer<typeof ScenarioListItem>;
 
-// M25 lane overview: one row per lane summarising counts and the
+// lane overview: one row per lane summarising counts and the
 // authenticated user's progress. Drives the new /scenarios page.
 export const LaneSummary = z.object({
   lane: Lane,
@@ -279,7 +291,7 @@ export const ScenarioListQuery = z.object({
   difficulty: z.coerce.number().int().min(1).max(5).optional(),
   tag: z.string().min(1).max(60).optional(),
   status: ScenarioStatus.optional(),
-  // M25: filter to a single lane.
+ // filter to a single lane.
   lane: Lane.optional(),
 });
 export type ScenarioListQuery = z.infer<typeof ScenarioListQuery>;

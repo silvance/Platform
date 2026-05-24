@@ -33,9 +33,9 @@ export default async function AdminReviewPage() {
         <div>
           <h1>Challenge review</h1>
           <p>
-            Playthrough log. Admin-only. Set a review verdict per scenario as
-            you walk through it; flag specific issues without leaving the
-            page. Notes don't reach regular users.
+            Admin-only. Set a review verdict per scenario as you walk through
+            it; flag specific issues without leaving the page. Notes don't
+            reach regular users.
           </p>
         </div>
       </header>

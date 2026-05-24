@@ -4,7 +4,9 @@ import { useActionState } from "react";
 import {
   LANE_LABELS,
   Lane,
+  SKILL_AREA_LABELS,
   type AdminScenarioDetail,
+  type SkillArea,
 } from "@ci-train/contracts";
 import type { ActionResult } from "./actions";
 
@@ -88,7 +90,6 @@ export function MetadataForm({ scenario, skillAreas, action }: Props) {
         />
       </label>
 
-      {/* M25 curated-library placement. */}
       <div className="admin-form-row">
         <label>
           Lane
@@ -140,7 +141,7 @@ export function MetadataForm({ scenario, skillAreas, action }: Props) {
                 value={a}
                 defaultChecked={selected.has(a as never)}
               />
-              <code>{a}</code>
+              {SKILL_AREA_LABELS[a as SkillArea]}
             </label>
           ))}
         </div>

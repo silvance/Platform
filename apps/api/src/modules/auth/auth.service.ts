@@ -69,7 +69,7 @@ export class AuthService implements OnModuleInit {
     return hash(plain, ARGON_OPTS);
   }
 
-  // Self-registration (M23: gated by an admin-issued access code).
+ // Self-registration (: gated by an admin-issued access code).
   //
   // Always returns void — the caller is the public endpoint which
   // echoes a single generic response on success. This is by design:
@@ -131,7 +131,7 @@ export class AuthService implements OnModuleInit {
           displayName: input.displayName,
           passwordHash,
           role: "user",
-          // M23: access-code-gated registrations are auto-approved.
+ // access-code-gated registrations are auto-approved.
           // The admin who issued the code is the trust anchor.
           approvedAt: new Date(),
         },

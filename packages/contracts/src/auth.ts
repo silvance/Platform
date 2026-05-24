@@ -72,8 +72,8 @@ export const ChangePasswordRequest = z
   });
 export type ChangePasswordRequest = z.infer<typeof ChangePasswordRequest>;
 
-// Self-registration. Gated by an admin-issued access code (M23) —
-// see access-codes.ts. The endpoint will create the account as
+// Self-registration. Gated by an admin-issued access code; see
+// access-codes.ts. The endpoint will create the account as
 // role=user with approvedAt set immediately so the user can sign
 // in on the next request. Default role is always "user" — the
 // register endpoint does NOT accept a role from the request body.

@@ -10,7 +10,7 @@ import { ThemeToggle } from "./theme-toggle";
 interface Props {
   user: PublicUser;
   theme: Theme;
-  // M21d: count of self-registered accounts awaiting admin
+ // count of self-registered accounts awaiting admin
   // approval. Passed from the server layout. Always 0 for
   // non-admin users (the layout doesn't fetch it).
   pendingApprovalCount: number;
@@ -21,14 +21,14 @@ const NAV_ITEMS: Array<{ href: string; label: string; admin?: boolean }> = [
   { href: "/me/progress", label: "Progress" },
   { href: "/me/security", label: "Security" },
   { href: "/admin", label: "Admin", admin: true },
-  // M21f: surface Review directly in the nav. Buried as a tile
+ // surface Review directly in the nav. Buried as a tile
   // on /admin in M21b — feedback was that operators couldn't
   // find it. A top-level link makes the playthrough surface
   // unmissable.
   { href: "/admin/review", label: "Review", admin: true },
-  // M26: per-scenario / per-question analytics.
+ // per-scenario / per-question analytics.
   { href: "/admin/analytics", label: "Analytics", admin: true },
-  // M23: registration access-code management surface.
+ // registration access-code management surface.
   { href: "/admin/access-codes", label: "Codes", admin: true },
 ];
 
@@ -47,7 +47,6 @@ export function AppHeader({ user, theme, pendingApprovalCount }: Props) {
           href={user.role === "admin" ? "/admin" : "/scenarios"}
           className="brand"
         >
-          <span className="brand-mark" aria-hidden>CL</span>
           CICyberLab
         </Link>
         <nav className="nav-links" aria-label="Primary">

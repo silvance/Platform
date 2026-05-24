@@ -10,7 +10,7 @@ import {
 
 export const dynamic = "force-dynamic";
 
-// M26: admin-only per-scenario / per-question analytics surface.
+// admin-only per-scenario / per-question analytics surface.
 // Shows which scenarios have traction and which individual
 // questions are tripping people up (low first-try-correct
 // indicates a candidate bad answer key or unclear wording).

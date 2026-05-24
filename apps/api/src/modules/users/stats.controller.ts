@@ -3,7 +3,7 @@ import type { AdminStatsResponse } from "@ci-train/contracts";
 import { UsersService } from "./users.service";
 import { Roles } from "../auth/decorators/roles.decorator";
 
-// Admin overview stats (M21d). Read-only. Lives on its own
+// Admin overview stats. Read-only. Lives on its own
 // controller — separate URL prefix from /admin/users keeps the
 // REST shape clean and the response shape doesn't share
 // write-action concerns with user management.

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-// M23: registration access codes. Admin-managed joining codes that
+// registration access codes. Admin-managed joining codes that
 // gate /register. A valid, active, non-expired, non-exhausted code
 // at /register creates an auto-approved user; bad/missing codes
 // reject with 400.
