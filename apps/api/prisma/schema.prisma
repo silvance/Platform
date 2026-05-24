@@ -89,6 +89,7 @@ enum ArtifactKind {
   pdf
   image
   eml
+  pcap
 }
 
 model User {

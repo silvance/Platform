@@ -392,6 +392,7 @@ function defaultMimeFor(kind: ArtifactKind): string {
     case "pdf":  return "application/pdf";
     case "image": return "application/octet-stream";
     case "eml":  return "message/rfc822";
+    case "pcap": return "application/vnd.tcpdump.pcap";
   }
 }
 
@@ -406,5 +407,6 @@ function extForKind(kind: ArtifactKind): string {
     // .img extension so the path doesn't claim a specific encoding.
     case "image": return ".img";
     case "eml":  return ".eml";
+    case "pcap": return ".pcap";
   }
 }

@@ -5,6 +5,7 @@ import { JsonViewer } from "./json-viewer";
 import { PdfViewer } from "./pdf-viewer";
 import { ImageViewer } from "./image-viewer";
 import { EmlViewer } from "./eml-viewer";
+import { PcapViewer } from "./pcap-viewer";
 
 interface Props {
   scenarioSlug: string;
@@ -31,6 +32,8 @@ export async function ArtifactViewer({ scenarioSlug, artifact, token }: Props) {
       return <ImageViewer artifact={artifact} proxyUrl={proxyUrl} />;
     case "eml":
       return <EmlViewer artifact={artifact} scenarioSlug={scenarioSlug} token={token} />;
+    case "pcap":
+      return <PcapViewer artifact={artifact} proxyUrl={proxyUrl} />;
     default:
       return (
         <div className="card">

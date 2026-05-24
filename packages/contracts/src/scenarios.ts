@@ -32,8 +32,7 @@ export const ScenarioStatus = z.enum(["draft", "published", "archived"]);
 export type ScenarioStatus = z.infer<typeof ScenarioStatus>;
 
 // Keep in sync with `enum ArtifactKind` in apps/api/prisma/schema.prisma.
-// M3 added text, csv, json, pdf, image. M4 adds eml. pcap/disk
-// images / Windows registry slabs come later.
+// M3 added text, csv, json, pdf, image. M4 adds eml. M27 adds pcap.
 export const ArtifactKind = z.enum([
   "text",
   "csv",
@@ -41,6 +40,7 @@ export const ArtifactKind = z.enum([
   "pdf",
   "image",
   "eml",
+  "pcap",
 ]);
 export type ArtifactKind = z.infer<typeof ArtifactKind>;
 
@@ -55,6 +55,9 @@ export function defaultMimeFor(kind: ArtifactKind): string {
     case "pdf":  return "application/pdf";
     case "image": return "application/octet-stream"; // overridden by stored mime
     case "eml":  return "message/rfc822";
+    // M27: libpcap (classic) format. Wireshark / tshark / tcpdump
+    // all open this content type natively.
+    case "pcap": return "application/vnd.tcpdump.pcap";
   }
 }
 
@@ -99,6 +102,10 @@ export function safeServeMimeFor(
       // comes from the parsed JSON endpoint, not from streaming the
       // raw bytes through a viewer.
       return { mime: "message/rfc822", inline: false };
+    case "pcap":
+      // Always download; we never render PCAP inline. The user opens
+      // it in Wireshark / tshark / their preferred tooling.
+      return { mime: "application/vnd.tcpdump.pcap", inline: false };
   }
 }
 
