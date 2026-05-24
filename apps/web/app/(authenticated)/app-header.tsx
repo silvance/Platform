@@ -47,7 +47,7 @@ export function AppHeader({ user, theme, pendingApprovalCount }: Props) {
           href={user.role === "admin" ? "/admin" : "/scenarios"}
           className="brand"
         >
-          CICyberLab
+          CI Cyber Lab
         </Link>
         <nav className="nav-links" aria-label="Primary">
           {visibleNav.map((item) => {

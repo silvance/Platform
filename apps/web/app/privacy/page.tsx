@@ -3,7 +3,7 @@ import { SiteFooter } from "@/components/site-footer";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
-  title: "Privacy — CICyberLab",
+  title: "Privacy — CI Cyber Lab",
 };
 
 export default function PrivacyPage() {
@@ -18,12 +18,12 @@ export default function PrivacyPage() {
       >
         <div style={{ fontSize: ".9rem", marginBottom: "1rem" }}>
           <Link href="/" style={{ color: "var(--accent)" }}>
-            ← CICyberLab
+            ← CI Cyber Lab
           </Link>
         </div>
         <h1 style={{ marginBottom: ".5rem" }}>Privacy</h1>
         <p style={{ color: "var(--muted)" }}>
-          What CICyberLab collects, what it doesn't, and what users should
+          What CI Cyber Lab collects, what it doesn't, and what users should
           never enter here.
         </p>
 
@@ -53,7 +53,7 @@ export default function PrivacyPage() {
             Argon2id hash is persisted.
           </li>
           <li>
-            CICyberLab does <strong>not ask users to upload real case
+            CI Cyber Lab does <strong>not ask users to upload real case
             data</strong>. Every artefact and scenario shipped with the
             platform is fictional and sanitized.
           </li>
@@ -62,7 +62,7 @@ export default function PrivacyPage() {
         <h2 style={{ marginTop: "1.5rem" }}>What users should not enter</h2>
         <p>
           Do not enter classified, sensitive, operational, personally
-          identifying, or real investigative information into CICyberLab —
+          identifying, or real investigative information into CI Cyber Lab —
           including in question free-text fields, admin notes, or
           authored-scenario content. Treat the platform as an unclassified
           training environment.
@@ -71,14 +71,14 @@ export default function PrivacyPage() {
         <h2 style={{ marginTop: "1.5rem" }}>Contributions</h2>
         <p>
           Optional contributions to help offset hosting costs are handled
-          entirely by <strong>GitHub Sponsors</strong>. CICyberLab does not
+          entirely by <strong>GitHub Sponsors</strong>. CI Cyber Lab does not
           receive payment information, does not retain billing records, and
           does not link sponsorship to any platform account.
         </p>
 
         <h2 style={{ marginTop: "1.5rem" }}>Scope</h2>
         <p>
-          CICyberLab is an independent, unclassified training project
+          CI Cyber Lab is an independent, unclassified training project
           maintained in my personal capacity. It is not a substitute for
           accredited training, agency tooling, or any official record system.
         </p>

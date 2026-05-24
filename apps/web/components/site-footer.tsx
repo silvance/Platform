@@ -23,7 +23,7 @@ export function SiteFooter() {
       }}
     >
       <span>
-        © {new Date().getFullYear()} CICyberLab. Fictional, sanitized
+        © {new Date().getFullYear()} CI Cyber Lab. Fictional, sanitized
         examples for training only.
       </span>
       <span aria-hidden style={{ opacity: 0.5 }}>·</span>

@@ -10,7 +10,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
     <div className="auth-shell">
       <aside className="auth-brand-panel">
         <a href="/login" className="auth-brand-mark">
-          CICyberLab
+          CI Cyber Lab
         </a>
         <div className="auth-tagline">
           <h2>Counter-intelligence and digital-forensics training.</h2>
@@ -29,7 +29,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
           style={{ display: "flex", flexWrap: "wrap", gap: ".75rem", alignItems: "center" }}
         >
           <span>
-            © {new Date().getFullYear()} CICyberLab. Fictional, sanitized
+            © {new Date().getFullYear()} CI Cyber Lab. Fictional, sanitized
             examples for training only.
           </span>
           <Link href="/about" style={{ color: "inherit", opacity: 0.8 }}>
