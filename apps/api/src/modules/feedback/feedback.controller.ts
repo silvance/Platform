@@ -9,7 +9,7 @@ import {
   UsePipes,
 } from "@nestjs/common";
 import {
-  AdminFeedbackListQuery,
+  AdminListQuery,
   FeedbackListResponse,
   SubmitFeedbackRequest,
   SubmitFeedbackResponse,
@@ -55,8 +55,8 @@ export class FeedbackAdminController {
 
   @Get()
   async list(
-    @Query(new ZodValidationPipe(AdminFeedbackListQuery))
-    query: AdminFeedbackListQuery,
+    @Query(new ZodValidationPipe(AdminListQuery))
+    query: AdminListQuery,
   ): Promise<FeedbackListResponse> {
     return this.feedback.listAll({ limit: query.limit });
   }
