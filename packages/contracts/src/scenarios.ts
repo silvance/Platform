@@ -188,7 +188,7 @@ export const LANE_DESCRIPTIONS: Record<Lane, string> = {
   foundations:
     "Core DF concepts every analyst needs first — hashes, MAC times, magic bytes, custody fundamentals.",
   email_bec:
-    "Triage business-email-compromise and phishing attempts; read headers, attachments, and lure mechanics.",
+    "Business Email Compromise (BEC) and phishing triage. Read headers, attachments, and lure mechanics; separate spoof from compromise.",
   windows_artifacts:
     "Windows-specific artefacts: execution evidence, registry, recent files, Windows 11 additions.",
   removable_media_spillage:
