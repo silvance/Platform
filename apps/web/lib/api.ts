@@ -2,6 +2,7 @@ import { z, ZodError } from "zod";
 import {
   AccessCodeListResponse,
   AnalyticsResponse,
+  CompletionListResponse,
   CreateAccessCodeRequest,
   CreateAccessCodeResponse,
   DisableAccessCodeResponse,
@@ -245,6 +246,19 @@ export const api = {
   analytics: {
     get: async (token: string): Promise<AnalyticsResponse> =>
       parse(AnalyticsResponse, await request("/admin/analytics", { token })),
+  },
+  completions: {
+    listRecent: async (
+      token: string,
+      opts: { limit?: number } = {},
+    ): Promise<CompletionListResponse> => {
+      const qp = new URLSearchParams();
+      if (opts.limit !== undefined) qp.set("limit", String(opts.limit));
+      const path = qp.toString()
+        ? `/admin/completions?${qp.toString()}`
+        : "/admin/completions";
+      return parse(CompletionListResponse, await request(path, { token }));
+    },
   },
   accessCodes: {
     list: async (token: string): Promise<AccessCodeListResponse> =>

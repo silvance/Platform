@@ -29,6 +29,8 @@ const NAV_ITEMS: Array<{ href: string; label: string; admin?: boolean }> = [
   { href: "/admin/review", label: "Review", admin: true },
  // per-scenario / per-question analytics.
   { href: "/admin/analytics", label: "Analytics", admin: true },
+ // recent-completions feed: who finished what, when.
+  { href: "/admin/completions", label: "Completions", admin: true },
  // registration access-code management surface.
   { href: "/admin/access-codes", label: "Codes", admin: true },
 ];
