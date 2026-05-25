@@ -12,3 +12,4 @@ export * from "./review.js";
 export * from "./access-codes.js";
 export * from "./analytics.js";
 export * from "./feedback.js";
+export * from "./completions.js";

@@ -65,6 +65,13 @@ export default async function AdminPage() {
             capture notes without leaving the page.
           </p>
         </Link>
+        <Link href="/admin/completions" className="card" style={cardStyle}>
+          <strong style={{ fontSize: "1.05rem" }}>Completions</strong>
+          <p style={pStyle}>
+            Recent-completions feed — who finished which challenge, when,
+            and how many attempts they took.
+          </p>
+        </Link>
       </div>
     </main>
   );
