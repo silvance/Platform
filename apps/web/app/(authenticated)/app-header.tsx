@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import type { PublicUser } from "@ci-train/contracts";
 import type { Theme } from "@/lib/theme";
 import { LogoutButton } from "./logout-button";
@@ -40,8 +41,39 @@ export function AppHeader({ user, theme, pendingApprovalCount }: Props) {
     (n) => !n.admin || user.role === "admin",
   );
 
+  // Mobile drawer state. Toggled by the hamburger button below the
+  // 768px breakpoint; CSS hides the drawer entirely on wider screens.
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  // Auto-close the drawer whenever the route changes (the user just
+  // tapped a nav link — no reason to keep the overlay open).
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
+
+  // ESC closes the drawer too.
+  useEffect(() => {
+    if (!menuOpen) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setMenuOpen(false);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [menuOpen]);
+
+  // Lock background scroll while the drawer is open so a tap-through
+  // doesn't scroll the page underneath. Cleaned up on close.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = menuOpen ? "hidden" : prev;
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [menuOpen]);
+
   return (
-    <header className="app-header">
+    <header className="app-header" data-menu-open={menuOpen ? "true" : "false"}>
       <div className="app-header-inner">
         <Link
           href={user.role === "admin" ? "/admin" : "/scenarios"}
@@ -49,7 +81,7 @@ export function AppHeader({ user, theme, pendingApprovalCount }: Props) {
         >
           CI Cyber Lab
         </Link>
-        <nav className="nav-links" aria-label="Primary">
+        <nav className="nav-links" id="primary-nav" aria-label="Primary">
           {visibleNav.map((item) => {
             // The Admin nav link gets a pending-approval badge
             // when self-registrations are waiting. /admin/users
@@ -105,13 +137,54 @@ export function AppHeader({ user, theme, pendingApprovalCount }: Props) {
           <ThemeToggle current={theme} />
           <span className="user-chip" title={user.email}>
             <span className="avatar" aria-hidden>{initials}</span>
-            {user.displayName}
+            <span className="user-chip-name">{user.displayName}</span>
             {user.role === "admin" ? (
               <span className="role-badge">admin</span>
             ) : null}
           </span>
           <LogoutButton />
         </div>
+        <button
+          type="button"
+          className="nav-burger"
+          aria-label={menuOpen ? "Close menu" : "Open menu"}
+          aria-expanded={menuOpen}
+          aria-controls="primary-nav"
+          onClick={() => setMenuOpen((v) => !v)}
+        >
+          {menuOpen ? (
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <line x1="6" y1="6" x2="18" y2="18" />
+              <line x1="6" y1="18" x2="18" y2="6" />
+            </svg>
+          ) : (
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <line x1="4" y1="7" x2="20" y2="7" />
+              <line x1="4" y1="12" x2="20" y2="12" />
+              <line x1="4" y1="17" x2="20" y2="17" />
+            </svg>
+          )}
+        </button>
       </div>
     </header>
   );
