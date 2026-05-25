@@ -106,9 +106,17 @@ even by a single bit.
         type: "text_match",
         weight: 1,
         promptMd:
-          "If a single bit in the file flipped during download, would the SHA-256 change? Answer yes or no.",
-        textMatch: { acceptableAnswers: ["yes", "y"] },
-        expected: { type: "text_match", acceptableAnswers: ["yes", "y"], regex: false },
+          "If a single bit in the file flipped during download, would the SHA-256 change? **(Type `yes` or `no`.)**",
+        textMatch: {
+          acceptableAnswers: ["yes", "y", "yes it would", "it would change"],
+          hint: "Cryptographic hashes are designed to amplify small input differences into large output differences. One bit flips → does the hash change?",
+          hintAfterTries: 2,
+        },
+        expected: {
+          type: "text_match",
+          acceptableAnswers: ["yes", "y", "yes it would", "it would change"],
+          regex: false,
+        },
         debriefMd:
           "**Yes.** Cryptographic hashes are designed to amplify small input differences into large output differences (the *avalanche* property). One bit flips → roughly half the hash bits change. That's exactly why hashes work as integrity checks.",
       },
@@ -197,11 +205,29 @@ The actual format is what's in the bytes.
         type: "text_match",
         weight: 1,
         promptMd:
-          "Type the first FOUR hex bytes of a real PDF file. (Bytes only, separated by spaces.)",
-        textMatch: { acceptableAnswers: ["25 50 44 46", "25504446", "25 50 44 46 "] },
+          "Type the first **four** hex bytes of a real PDF file. (Hex only — spaces, dashes, or no separator are all fine.)",
+        textMatch: {
+          acceptableAnswers: [
+            "25 50 44 46",
+            "25504446",
+            "25-50-44-46",
+            "25,50,44,46",
+            "0x25 0x50 0x44 0x46",
+            "%PDF",
+          ],
+          hint: "All four bytes. Read them off the PDF row of the magic-bytes table in the brief: `25 50 44 46`.",
+          hintAfterTries: 2,
+        },
         expected: {
           type: "text_match",
-          acceptableAnswers: ["25 50 44 46", "25504446", "25 50 44 46 "],
+          acceptableAnswers: [
+            "25 50 44 46",
+            "25504446",
+            "25-50-44-46",
+            "25,50,44,46",
+            "0x25 0x50 0x44 0x46",
+            "%PDF",
+          ],
           regex: false,
         },
         debriefMd:
@@ -304,9 +330,17 @@ A few common patterns:
         type: "text_match",
         weight: 1,
         promptMd:
-          "Of the three timestamps (M, A, C), which one most directly tells you the file was opened or read recently?",
-        textMatch: { acceptableAnswers: ["a", "accessed", "access"] },
-        expected: { type: "text_match", acceptableAnswers: ["a", "accessed", "access"], regex: false },
+          "Of the three timestamps (M, A, C), which one most directly tells you the file was opened or read recently? **(Type just one letter: M, A, or C — or the word.)**",
+        textMatch: {
+          acceptableAnswers: ["a", "accessed", "access", "atime", "a (accessed)"],
+          hint: "One letter. Of the three timestamps, which one fires on a *read* (not a write, not a metadata change)?",
+          hintAfterTries: 2,
+        },
+        expected: {
+          type: "text_match",
+          acceptableAnswers: ["a", "accessed", "access", "atime", "a (accessed)"],
+          regex: false,
+        },
         debriefMd:
           "**A**ccessed. Caveat: on many modern systems the OS suppresses access-time updates by default (for performance), so A may lag or be unreliable. Treat A as a useful hint, not as ground truth.",
       },
@@ -634,8 +668,12 @@ Two HTTP status families that matter for triage:
         ordinal: 1,
         type: "text_match",
         weight: 1,
-        promptMd: "How many distinct client IPs appear in the log?",
-        textMatch: { acceptableAnswers: ["3", "three"] },
+        promptMd: "How many distinct client IPs appear in the log? **(Just the number.)**",
+        textMatch: {
+          acceptableAnswers: ["3", "three"],
+          hint: "Pull the first column (the IP) from each line and count the unique values.",
+          hintAfterTries: 2,
+        },
         expected: { type: "text_match", acceptableAnswers: ["3", "three"], regex: false },
         debriefMd:
           "Three: `198.51.100.7`, `203.0.113.42`, `192.0.2.18`. Counting is a basic grep-and-sort move (`cut -d' ' -f1 access.log | sort -u | wc -l`).",
@@ -645,8 +683,12 @@ Two HTTP status families that matter for triage:
         type: "text_match",
         weight: 1,
         promptMd:
-          "Which client IP looks like it's probing for admin / API endpoints with a non-browser user-agent? (Just the IP.)",
-        textMatch: { acceptableAnswers: ["203.0.113.42"] },
+          "Which client IP looks like it's probing for admin / API endpoints with a non-browser user-agent? **(Just the IPv4 address, e.g. `198.51.100.7`.)**",
+        textMatch: {
+          acceptableAnswers: ["203.0.113.42"],
+          hint: "Look for requests with a `curl/...` user-agent — those aren't from a browser.",
+          hintAfterTries: 2,
+        },
         expected: { type: "text_match", acceptableAnswers: ["203.0.113.42"], regex: false },
         debriefMd:
           "`203.0.113.42`. Four requests from that IP, all `401`s, all `curl/7.85`, all targeting `/admin*` or `/api/*`. That's the recognizable shape of a scripted probe — not somebody using a browser.",
@@ -742,11 +784,15 @@ Practice on the artifact.
         type: "text_match",
         weight: 1,
         promptMd:
-          "What are the first two bytes of the file, in hex? (Just the two bytes, space-separated.)",
-        textMatch: { acceptableAnswers: ["4d 5a", "4d5a", "MZ", "mz", "4d 5a "] },
+          "What are the first **two** bytes of the file, in hex? (Two bytes — spaces, dashes, or no separator are all fine. The two ASCII letters are also accepted.)",
+        textMatch: {
+          acceptableAnswers: ["4d 5a", "4d5a", "4d-5a", "MZ", "mz", "0x4d 0x5a"],
+          hint: "Look at offset `00000000:` in the hex dump. The first two hex bytes on that line.",
+          hintAfterTries: 2,
+        },
         expected: {
           type: "text_match",
-          acceptableAnswers: ["4d 5a", "4d5a", "MZ", "mz", "4d 5a "],
+          acceptableAnswers: ["4d 5a", "4d5a", "4d-5a", "MZ", "mz", "0x4d 0x5a"],
           regex: false,
         },
         debriefMd:
@@ -773,13 +819,31 @@ Practice on the artifact.
         type: "text_match",
         weight: 1,
         promptMd:
-          "At what offset (in hex, e.g. `0x00000040`) does the ASCII text \"This program cannot be run in DOS mode.\" begin?",
+          "At what offset (in hex, e.g. `0x4e` or `0x0000004e`) does the ASCII text \"This program cannot be run in DOS mode.\" begin?",
         textMatch: {
-          acceptableAnswers: ["0x4e", "4e", "0x0000004e", "0000004e"],
+          acceptableAnswers: [
+            "0x4e",
+            "4e",
+            "0x0000004e",
+            "0000004e",
+            "0x4E",
+            "4E",
+            "78",
+          ],
+          hint: "Look at the ASCII column. The capital `T` of `This program...` is in the second-to-last column of the row that starts at offset `0x40`.",
+          hintAfterTries: 2,
         },
         expected: {
           type: "text_match",
-          acceptableAnswers: ["0x4e", "4e", "0x0000004e", "0000004e"],
+          acceptableAnswers: [
+            "0x4e",
+            "4e",
+            "0x0000004e",
+            "0000004e",
+            "0x4E",
+            "4E",
+            "78",
+          ],
           regex: false,
         },
         debriefMd:

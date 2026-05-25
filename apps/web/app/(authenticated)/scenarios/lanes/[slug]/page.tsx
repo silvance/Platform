@@ -91,47 +91,48 @@ export default async function LanePage({ params }: Props) {
             // Ordinals run continuously across modules within the
             // lane: module A's last challenge is N, module B's first
             // is N+1. Same number never repeats inside a single lane.
+            //
+            // The module header is shown only when a module groups two
+            // or more scenarios. Singletons render as bare cards in
+            // their place in the curated order — putting an
+            // ALL-CAPS section header above a single card was
+            // structural noise that made the page feel padded.
             let ordinal = 0;
-            return orderedGroups.map(([moduleName, items]) => (
-              <section key={moduleName}>
-                <h2
-                  style={{
-                    fontSize: ".95rem",
-                    margin: "0 0 .5rem 0",
-                    color: "var(--muted-strong)",
-                    textTransform: "uppercase",
-                    letterSpacing: ".04em",
-                  }}
-                >
-                  {moduleName}
-                </h2>
-                <p
-                  style={{
-                    margin: "0 0 .5rem 0",
-                    color: "var(--muted)",
-                    fontSize: ".82rem",
-                  }}
-                >
-                  Recommended order. Any challenge is unlocked; the order is a
-                  guide, not a gate.
-                </p>
-                <ul
-                  className="scenario-list"
-                  style={{ listStyle: "none", padding: 0 }}
-                >
-                  {items.map((s) => {
-                    ordinal += 1;
-                    return (
-                      <li key={s.id} className="scenario-card">
-                        <Link href={`/scenarios/${s.slug}`}>
-                          <ScenarioCard scenario={s} ordinal={ordinal} />
-                        </Link>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </section>
-            ));
+            return orderedGroups.map(([moduleName, items]) => {
+              const showHeader = items.length >= 2;
+              return (
+                <section key={moduleName}>
+                  {showHeader && (
+                    <h2
+                      style={{
+                        fontSize: ".95rem",
+                        margin: "0 0 .5rem 0",
+                        color: "var(--muted-strong)",
+                        textTransform: "uppercase",
+                        letterSpacing: ".04em",
+                      }}
+                    >
+                      {moduleName}
+                    </h2>
+                  )}
+                  <ul
+                    className="scenario-list"
+                    style={{ listStyle: "none", padding: 0 }}
+                  >
+                    {items.map((s) => {
+                      ordinal += 1;
+                      return (
+                        <li key={s.id} className="scenario-card">
+                          <Link href={`/scenarios/${s.slug}`}>
+                            <ScenarioCard scenario={s} ordinal={ordinal} />
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
+              );
+            });
           })()}
         </div>
       )}

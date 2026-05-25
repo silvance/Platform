@@ -277,17 +277,39 @@ language should say and what the operational next step is.
       },
       {
         ordinal: 2,
-        type: "text_match",
+        type: "multi_choice",
         weight: 1,
         promptMd: "Who should the report be escalated to?",
-        textMatch: { acceptableAnswers: ["tscm", "qualified tscm", "tscm personnel", "tscm team", "qualified tscm personnel"] },
+        options: [
+          {
+            id: "tscm",
+            label:
+              "Qualified TSCM personnel — they have the equipment and the certification to assess an RF anomaly.",
+          },
+          {
+            id: "j6-netops",
+            label:
+              "J6 / network operations — they own the wired side and can disable affected ports.",
+          },
+          {
+            id: "cidc-immediately",
+            label:
+              "USACIDC — open a criminal-investigative case immediately on the strength of the observation.",
+          },
+          {
+            id: "ignore-until-pattern",
+            label:
+              "No-one yet — wait until a second matching observation surfaces, then escalate.",
+          },
+        ],
+        allowMultiple: false,
         expected: {
-          type: "text_match",
-          acceptableAnswers: ["tscm", "qualified tscm", "tscm personnel", "tscm team", "qualified tscm personnel"],
-          regex: false,
+          type: "multi_choice",
+          correctIds: ["tscm"],
+          allowMultiple: false,
         },
         debriefMd:
-          "Qualified TSCM personnel. The escalation threshold is the right operational discipline — observation by a non-TSCM analyst names an anomaly worth assessment, and the assessment is done by people with the equipment and the certification.",
+          "**Qualified TSCM personnel.** The escalation threshold is the right operational discipline — a non-TSCM analyst names the anomaly worth assessing; the assessment itself is done by people with the equipment and the certification. J6 owns the wired side and is a stakeholder, not the primary owner of an RF anomaly. A criminal-investigative referral has no articulable predicate yet. Waiting for a second observation is the failure mode the discipline is designed to prevent.",
       },
       {
         ordinal: 3,

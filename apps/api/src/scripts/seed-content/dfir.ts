@@ -258,21 +258,40 @@ the attribution inferences.
       },
       {
         ordinal: 3,
-        type: "text_match",
+        type: "multi_choice",
         weight: 1,
         promptMd:
-          "Name the **single phrase** that most precisely describes what carving from unallocated space proves about *who* wrote the document. (Short noun phrase.)",
-        textMatch: {
-          acceptableAnswers: ["nothing", "nothing about authorship", "not a thing", "no attribution"],
-          hint: "Carving recovers bytes, not user context.",
-        },
+          "What does carving from unallocated space prove about **who wrote** the document?",
+        options: [
+          {
+            id: "nothing-about-authorship",
+            label:
+              "Nothing about authorship. Carving recovers bytes from sectors the filesystem no longer claims — it does not recover the user-account / ACL / process context that would establish who wrote them.",
+          },
+          {
+            id: "named-author-wrote-it",
+            label:
+              "It proves the person named in the DOCX `Author` field (S.LOPEZ) wrote the document, because the carved metadata names them.",
+          },
+          {
+            id: "device-owner-wrote-it",
+            label:
+              "It proves whoever last mounted the USB device wrote the document, because the device's last-mount user is recorded.",
+          },
+          {
+            id: "deleter-is-author",
+            label:
+              "It proves whoever deleted the file authored it — files in unallocated space were placed there by their author.",
+          },
+        ],
+        allowMultiple: false,
         expected: {
-          type: "text_match",
-          acceptableAnswers: ["nothing", "nothing about authorship", "not a thing", "no attribution"],
-          regex: false,
+          type: "multi_choice",
+          correctIds: ["nothing-about-authorship"],
+          allowMultiple: false,
         },
         debriefMd:
-          "**Nothing.** Carving recovers byte content from sectors the filesystem no longer claims; it does not recover the filesystem context (user account, ACLs, write-time process) that would establish authorship. Authorship requires evidence from sources where the document was authored or used — workstation MFT records, SharePoint version history, recent-documents shell extensions, email attachment chains. A carved DOCX is a *starting point* for those inquiries, not the answer to them.",
+          "**Nothing about authorship.** Carving recovers byte content; it does not recover the filesystem context (user account, ACLs, write-time process) that would establish authorship. The carved DOCX `Author` metadata field is author-controllable text inside the file — it names a *claim*, not a *fact*. Authorship requires evidence from where the document was authored or used: workstation MFT records, SharePoint version history, recent-documents shell extensions, email attachment chains. A carved DOCX is a *starting point* for those inquiries, not the answer to them.",
       },
       {
         ordinal: 4,
@@ -460,12 +479,17 @@ answer.
         type: "text_match",
         weight: 1,
         promptMd:
-          "Which Windows artifact, when present, is the **strongest** routine evidence of execution? (One word, the artifact name.)",
+          "Which Windows artifact, when present, is the **strongest** routine evidence of execution? **(One-word artifact name.)**",
         textMatch: {
-          acceptableAnswers: ["prefetch", "prefetch.pf", ".pf"],
-          hint: "Files in C:\\Windows\\Prefetch.",
+          acceptableAnswers: ["prefetch", "prefetch.pf", ".pf", "pf"],
+          hint: "Files in `C:\\Windows\\Prefetch` whose name ends `.pf`. The artifact name is in the file extension.",
+          hintAfterTries: 2,
         },
-        expected: { type: "text_match", acceptableAnswers: ["prefetch", "prefetch.pf", ".pf"], regex: false },
+        expected: {
+          type: "text_match",
+          acceptableAnswers: ["prefetch", "prefetch.pf", ".pf", "pf"],
+          regex: false,
+        },
         debriefMd:
           "Prefetch (`.pf` files in `C:\\Windows\\Prefetch`). The presence of `UTIL-X.EXE-XXXX.pf` is direct evidence that the loader ran the binary at least once. Absence is the weaker side of the coin — Prefetch creation can be delayed under load, and certain configurations suppress Prefetch for some images — but presence is strong.",
       },
@@ -647,9 +671,29 @@ that gets called out in any subsequent legal review.
         type: "text_match",
         weight: 1,
         promptMd:
-          "What was the *first-run* timestamp Prefetch recorded for util-x.exe? (Exact ISO-8601, as written in the artifact.)",
-        textMatch: { acceptableAnswers: ["2026-09-04T09:11:18Z"] },
-        expected: { type: "text_match", acceptableAnswers: ["2026-09-04T09:11:18Z"], regex: false },
+          "What was the *first-run* timestamp Prefetch recorded for util-x.exe? **(ISO-8601 as written in the artifact; trailing `Z` and the `T` separator both optional.)**",
+        textMatch: {
+          acceptableAnswers: [
+            "2026-09-04T09:11:18Z",
+            "2026-09-04T09:11:18",
+            "2026-09-04 09:11:18Z",
+            "2026-09-04 09:11:18",
+            "2026-09-04T09:11:18 UTC",
+          ],
+          hint: "Look at the `first run:` line in `prefetch-summary.txt`. Copy the timestamp from there verbatim.",
+          hintAfterTries: 2,
+        },
+        expected: {
+          type: "text_match",
+          acceptableAnswers: [
+            "2026-09-04T09:11:18Z",
+            "2026-09-04T09:11:18",
+            "2026-09-04 09:11:18Z",
+            "2026-09-04 09:11:18",
+            "2026-09-04T09:11:18 UTC",
+          ],
+          regex: false,
+        },
         debriefMd:
           "`2026-09-04T09:11:18Z`. That's the loader's prefetch-train moment — strong execution evidence at that timestamp, modulo the usual Prefetch caveats (creation can be delayed; some configurations suppress Prefetch).",
       },
@@ -854,9 +898,30 @@ for what it actually records.
         ordinal: 2,
         type: "text_match",
         weight: 1,
-        promptMd: "What time did the target document's last-access show in the LNK?",
-        textMatch: { acceptableAnswers: ["2026-08-15T10:14:00Z"] },
-        expected: { type: "text_match", acceptableAnswers: ["2026-08-15T10:14:00Z"], regex: false },
+        promptMd:
+          "What time did the **target document's** last-access show in the LNK? **(ISO-8601 as written; trailing `Z` and the `T` separator both optional.)**",
+        textMatch: {
+          acceptableAnswers: [
+            "2026-08-15T10:14:00Z",
+            "2026-08-15T10:14:00",
+            "2026-08-15 10:14:00Z",
+            "2026-08-15 10:14:00",
+            "2026-08-15T10:14:00 UTC",
+          ],
+          hint: "Look at the `target last-access:` line in the LNK artifact (NOT the LNK's own creation/modification times — those are a few seconds later).",
+          hintAfterTries: 2,
+        },
+        expected: {
+          type: "text_match",
+          acceptableAnswers: [
+            "2026-08-15T10:14:00Z",
+            "2026-08-15T10:14:00",
+            "2026-08-15 10:14:00Z",
+            "2026-08-15 10:14:00",
+            "2026-08-15T10:14:00 UTC",
+          ],
+          regex: false,
+        },
         debriefMd:
           "`2026-08-15T10:14:00Z`. Note this is the **target file's** last-access embedded in the LNK; the LNK's own creation/modification timestamps are a few seconds later.",
       },
