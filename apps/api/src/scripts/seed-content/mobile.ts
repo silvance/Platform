@@ -166,24 +166,31 @@ satisfy the ask.
         kind: "csv",
         mimeType: "text/csv; charset=utf-8",
         bytes: utf8(
+          // Cellebrite Physical Analyzer 7.74 — "Analyzed Data
+          // Summary" report exported to CSV from the Reports menu.
+          // The "Status" column is PA's standard verdict per
+          // category (Present / Empty / Not Applicable). "Notes"
+          // is the report's free-text annotation field, populated
+          // by PA when the category was skipped because of the
+          // chosen extraction method.
           [
-            "category,present_in_extraction,row_count,notes",
-            "Contacts,yes,438,",
-            "Call log,yes,1207,calls + FaceTime audio/video included",
-            "SMS / iMessage,yes,5611,active threads only; deleted iMessages not recovered from this extraction type",
-            "Photos & Videos (Camera Roll),yes,2104,active media only; \"Recently Deleted\" album not parsed by Advanced Logical",
-            "Notes (Apple),yes,89,active notes only",
-            "Voice Memos,yes,12,",
-            "Calendar,yes,322,",
-            "Safari history,yes,4188,active history only",
-            "Wi-Fi networks,partial,32,SSIDs visible; pre-shared keys are in the keychain and NOT present",
-            "Keychain entries,no,0,Keychain requires File System extraction or GRAYKEY",
-            "Signal messages (active),no,0,Signal sandbox database not exposed by Advanced Logical on iOS 17",
-            "Signal messages (deleted),no,0,Requires FFS + decoding of Signal's SQLite WAL/journal",
-            "WhatsApp messages,no,0,Sandbox database not exposed by Advanced Logical",
-            "knowledgeC.db / biome (pattern of life),no,0,Requires FFS",
-            "Powerlog (CurrentPowerlog.PLSQL),no,0,Requires FFS",
-            "Unallocated / deleted-file carving,no,0,No physical image available on modern iOS",
+            "Category,Status,ItemCount,Notes",
+            "Contacts,Present,438,",
+            "Call Log,Present,1207,Includes FaceTime audio + video entries",
+            "SMS / iMessage,Present,5611,Active threads only; deleted iMessages not exposed by Advanced Logical on iOS 17",
+            "Photos & Videos (Camera Roll),Present,2104,Active media only; \"Recently Deleted\" album not parsed by Advanced Logical",
+            "Notes (Apple),Present,89,Active notes only",
+            "Voice Memos,Present,12,",
+            "Calendar,Present,322,",
+            "Safari History,Present,4188,Active history only",
+            "Wi-Fi Networks,Partial,32,SSIDs present; pre-shared keys live in the keychain and were not extracted",
+            "Keychain Entries,Empty,0,Keychain decoding requires File System / FFS extraction or GRAYKEY",
+            "Signal — Active Messages,Empty,0,Signal sandbox database not exposed by Advanced Logical on iOS 17",
+            "Signal — Deleted Messages,Empty,0,Requires FFS + decoding of Signal's SQLite WAL / journal",
+            "WhatsApp Messages,Empty,0,Sandbox database not exposed by Advanced Logical",
+            "knowledgeC.db / Biome (pattern of life),Empty,0,Requires File System / FFS extraction",
+            "Powerlog (CurrentPowerlog.PLSQL),Empty,0,Requires File System / FFS extraction",
+            "Unallocated / Deleted-File Carving,Not Applicable,0,No physical image available on modern iOS",
           ].join("\n") + "\n",
         ),
       },

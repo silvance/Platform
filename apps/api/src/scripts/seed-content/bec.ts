@@ -138,16 +138,21 @@ Distinguish:
         kind: "csv",
         mimeType: "text/csv; charset=utf-8",
         bytes: utf8(
+          // Zscaler ZIA Web Insights export — `Web Transactions`
+          // report scoped to user j.smith over the 24h analyst
+          // window. Columns mirror the canonical ZIA web-log
+          // schema (full URL split across host + path; the
+          // `action` column shows the policy verdict).
           [
-            "timestamp,src_ip,user,host,url,status,bytes,user_agent",
-            "2026-04-18T13:51:02Z,10.4.7.18,j.smith,vendor.example,/login,200,4321,Mozilla/5.0",
-            "2026-04-18T13:52:14Z,10.4.7.18,j.smith,vendor.example,/invoices/INV-2026-0418,200,18211,Mozilla/5.0",
-            "2026-04-18T14:06:48Z,10.4.7.18,j.smith,vendor-lookup-alike.com,/secure-payment,200,2104,Mozilla/5.0",
-            "2026-04-18T14:06:53Z,10.4.7.18,j.smith,vendor-lookup-alike.com,/api/account-update,200,884,Mozilla/5.0",
-            "2026-04-18T14:07:21Z,10.4.7.18,j.smith,smtp.gmail.com,/inbox,200,17033,Mozilla/5.0",
-            "2026-04-18T14:09:02Z,10.4.7.18,j.smith,vendor.example,/account,401,118,Mozilla/5.0",
-            "2026-04-18T14:09:11Z,10.4.7.18,j.smith,vendor.example,/login,200,4319,Mozilla/5.0",
-            "2026-04-18T14:12:33Z,10.4.7.18,j.smith,internal.partner.local,/wiki/wire-change-policy,200,28442,Mozilla/5.0",
+            "datetime,user,department,location,client_internal_ip,host,url_path,http_method,status,response_size,user_agent,url_category,action",
+            "2026-04-18T13:51:02Z,j.smith@partner.example,Finance,SF Office,10.4.7.18,vendor.example,/login,GET,200,4321,Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36,Business and Economy,Allowed",
+            "2026-04-18T13:52:14Z,j.smith@partner.example,Finance,SF Office,10.4.7.18,vendor.example,/invoices/INV-2026-0418,GET,200,18211,Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36,Business and Economy,Allowed",
+            "2026-04-18T14:06:48Z,j.smith@partner.example,Finance,SF Office,10.4.7.18,vendor-lookup-alike.com,/secure-payment,GET,200,2104,Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36,Newly Registered Domains,Allowed",
+            "2026-04-18T14:06:53Z,j.smith@partner.example,Finance,SF Office,10.4.7.18,vendor-lookup-alike.com,/api/account-update,POST,200,884,Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36,Newly Registered Domains,Allowed",
+            "2026-04-18T14:07:21Z,j.smith@partner.example,Finance,SF Office,10.4.7.18,smtp.gmail.com,/inbox,GET,200,17033,Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36,Web-Based Email,Allowed",
+            "2026-04-18T14:09:02Z,j.smith@partner.example,Finance,SF Office,10.4.7.18,vendor.example,/account,GET,401,118,Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36,Business and Economy,Allowed",
+            "2026-04-18T14:09:11Z,j.smith@partner.example,Finance,SF Office,10.4.7.18,vendor.example,/login,POST,200,4319,Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36,Business and Economy,Allowed",
+            "2026-04-18T14:12:33Z,j.smith@partner.example,Finance,SF Office,10.4.7.18,internal.partner.local,/wiki/wire-change-policy,GET,200,28442,Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36,Corporate Marketing,Allowed",
           ].join("\n") + "\n",
         ),
       },
@@ -400,11 +405,21 @@ reportable cyberspace indicators.
         kind: "csv",
         mimeType: "text/csv; charset=utf-8",
         bytes: utf8(
+          // Azure AD / Entra ID directory export via Microsoft Graph
+          // PowerShell:
+          //   Connect-MgGraph -Scopes "User.Read.All"
+          //   Get-MgUser -All -Property
+          //     DisplayName,UserPrincipalName,Mail,Department,JobTitle,
+          //     EmployeeId,AccountEnabled,Manager
+          //   | Select DisplayName,UserPrincipalName,Mail,Department,
+          //            JobTitle,EmployeeId,AccountEnabled,
+          //            @{n='Manager';e={$_.Manager.AdditionalProperties.userPrincipalName}}
+          //   | Export-Csv -NoTypeInformation
           [
-            "email,display_name,department,manager",
-            "a.morales@partner.example,Alex Morales,Engineering,e.lee@partner.example",
-            "hr-payroll@partner.example,HR Payroll,HR,",
-            "e.lee@partner.example,Erin Lee,Engineering,",
+            "DisplayName,UserPrincipalName,Mail,Department,JobTitle,EmployeeId,AccountEnabled,Manager",
+            "Alex Morales,a.morales@partner.example,a.morales@partner.example,Engineering,Senior Engineer,E1042,True,e.lee@partner.example",
+            "HR Payroll (Shared),hr-payroll@partner.example,hr-payroll@partner.example,HR,,SHARED-HR-01,True,",
+            "Erin Lee,e.lee@partner.example,e.lee@partner.example,Engineering,Engineering Manager,E0884,True,",
           ].join("\n") + "\n",
         ),
       },
