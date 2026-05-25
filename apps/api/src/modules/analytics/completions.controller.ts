@@ -1,7 +1,11 @@
 import { Controller, Get, Query } from "@nestjs/common";
-import type { CompletionListResponse } from "@ci-train/contracts";
+import {
+  AdminCompletionsListQuery,
+  type CompletionListResponse,
+} from "@ci-train/contracts";
 import { CompletionsService } from "./completions.service";
 import { Roles } from "../auth/decorators/roles.decorator";
+import { ZodValidationPipe } from "../../common/zod-validation.pipe";
 
 // admin-only recent-completions feed. Newest first across the
 // whole catalogue. Lives alongside AnalyticsController in the
@@ -14,11 +18,9 @@ export class CompletionsController {
 
   @Get()
   async list(
-    @Query("limit") limitRaw?: string,
+    @Query(new ZodValidationPipe(AdminCompletionsListQuery))
+    query: AdminCompletionsListQuery,
   ): Promise<CompletionListResponse> {
-    const limit = limitRaw ? Number.parseInt(limitRaw, 10) : 200;
-    return this.completions.listRecent({
-      limit: Number.isFinite(limit) ? limit : 200,
-    });
+    return this.completions.listRecent({ limit: query.limit });
   }
 }

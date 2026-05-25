@@ -23,11 +23,19 @@ function makeFakePrisma() {
   const session = {
     updateMany: jest.fn(),
   };
-  return {
-    api: { user, session } as unknown as PrismaService,
-    user,
-    session,
+  // Interactive-transaction shim: changePassword now wraps the
+  // password update + the other-session revocation in a single
+  // $transaction(async tx => ...). Our fake just invokes the
+  // callback with the same fake-prisma object, since the inner
+  // ops use the same `.user.update` / `.session.updateMany`
+  // method shape that the non-transactional client exposes.
+  const client = { user, session } as unknown as PrismaService & {
+    $transaction: (fn: (tx: unknown) => unknown) => unknown;
   };
+  (client as { $transaction: (fn: (tx: unknown) => unknown) => unknown }).$transaction = (
+    fn,
+  ) => fn(client);
+  return { api: client, user, session };
 }
 
 describe("AuthService.changePassword", () => {

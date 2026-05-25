@@ -36,3 +36,13 @@ export const CompletionListResponse = z.object({
   totalCount: z.number().int().min(0),
 });
 export type CompletionListResponse = z.infer<typeof CompletionListResponse>;
+
+// Boundary-level validation for `GET /admin/completions?limit=N`.
+// The service additionally caps at 500; defining the schema here
+// lets the controller use ZodValidationPipe and reject negative /
+// NaN / out-of-range values at the request edge instead of relying
+// on a downstream service-level `Math.min`.
+export const AdminCompletionsListQuery = z.object({
+  limit: z.coerce.number().int().min(1).max(500).default(200),
+});
+export type AdminCompletionsListQuery = z.infer<typeof AdminCompletionsListQuery>;
