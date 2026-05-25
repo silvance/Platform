@@ -218,11 +218,15 @@ the attribution inferences.
         kind: "csv",
         mimeType: "text/csv; charset=utf-8",
         bytes: utf8(
+          // Magnet AXIOM Process - USB Devices artefact category,
+          // pivoted to mounts observed for VID/PID/Serial XX-001 across
+          // the workstations in scope (CSV export from AXIOM Examine).
+          // Columns mirror the AXIOM "Connected USB Devices" view.
           [
-            "workstation,user_at_console,first_mount_observed,last_mount_observed,mount_count",
-            "WS-441,M.GREENE,2026-08-12T08:14:00Z,2026-08-14T11:30:00Z,4",
-            "WS-622,S.LOPEZ,2026-08-13T09:45:00Z,2026-08-14T10:50:00Z,3",
-            "WS-104,(shared kiosk),2026-08-16T13:01:00Z,2026-08-16T13:04:00Z,1",
+            "Source.Evidence,Hostname,FirstConnected,LastConnected,ConnectionCount,UserAtConsole",
+            "WS-441-image.E01,WS-441,2026-08-12T08:14:00Z,2026-08-14T11:30:00Z,4,WS-441\\m.greene",
+            "WS-622-image.E01,WS-622,2026-08-13T09:45:00Z,2026-08-14T10:50:00Z,3,WS-622\\s.lopez",
+            "WS-104-image.E01,WS-104,2026-08-16T13:01:00Z,2026-08-16T13:04:00Z,1,",
           ].join("\n") + "\n",
         ),
       },
@@ -419,11 +423,19 @@ answer.
         kind: "csv",
         mimeType: "text/csv; charset=utf-8",
         bytes: utf8(
+          // sqlite3 'C:/Cases/WS-WONG/AppData/Local/Google/Chrome/User Data/Default/History'
+          //   "SELECT datetime(v.visit_time/1000000 - 11644473600, 'unixepoch') AS visit_utc,
+          //           u.url, ref.url AS referrer, d.target_path, d.state
+          //    FROM visits v JOIN urls u ON v.url = u.id
+          //    LEFT JOIN visits vref ON v.from_visit = vref.id
+          //    LEFT JOIN urls ref ON vref.url = ref.id
+          //    LEFT JOIN downloads d ON d.start_time = v.visit_time
+          //    ORDER BY v.visit_time;"  --csv --header
           [
-            "ts_utc,url,referrer,target_path,result",
-            "2026-09-03T14:08:21Z,https://github.example/redteam/util-x/releases/download/v2/util-x.exe,https://github.example/redteam/util-x/releases,C:\\Users\\m.wong\\Downloads\\util-x.exe,completed",
-            "2026-09-03T14:09:02Z,https://github.example/redteam/util-x,,,navigation",
-            "2026-09-03T14:11:55Z,https://mail.partner.example/inbox,,,navigation",
+            "visit_utc,url,referrer,target_path,state",
+            "2026-09-03 14:08:21,https://github.example/redteam/util-x/releases/download/v2/util-x.exe,https://github.example/redteam/util-x/releases,C:\\Users\\m.wong\\Downloads\\util-x.exe,1",
+            "2026-09-03 14:09:02,https://github.example/redteam/util-x,,,",
+            "2026-09-03 14:11:55,https://mail.partner.example/inbox,,,",
           ].join("\n") + "\n",
         ),
       },
@@ -511,11 +523,12 @@ answer.
         kind: "csv",
         mimeType: "text/csv; charset=utf-8",
         bytes: utf8(
+          // EvtxECmd.exe -f C:\Cases\WS-WONG\Sysmon.evtx --inc 1 --csv . --csvf sysmon-eid1.csv
           [
-            "ts_utc,user,image,parent_image,cmdline,hash_sha256",
-            "2026-09-03T14:06:11Z,m.wong,C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe,explorer.exe,chrome.exe,(elided)",
-            "2026-09-03T14:14:08Z,m.wong,C:\\Windows\\System32\\notepad.exe,explorer.exe,notepad.exe util-x_readme.txt,(elided)",
-            "2026-09-03T15:02:30Z,m.wong,C:\\Program Files\\Microsoft\\OneDrive\\OneDrive.exe,explorer.exe,onedrive.exe,(elided)",
+            "TimeCreated,EventId,User,Image,CommandLine,ParentImage,ParentCommandLine,Hashes",
+            "2026-09-03T14:06:11.2118Z,1,WORKGROUP\\m.wong,C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe,\"\"\"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe\"\"\",C:\\Windows\\explorer.exe,C:\\Windows\\explorer.exe,SHA256=1A2B3C4D5E6F70819A2B3C4D5E6F70819A2B3C4D5E6F70819A2B3C4D5E6F7081",
+            "2026-09-03T14:14:08.7901Z,1,WORKGROUP\\m.wong,C:\\Windows\\System32\\notepad.exe,\"notepad.exe util-x_readme.txt\",C:\\Windows\\explorer.exe,C:\\Windows\\explorer.exe,SHA256=ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789",
+            "2026-09-03T15:02:30.4400Z,1,WORKGROUP\\m.wong,C:\\Program Files\\Microsoft\\OneDrive\\OneDrive.exe,\"\"\"C:\\Program Files\\Microsoft\\OneDrive\\OneDrive.exe\"\" /background\",C:\\Windows\\explorer.exe,C:\\Windows\\explorer.exe,SHA256=DEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEF",
           ].join("\n") + "\n",
         ),
       },
@@ -711,10 +724,13 @@ that gets called out in any subsequent legal review.
         kind: "csv",
         mimeType: "text/csv; charset=utf-8",
         bytes: utf8(
+          // AmcacheParser.exe -f C:\Cases\WS-WONG\Amcache.hve --csv . --csvf amcache.csv
+          // (Excerpt: InventoryApplicationFile rows; subset of Eric
+          //  Zimmerman's canonical AmcacheParser column set.)
           [
-            "file_path,sha1,first_seen_utc,product_name,publisher",
-            "C:\\Users\\m.wong\\Downloads\\util-x.exe,1234abcd1234abcd1234abcd1234abcd1234abcd,2026-09-03T14:08:25Z,UtilX,UtilX Project",
-            "C:\\Windows\\System32\\cmd.exe,abcdef,2025-12-01T00:00:00Z,Windows Command Processor,Microsoft Corporation",
+            "ApplicationName,FullPath,Name,SHA1,FileKeyLastWriteTimestamp,ProductName,Publisher,Size,Version,IsPeFile,IsOsComponent",
+            "util-x.exe,C:\\Users\\m.wong\\Downloads\\util-x.exe,util-x.exe,1234abcd1234abcd1234abcd1234abcd1234abcd,2026-09-03 14:08:25,UtilX,UtilX Project,28672,2.0.0.0,True,False",
+            "cmd.exe,C:\\Windows\\System32\\cmd.exe,cmd.exe,0123456789abcdef0123456789abcdef01234567,2025-12-01 00:00:00,Microsoft® Windows® Operating System,Microsoft Corporation,289792,10.0.22631.1,True,True",
           ].join("\n") + "\n",
         ),
       },
@@ -724,10 +740,13 @@ that gets called out in any subsequent legal review.
         kind: "csv",
         mimeType: "text/csv; charset=utf-8",
         bytes: utf8(
+          // AppCompatCacheParser.exe -f C:\Cases\WS-WONG\SYSTEM --csv . --csvf shimcache.csv
+          // (Excerpt: ControlSet001 AppCompatCache values; canonical
+          //  column set from Eric Zimmerman's AppCompatCacheParser.)
           [
-            "file_path,file_last_modified_utc,executed_flag",
-            "C:\\Users\\m.wong\\Downloads\\util-x.exe,2026-09-02T22:00:00Z,present",
-            "C:\\Windows\\System32\\cmd.exe,2024-11-12T18:00:00Z,present",
+            "ControlSet,CacheEntryPosition,Path,LastModifiedTimeUTC,Executed,Duplicate",
+            "ControlSet001,12,C:\\Users\\m.wong\\Downloads\\util-x.exe,2026-09-02 22:00:00,Yes,False",
+            "ControlSet001,158,C:\\Windows\\System32\\cmd.exe,2024-11-12 18:00:00,Yes,False",
           ].join("\n") + "\n",
         ),
       },
@@ -1285,13 +1304,16 @@ subkey carrying:
         kind: "csv",
         mimeType: "text/csv; charset=utf-8",
         bytes: utf8(
+          // EvtxECmd.exe -f C:\Cases\WS-104\Security.evtx --inc 4624,4634 --csv . --csvf logons.csv
+          // Workstation context: WS-104 is a shared kiosk used by both
+          //   accounts on overlapping shifts — captured in the casenotes,
+          //   not in this artefact.
           [
-            "utc,event_id,event_name,user,logon_type",
-            "2026-11-04T08:30:01Z,4624,LogonSuccess,CORP\\s.alvarez,interactive",
-            "2026-11-04T19:00:00Z,4634,Logoff,CORP\\s.alvarez,interactive",
-            "2026-11-04T19:01:08Z,4624,LogonSuccess,CORP\\m.greene,interactive",
-            "2026-11-04T21:30:01Z,4634,Logoff,CORP\\m.greene,interactive",
-            "(Workstation is a shared kiosk used by both accounts on overlapping shifts.)",
+            "TimeCreated,EventId,MapDescription,Computer,UserName,LogonType,WorkstationName,IpAddress",
+            "2026-11-04T08:30:01.3201Z,4624,Account successfully logged on,WS-104,CORP\\s.alvarez,2 (Interactive),WS-104,-",
+            "2026-11-04T19:00:00.1180Z,4634,Account was logged off,WS-104,CORP\\s.alvarez,2 (Interactive),WS-104,-",
+            "2026-11-04T19:01:08.7045Z,4624,Account successfully logged on,WS-104,CORP\\m.greene,2 (Interactive),WS-104,-",
+            "2026-11-04T21:30:01.9911Z,4634,Account was logged off,WS-104,CORP\\m.greene,2 (Interactive),WS-104,-",
           ].join("\n") + "\n",
         ),
       },
