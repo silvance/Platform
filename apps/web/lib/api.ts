@@ -43,6 +43,9 @@ import {
   ScenarioProgressPayload,
   SubmitAnswerRequest,
   SubmitAnswerResponse,
+  SubmitFeedbackRequest,
+  SubmitFeedbackResponse,
+  FeedbackListResponse,
   UpdateArtifactRequest,
   UpdateIndicatorSetRequest,
   UpdateQuestionRequest,
@@ -247,6 +250,30 @@ export const api = {
     get: async (token: string): Promise<AnalyticsResponse> =>
       parse(AnalyticsResponse, await request("/admin/analytics", { token })),
   },
+  feedback: {
+    submit: async (
+      token: string,
+      slug: string,
+      body: SubmitFeedbackRequest,
+    ): Promise<SubmitFeedbackResponse> =>
+      parse(
+        SubmitFeedbackResponse,
+        await request(`/scenarios/${encodeURIComponent(slug)}/feedback`, {
+          method: "POST",
+          token,
+          body,
+        }),
+      ),
+    listAll: async (
+      token: string,
+      opts: { limit?: number } = {},
+    ): Promise<FeedbackListResponse> => {
+      const qp = new URLSearchParams();
+      if (opts.limit !== undefined) qp.set("limit", String(opts.limit));
+      const path = qp.toString()
+        ? `/admin/feedback?${qp.toString()}`
+        : "/admin/feedback";
+      return parse(FeedbackListResponse, await request(path, { token }));
   completions: {
     listRecent: async (
       token: string,

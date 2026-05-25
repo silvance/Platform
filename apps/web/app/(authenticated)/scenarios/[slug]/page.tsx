@@ -12,6 +12,7 @@ import {
   type AdminScenarioDetail,
 } from "@ci-train/contracts";
 import { InlineReviewPanel } from "./inline-review-panel";
+import { FeedbackWidget } from "./feedback-widget";
 
 export const dynamic = "force-dynamic";
 
@@ -187,6 +188,10 @@ export default async function ScenarioWorkspacePage({ params }: Props) {
         saved automatically. There's no overall "submit" — completing every
         question marks the scenario complete.
       </footer>
+
+      {/* Feedback widget — visible to every signed-in user.
+          Append-only; the admin reads submissions at /admin/feedback. */}
+      <FeedbackWidget slug={slug} />
 
       {/* Admin review panel: rendered at the very bottom of the
           page so it doesn't push the brief / artifacts / questions

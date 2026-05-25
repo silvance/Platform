@@ -7,6 +7,7 @@ import {
   QuestionResponse,
   ScenarioReviewStatus,
   SubmitAnswerRequest,
+  SubmitFeedbackRequest,
   type SubmitAnswerResponse,
 } from "@ci-train/contracts";
 
@@ -96,6 +97,62 @@ export async function setInlineScenarioReviewAction(
     };
   }
   revalidatePath(`/scenarios/${slug}`);
+  return { ok: true };
+}
+
+// Scenario feedback submission. Triggered by the small widget at
+// the bottom of the solve view (one row per click, append-only).
+// Resolves to a SubmitResult-shape so the client component can
+// render the success / error path uniformly with the other
+// actions on this page.
+export type SubmitFeedbackResult =
+  | { ok: true }
+  | { ok: false; error: string };
+
+export async function submitScenarioFeedbackAction(
+  scenarioSlug: string,
+  _prev: SubmitFeedbackResult | undefined,
+  formData: FormData,
+): Promise<SubmitFeedbackResult> {
+  const token = await readToken();
+  if (!token) return { ok: false, error: "Not signed in." };
+
+  const bodyRaw = formData.get("body");
+  const ratingRaw = formData.get("rating");
+
+  // The textarea is required by the contract; "" / undefined are
+  // user errors, not server errors.
+  if (typeof bodyRaw !== "string" || bodyRaw.trim().length === 0) {
+    return { ok: false, error: "Feedback can't be empty." };
+  }
+
+  let rating: number | null = null;
+  if (typeof ratingRaw === "string" && ratingRaw !== "") {
+    const n = Number.parseInt(ratingRaw, 10);
+    if (Number.isFinite(n) && n >= 1 && n <= 5) rating = n;
+  }
+
+  const parsed = SubmitFeedbackRequest.safeParse({ body: bodyRaw, rating });
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid feedback." };
+  }
+
+  try {
+    await api.feedback.submit(token, scenarioSlug, parsed.data);
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 400) {
+      const ebody = err.body as { message?: string } | undefined;
+      return { ok: false, error: ebody?.message ?? err.message };
+    }
+    if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+      return { ok: false, error: "Not authorized." };
+    }
+    return {
+      ok: false,
+      error: err instanceof ApiError ? err.message : "Submit failed.",
+    };
+  }
+
   return { ok: true };
 }
 

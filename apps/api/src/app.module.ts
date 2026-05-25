@@ -16,6 +16,7 @@ import { AttemptsModule } from "./modules/attempts/attempts.module";
 import { AuthoringModule } from "./modules/authoring/authoring.module";
 import { AccessCodesModule } from "./modules/access-codes/access-codes.module";
 import { AnalyticsModule } from "./modules/analytics/analytics.module";
+import { FeedbackModule } from "./modules/feedback/feedback.module";
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { AnalyticsModule } from "./modules/analytics/analytics.module";
     AuthoringModule,
     AccessCodesModule,
     AnalyticsModule,
+    FeedbackModule,
     HealthModule,
     HelloModule,
   ],

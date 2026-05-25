@@ -33,6 +33,8 @@ const NAV_ITEMS: Array<{ href: string; label: string; admin?: boolean }> = [
   { href: "/admin/completions", label: "Completions", admin: true },
  // registration access-code management surface.
   { href: "/admin/access-codes", label: "Codes", admin: true },
+ // user-submitted feedback inbox.
+  { href: "/admin/feedback", label: "Feedback", admin: true },
 ];
 
 export function AppHeader({ user, theme, pendingApprovalCount }: Props) {
