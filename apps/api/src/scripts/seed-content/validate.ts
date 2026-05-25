@@ -52,6 +52,7 @@ const VALID_LANES = new Set<string>([
   "removable_media_spillage",
   "insider_risk",
   "network_logs",
+  "mobile_forensics",
   "rf_awareness",
   "evidence_handling",
   "report_writing",

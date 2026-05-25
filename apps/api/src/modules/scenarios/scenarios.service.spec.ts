@@ -223,8 +223,8 @@ describe("ScenariosService (unit)", () => {
       const svc = new ScenariosService(prisma);
       const { lanes } = await svc.laneOverview("user", "test-user-id");
 
-      // 9 canonical lanes returned regardless of contents.
-      expect(lanes).toHaveLength(9);
+      // 10 canonical lanes returned regardless of contents.
+      expect(lanes).toHaveLength(10);
       const foundations = lanes.find((l) => l.lane === "foundations");
       const win = lanes.find((l) => l.lane === "windows_artifacts");
       const empty = lanes.find((l) => l.lane === "rf_awareness");
