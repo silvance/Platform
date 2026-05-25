@@ -229,12 +229,17 @@ A correct answer separates:
         type: "text_match",
         weight: 1,
         promptMd:
-          "What is the **real** domain a DHL notification should come from? (Bare domain only.)",
+          "What is the **real** domain a DHL notification should come from? **(Bare domain — no `www.`, no path.)**",
         textMatch: {
-          acceptableAnswers: ["dhl.com"],
-          hint: "Check organization-mail-policy.txt.",
+          acceptableAnswers: ["dhl.com", "www.dhl.com"],
+          hint: "Check `organization-mail-policy.txt` — the org's mail policy names it explicitly.",
+          hintAfterTries: 2,
         },
-        expected: { type: "text_match", acceptableAnswers: ["dhl.com"], regex: false },
+        expected: {
+          type: "text_match",
+          acceptableAnswers: ["dhl.com", "www.dhl.com"],
+          regex: false,
+        },
         debriefMd:
           "`dhl.com`. The organizational mail policy names it explicitly — and that's the bar the message has to clear. The fact that the lookalike domain technically passes its own auth checks is not a substitute for matching the expected sender.",
       },
@@ -432,12 +437,39 @@ Separate:
         promptMd:
           "What is the **actual** file type, named by the first eight hex bytes? (Pick the short label, not the long name.)",
         textMatch: {
-          acceptableAnswers: ["cfb", "compound file", "compound file binary", "compound document", "doc", "ole", "office", "office cfb"],
-          hint: "The hex starts D0 CF 11 E0 A1 B1 1A E1.",
+          acceptableAnswers: [
+            "cfb",
+            "compound file",
+            "compound file binary",
+            "compound document",
+            "doc",
+            ".doc",
+            "ole",
+            "ole2",
+            "office",
+            "office cfb",
+            "ms office",
+            "ms-office",
+          ],
+          hint: "The hex starts `D0 CF 11 E0 A1 B1 1A E1` — the signature of the Microsoft Compound File Binary (CFB) container that pre-OOXML Office used. Short label like `CFB`, `OLE`, `DOC`.",
+          hintAfterTries: 2,
         },
         expected: {
           type: "text_match",
-          acceptableAnswers: ["cfb", "compound file", "compound file binary", "compound document", "doc", "ole", "office", "office cfb"],
+          acceptableAnswers: [
+            "cfb",
+            "compound file",
+            "compound file binary",
+            "compound document",
+            "doc",
+            ".doc",
+            "ole",
+            "ole2",
+            "office",
+            "office cfb",
+            "ms office",
+            "ms-office",
+          ],
           regex: false,
         },
         debriefMd:
@@ -541,20 +573,40 @@ the mismatch proves and what it doesn't.
       },
       {
         ordinal: 2,
-        type: "text_match",
+        type: "multi_choice",
         weight: 1,
         promptMd:
-          "What is the operational verification step before fulfilling this request?",
-        textMatch: {
-          acceptableAnswers: ["call pat", "phone pat", "voice verify", "in person", "verify in person"],
-        },
+          "What is the right verification step before fulfilling this request?",
+        options: [
+          {
+            id: "out-of-band-voice",
+            label:
+              "Verify out-of-band: phone-call Pat at a known good number (from the directory, not from the email), or walk over in person.",
+          },
+          {
+            id: "reply-asking",
+            label:
+              "Reply to the email asking Pat to confirm the gift-card amount and the codes-back instruction.",
+          },
+          {
+            id: "block-and-move-on",
+            label:
+              "Block the sender at the mail gateway and consider the matter closed.",
+          },
+          {
+            id: "forward-to-manager",
+            label:
+              "Forward the email to your manager and wait for them to decide whether to act on it.",
+          },
+        ],
+        allowMultiple: false,
         expected: {
-          type: "text_match",
-          acceptableAnswers: ["call pat", "phone pat", "voice verify", "in person", "verify in person"],
-          regex: false,
+          type: "multi_choice",
+          correctIds: ["out-of-band-voice"],
+          allowMultiple: false,
         },
         debriefMd:
-          "Out-of-band verification (phone call to a known number, or in-person walk-over) is the operational defense. Gift-card requests + reply-to-elsewhere is one of the most reliable phishing fingerprints; the call resolves it cheaply.",
+          "Out-of-band verification (phone call to a known good number, or an in-person walk-over) is the operational defense. Gift-card requests with a Reply-To pointed at an external mailbox is the canonical CEO-fraud script; the call resolves it cheaply. *Replying* only gets you the attacker on the other end. *Blocking and moving on* discards a live indicator without confirming whether Pat's account is involved.",
       },
       {
         ordinal: 3,
@@ -640,11 +692,44 @@ user is asking whether it's safe to reply.
         ordinal: 2,
         type: "text_match",
         weight: 1,
-        promptMd: "Which header field is the canonical sender of the message at the protocol layer?",
-        textMatch: { acceptableAnswers: ["from address", "from", "from:", "smtp.mailfrom", "envelope from", "return-path"] },
+        promptMd:
+          "Which header field is the canonical sender of the message at the protocol layer? **(Field name only, e.g. `From` or `Return-Path`.)**",
+        textMatch: {
+          acceptableAnswers: [
+            "from address",
+            "from",
+            "from:",
+            "from header",
+            "smtp.mailfrom",
+            "envelope from",
+            "envelope-from",
+            "mail from",
+            "return-path",
+            "return path",
+            "5321.from",
+            "rfc5321.from",
+            "rfc 5321 from",
+          ],
+          hint: "Two acceptable answers: the address portion of the `From:` header, or the SMTP-layer envelope sender (`Return-Path` / `MAIL FROM`).",
+          hintAfterTries: 2,
+        },
         expected: {
           type: "text_match",
-          acceptableAnswers: ["from address", "from", "from:", "smtp.mailfrom", "envelope from", "return-path"],
+          acceptableAnswers: [
+            "from address",
+            "from",
+            "from:",
+            "from header",
+            "smtp.mailfrom",
+            "envelope from",
+            "envelope-from",
+            "mail from",
+            "return-path",
+            "return path",
+            "5321.from",
+            "rfc5321.from",
+            "rfc 5321 from",
+          ],
           regex: false,
         },
         debriefMd:
@@ -714,9 +799,17 @@ expiry. Look closely at the sender domain.
         type: "text_match",
         weight: 1,
         promptMd:
-          "What is the **registered** (base) domain the message actually comes from? (Bare domain.)",
-        textMatch: { acceptableAnswers: ["workday-notice.com"] },
-        expected: { type: "text_match", acceptableAnswers: ["workday-notice.com"], regex: false },
+          "What is the **registered** (base) domain the message actually comes from? **(Bare domain — no `www.`, no path.)**",
+        textMatch: {
+          acceptableAnswers: ["workday-notice.com", "www.workday-notice.com"],
+          hint: "Read right-to-left across the `From` value. The registered domain is the rightmost two labels (`name.tld`), not the eye-friendly parts on the left.",
+          hintAfterTries: 2,
+        },
+        expected: {
+          type: "text_match",
+          acceptableAnswers: ["workday-notice.com", "www.workday-notice.com"],
+          regex: false,
+        },
         debriefMd:
           "`workday-notice.com`. The full From value `partner-corp.example.workday-notice.com` is *subdomain stacking*: the eye-friendly parts (`partner-corp.example`) sit on the left so the user reads past them, but the registered domain — the one whose owner controls what happens — is the right-most label group: `workday-notice.com`. That's where whois + passive-DNS pivots should focus.",
       },
@@ -827,9 +920,18 @@ Do not scan the QR code with a personal phone.
         ordinal: 2,
         type: "text_match",
         weight: 1,
-        promptMd: "What is the *registered* (base) domain of the decoded URL? (Bare domain.)",
-        textMatch: { acceptableAnswers: ["weirdtld.xyz"] },
-        expected: { type: "text_match", acceptableAnswers: ["weirdtld.xyz"], regex: false },
+        promptMd:
+          "What is the *registered* (base) domain of the decoded URL? **(Bare domain — no `www.`, no path.)**",
+        textMatch: {
+          acceptableAnswers: ["weirdtld.xyz", "www.weirdtld.xyz"],
+          hint: "Read right-to-left across the URL host. The registered domain is the rightmost two labels (`name.tld`), not the eye-friendly subdomain prefix.",
+          hintAfterTries: 2,
+        },
+        expected: {
+          type: "text_match",
+          acceptableAnswers: ["weirdtld.xyz", "www.weirdtld.xyz"],
+          regex: false,
+        },
         debriefMd:
           "`weirdtld.xyz`. The subdomain (`hr-benefits-portal-7791`) is attacker-chosen window dressing; the registered domain is what they own and where the investigation pivots from.",
       },

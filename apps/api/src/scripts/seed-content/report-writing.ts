@@ -364,17 +364,37 @@ Rewrite the sentence.
       },
       {
         ordinal: 2,
-        type: "text_match",
+        type: "multi_choice",
         weight: 1,
-        promptMd: "What does Prefetch's *absence* prove?",
-        textMatch: { acceptableAnswers: ["nothing", "very little", "little", "nothing definitive", "not by itself"] },
+        promptMd: "What does the **absence** of a Prefetch entry for `util-x.exe` prove?",
+        options: [
+          {
+            id: "nothing-definitive",
+            label:
+              "Nothing definitive. It leans toward non-execution, but Prefetch creation can be delayed and some configurations suppress Prefetch — absence is suggestive, not affirmative.",
+          },
+          {
+            id: "proves-not-executed",
+            label: "It proves the binary did not execute on this workstation.",
+          },
+          {
+            id: "proves-cleaned-up",
+            label:
+              "It proves the binary executed but the attacker cleaned up Prefetch afterwards.",
+          },
+          {
+            id: "proves-sysmon-off",
+            label: "It proves Sysmon was disabled at the time of execution.",
+          },
+        ],
+        allowMultiple: false,
         expected: {
-          type: "text_match",
-          acceptableAnswers: ["nothing", "very little", "little", "nothing definitive", "not by itself"],
-          regex: false,
+          type: "multi_choice",
+          correctIds: ["nothing-definitive"],
+          allowMultiple: false,
         },
         debriefMd:
-          "Absence of a Prefetch entry leans toward non-execution but does not prove it. Prefetch creation can be delayed, and some configurations suppress Prefetch entries. Absence is suggestive, not affirmative.",
+          "**Nothing definitive.** Absence of a Prefetch entry leans toward non-execution, but Prefetch creation can be delayed under load and certain configurations suppress Prefetch entries. Absence is suggestive, not affirmative — exactly the kind of result the *calibrated* writeup names explicitly (looked for, not observed) rather than promoting to a conclusion in either direction.",
       },
       {
         ordinal: 3,
