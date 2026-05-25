@@ -6,6 +6,7 @@ import { Markdown } from "@/components/markdown";
 import { ArtifactViewer } from "@/components/viewers/artifact-viewer";
 import { QuestionCard } from "@/components/questions/question-card";
 import {
+  LANE_LABELS,
   SKILL_AREA_LABELS,
   isAwarenessOnly,
   type AdminScenarioDetail,
@@ -60,8 +61,11 @@ export default async function ScenarioWorkspacePage({ params }: Props) {
   return (
     <main>
       <div style={{ fontSize: ".9rem", marginBottom: ".5rem" }}>
-        <Link href="/scenarios" style={{ color: "var(--accent)" }}>
-          ← All scenarios
+        <Link
+          href={`/scenarios/lanes/${encodeURIComponent(scenario.lane)}`}
+          style={{ color: "var(--accent)" }}
+        >
+          ← {LANE_LABELS[scenario.lane]}
         </Link>
       </div>
 

@@ -207,14 +207,3 @@ export function buildPcap(packets: PcapPacket[]): Buffer {
   }
   return Buffer.concat(chunks);
 }
-
-// RF-awareness scenarios share the same disclaimer so the legal /
-// scope framing is identical across the family.
-export const RF_AWARENESS_DISCLAIMER = `
-> **Awareness module — not TSCM training.** This scenario builds
-> investigative judgement around RF observations. It does **not**
-> qualify you to conduct TSCM sweeps, evaluate device presence,
-> or render technical findings on RF threats. When in doubt,
-> escalate to qualified TSCM personnel and document observations
-> conservatively.
-`.trim();
