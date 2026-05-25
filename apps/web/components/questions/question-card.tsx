@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type {
   AnswerKeyPayload,
   QuestionPayload,
@@ -26,6 +26,11 @@ interface Props {
 // that shows their answer + the answer key + the debrief. Until
 // then it allows unlimited retries, optionally showing a hint when
 // one's authored and the threshold's hit.
+//
+// Completed questions are auto-minimized when the page loads, so
+// returning students see their incomplete questions front and
+// centre. A question the student gets right *this session* stays
+// expanded so the debrief is visible immediately.
 export function QuestionCard({ scenarioSlug, question, initialState }: Props) {
   const [completedAt, setCompletedAt] = useState<string | null>(
     initialState?.completedAt ?? null,
@@ -44,6 +49,14 @@ export function QuestionCard({ scenarioSlug, question, initialState }: Props) {
   const [feedback, setFeedback] = useState<
     null | { correct: boolean; completedJustNow: boolean }
   >(null);
+
+  // Capture "was completed when the page loaded" once. Used to
+  // decide whether to start collapsed (returning student already
+  // saw the debrief) or expanded (just-completed-now, debrief is
+  // new information).
+  const wasCompletedOnLoadRef = useRef<boolean>(
+    initialState?.completedAt != null,
+  );
 
   const isCompleted = completedAt !== null;
   const formDisabled = isCompleted;
@@ -68,21 +81,25 @@ export function QuestionCard({ scenarioSlug, question, initialState }: Props) {
     }
   }
 
-  return (
-    <article className={`card q-card ${isCompleted ? "q-completed" : ""}`}>
-      <header className="q-header">
-        <span className="q-ordinal">Q{question.ordinal}</span>
-        <span className="chip">{question.type.replace(/_/g, " ")}</span>
-        <span className="chip">weight {question.weight}</span>
-        {isCompleted ? (
-          <span className="chip chip-ok">
-            completed {attemptCount === 1 ? "first try" : `try ${attemptCount}`}
-          </span>
-        ) : attemptCount > 0 ? (
-          <span className="chip">try {attemptCount}</span>
-        ) : null}
-      </header>
+  const completedChip = isCompleted ? (
+    <span className="chip chip-ok">
+      completed {attemptCount === 1 ? "first try" : `try ${attemptCount}`}
+    </span>
+  ) : attemptCount > 0 ? (
+    <span className="chip">try {attemptCount}</span>
+  ) : null;
 
+  const headerChips = (
+    <>
+      <span className="q-ordinal">Q{question.ordinal}</span>
+      <span className="chip">{question.type.replace(/_/g, " ")}</span>
+      <span className="chip">weight {question.weight}</span>
+      {completedChip}
+    </>
+  );
+
+  const body = (
+    <>
       <div className="q-prompt">
         <Markdown source={question.promptMd} />
       </div>
@@ -131,6 +148,24 @@ export function QuestionCard({ scenarioSlug, question, initialState }: Props) {
           </div>
         </details>
       ) : null}
+    </>
+  );
+
+  if (isCompleted) {
+    return (
+      <article className="card q-card q-completed">
+        <details open={!wasCompletedOnLoadRef.current}>
+          <summary className="q-header q-summary">{headerChips}</summary>
+          {body}
+        </details>
+      </article>
+    );
+  }
+
+  return (
+    <article className="card q-card">
+      <header className="q-header">{headerChips}</header>
+      {body}
     </article>
   );
 }
