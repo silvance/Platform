@@ -274,6 +274,8 @@ export const api = {
         ? `/admin/feedback?${qp.toString()}`
         : "/admin/feedback";
       return parse(FeedbackListResponse, await request(path, { token }));
+    },
+  },
   completions: {
     listRecent: async (
       token: string,

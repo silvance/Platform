@@ -327,15 +327,30 @@ export class AuthService implements OnModuleInit {
       throw new UnauthorizedException("Invalid current password.");
     }
     const newHash = await this.hashPassword(newPlain);
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { passwordHash: newHash },
+
+    // Wrap the password update + the other-session revocation in a
+    // single transaction. The two operations together represent
+    // "rotate credentials": running them sequentially left a
+    // microsecond window in which a previously-leaked token could
+    // race a re-authentication against the still-valid old hash on
+    // a replica. Wrapping closes the window — either both writes
+    // commit, or neither does.
+    const result = await this.prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: userId },
+        data: { passwordHash: newHash },
+      });
+      const updated = await tx.session.updateMany({
+        where: {
+          userId,
+          revokedAt: null,
+          NOT: { id: currentSessionId },
+        },
+        data: { revokedAt: new Date() },
+      });
+      return { revoked: updated.count };
     });
-    const { revoked } = await this.revokeAllSessionsForUser(
-      userId,
-      currentSessionId,
-    );
-    return { revokedSessions: revoked };
+    return { revokedSessions: result.revoked };
   }
 
   // SHA-256 of the bearer token. The raw token never lands in the DB;

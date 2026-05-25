@@ -9,6 +9,7 @@ import {
   UsePipes,
 } from "@nestjs/common";
 import {
+  AdminFeedbackListQuery,
   FeedbackListResponse,
   SubmitFeedbackRequest,
   SubmitFeedbackResponse,
@@ -54,11 +55,9 @@ export class FeedbackAdminController {
 
   @Get()
   async list(
-    @Query("limit") limitRaw?: string,
+    @Query(new ZodValidationPipe(AdminFeedbackListQuery))
+    query: AdminFeedbackListQuery,
   ): Promise<FeedbackListResponse> {
-    const limit = limitRaw ? Number.parseInt(limitRaw, 10) : 200;
-    return this.feedback.listAll({
-      limit: Number.isFinite(limit) ? limit : 200,
-    });
+    return this.feedback.listAll({ limit: query.limit });
   }
 }
