@@ -365,6 +365,7 @@ export class ProgressService {
           attemptCount: existing.attemptCount,
           answerKey: toAnswerKey(question.type, question.answerKey, question.optionsJson),
           hint: null,
+          selectionFeedback: null,
         });
       }
 
@@ -432,6 +433,10 @@ export class ProgressService {
           ? toAnswerKey(question.type, question.answerKey, question.optionsJson)
           : null,
         hint,
+        // Per-pick breakdown is meaningful only while the student is
+        // still trying. Once they get it right, the debrief renders
+        // and the breakdown adds no signal.
+        selectionFeedback: result.correct ? null : result.selectionFeedback,
       });
     });
   }

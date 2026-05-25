@@ -17,7 +17,7 @@ describe("GradingService", () => {
         expectedJson: expected,
         responseJson: { type: "multi_choice", data: { selectedIds: ["a", "c"] } },
       });
-      expect(r).toEqual({ correct: true, score: 1 });
+      expect(r).toMatchObject({ correct: true, score: 1 });
     });
 
     it("partial subset with no false positives → correct=false, fractional score", () => {
@@ -38,7 +38,7 @@ describe("GradingService", () => {
         expectedJson: expected,
         responseJson: { type: "multi_choice", data: { selectedIds: ["a", "b"] } },
       });
-      expect(r).toEqual({ correct: false, score: 0 });
+      expect(r).toMatchObject({ correct: false, score: 0 });
     });
 
     it("no partial on allowMultiple=false", () => {
@@ -48,7 +48,7 @@ describe("GradingService", () => {
         expectedJson: { ...expected, allowMultiple: false },
         responseJson: { type: "multi_choice", data: { selectedIds: ["a"] } },
       });
-      expect(r).toEqual({ correct: false, score: 0 });
+      expect(r).toMatchObject({ correct: false, score: 0 });
     });
   });
 
@@ -66,7 +66,7 @@ describe("GradingService", () => {
           expectedJson: expected,
           responseJson: { type: "confidence", data: { value: 4 } },
         }),
-      ).toEqual({ correct: true, score: 1 });
+      ).toMatchObject({ correct: true, score: 1 });
     });
 
     it("boundary values are inclusive", () => {
@@ -96,7 +96,7 @@ describe("GradingService", () => {
           expectedJson: expected,
           responseJson: { type: "confidence", data: { value: 2 } },
         }),
-      ).toEqual({ correct: false, score: 0 });
+      ).toMatchObject({ correct: false, score: 0 });
     });
   });
 
@@ -117,7 +117,7 @@ describe("GradingService", () => {
             data: { selectedIds: ["a", "b", "c"] },
           },
         }),
-      ).toEqual({ correct: true, score: 1 });
+      ).toMatchObject({ correct: true, score: 1 });
     });
 
     it("subset with no false positives → fractional score, correct=false", () => {
@@ -145,7 +145,7 @@ describe("GradingService", () => {
             data: { selectedIds: ["a", "z"] },
           },
         }),
-      ).toEqual({ correct: false, score: 0 });
+      ).toMatchObject({ correct: false, score: 0 });
     });
   });
 
@@ -174,7 +174,7 @@ describe("GradingService", () => {
             data: { text: "  Vendor-Lookup-Alike.COM  " },
           },
         }),
-      ).toEqual({ correct: true, score: 1 });
+      ).toMatchObject({ correct: true, score: 1 });
     });
 
     it("collapses internal whitespace when normalizeWhitespace is on", () => {
@@ -194,7 +194,7 @@ describe("GradingService", () => {
           data: { text: "PROVEN     not\t\tinferred" },
         },
       });
-      expect(withWs).toEqual({ correct: true, score: 1 });
+      expect(withWs).toMatchObject({ correct: true, score: 1 });
     });
 
     it("rejects when wrong", () => {
@@ -208,7 +208,7 @@ describe("GradingService", () => {
             data: { text: "wrong-domain.com" },
           },
         }),
-      ).toEqual({ correct: false, score: 0 });
+      ).toMatchObject({ correct: false, score: 0 });
     });
 
     it("respects caseSensitive=true", () => {
@@ -223,7 +223,7 @@ describe("GradingService", () => {
             data: { text: "vendor-lookup-alike.com" },
           },
         }),
-      ).toEqual({ correct: true, score: 1 });
+      ).toMatchObject({ correct: true, score: 1 });
       // Wrong case → no match against either acceptable string.
       expect(
         svc.grade({
@@ -261,7 +261,7 @@ describe("GradingService", () => {
         },
         responseJson: { type: "text_match", data: { text: "10.0.0.42" } },
       });
-      expect(r).toEqual({ correct: true, score: 1 });
+      expect(r).toMatchObject({ correct: true, score: 1 });
     });
 
     it("malformed regex grades as miss, not crash", () => {
@@ -281,7 +281,7 @@ describe("GradingService", () => {
         },
         responseJson: { type: "text_match", data: { text: "anything" } },
       });
-      expect(r).toEqual({ correct: false, score: 0 });
+      expect(r).toMatchObject({ correct: false, score: 0 });
     });
   });
 
@@ -293,7 +293,7 @@ describe("GradingService", () => {
         expectedJson: { type: "some_future_type" },
         responseJson: { type: "some_future_type", data: {} },
       });
-      expect(r).toEqual({ correct: false, score: 0 });
+      expect(r).toMatchObject({ correct: false, score: 0 });
     });
 
     it("malformed expected key → miss, not throw", () => {
@@ -303,7 +303,77 @@ describe("GradingService", () => {
         expectedJson: { wat: true },
         responseJson: { type: "multi_choice", data: { selectedIds: ["a"] } },
       });
-      expect(r).toEqual({ correct: false, score: 0 });
+      expect(r).toMatchObject({ correct: false, score: 0 });
+    });
+  });
+
+  // Per-pick breakdown shipped to the UI so the student can see
+  // "3 of 4 right, plus 2 extras" instead of a bare "Not yet."
+  describe("selectionFeedback", () => {
+    it("counts hits + extras + reports total-correct on select_indicators wrong with overpick", () => {
+      const r = svc.grade({
+        type: "select_indicators",
+        optionsJson: null,
+        expectedJson: { type: "select_indicators", correctIds: ["a", "b", "c", "d"] },
+        responseJson: {
+          type: "select_indicators",
+          data: { selectedIds: ["a", "b", "x", "y"] },
+        },
+      });
+      expect(r).toMatchObject({
+        correct: false,
+        selectionFeedback: {
+          correctPicked: 2,
+          totalPicked: 4,
+          totalCorrect: 4,
+        },
+      });
+    });
+
+    it("includes breakdown on correct select_indicators submissions too", () => {
+      const r = svc.grade({
+        type: "select_indicators",
+        optionsJson: null,
+        expectedJson: { type: "select_indicators", correctIds: ["a", "b"] },
+        responseJson: {
+          type: "select_indicators",
+          data: { selectedIds: ["a", "b"] },
+        },
+      });
+      expect(r.correct).toBe(true);
+      expect(r.selectionFeedback).toEqual({
+        correctPicked: 2,
+        totalPicked: 2,
+        totalCorrect: 2,
+      });
+    });
+
+    it("returns null breakdown on single-pick multi_choice (allowMultiple=false)", () => {
+      const r = svc.grade({
+        type: "multi_choice",
+        optionsJson: null,
+        expectedJson: { type: "multi_choice", correctIds: ["a"], allowMultiple: false },
+        responseJson: { type: "multi_choice", data: { selectedIds: ["b"] } },
+      });
+      expect(r.selectionFeedback).toBeNull();
+    });
+
+    it("returns null breakdown on text_match + confidence", () => {
+      const tm = svc.grade({
+        type: "text_match",
+        optionsJson: { caseSensitive: false, normalizeWhitespace: true, hintAfterTries: 3 },
+        expectedJson: { type: "text_match", acceptableAnswers: ["yes"], regex: false },
+        responseJson: { type: "text_match", data: { text: "no" } },
+      });
+      expect(tm.selectionFeedback).toBeNull();
+
+      const c = svc.grade({
+        type: "confidence",
+        optionsJson: null,
+        expectedJson: { type: "confidence", expectedRange: [3, 5] },
+        responseJson: { type: "confidence", data: { value: 1 } },
+      });
+      expect(c.selectionFeedback).toBeNull();
     });
   });
 });

@@ -276,5 +276,21 @@ export const SubmitAnswerResponse = z.object({
   // Optional hint, shown when incorrect *and* attemptCount has crossed
   // the authored hintAfterTries threshold (text_match only in M7).
   hint: z.string().max(MAX_HINT_CHARS).nullable(),
+  // Set when incorrect AND the question type supports per-pick
+  // feedback (multi_choice with allowMultiple, select_indicators).
+  // The UI uses these counts to render a "you have 3 of 4 correct,
+  // 2 of your selections aren't part of the answer" hint so the
+  // student can converge instead of guessing — without revealing
+  // which specific items are right or wrong.
+  selectionFeedback: z
+    .object({
+      // How many of the picked items are in the answer set.
+      correctPicked: z.number().int().min(0),
+      // How many items the trainee picked total.
+      totalPicked: z.number().int().min(0),
+      // Size of the answer set.
+      totalCorrect: z.number().int().min(1),
+    })
+    .nullable(),
 });
 export type SubmitAnswerResponse = z.infer<typeof SubmitAnswerResponse>;
