@@ -586,6 +586,32 @@ footer { color: var(--muted); font-size: .85rem; margin-top: var(--space-12); }
   background: linear-gradient(0deg, var(--status-ok-bg) 0%, transparent 100%);
 }
 
+/* Completed questions wrap their body in a <details>; the
+   <summary> takes over the q-header role. Drop the default
+   disclosure marker (it doesn't compose with the flex layout)
+   and add an aligned chevron the user can hover. Collapsed cards
+   show only the header chips; the prompt + (read-only) form +
+   debrief expand on click. */
+.q-summary {
+  cursor: pointer;
+  margin-bottom: 0;
+  list-style: none;
+}
+.q-summary::-webkit-details-marker { display: none; }
+.q-summary::after {
+  content: "▾";
+  margin-left: auto;
+  color: var(--muted);
+  font-size: .85rem;
+  transition: transform 200ms ease;
+}
+.q-card details:not([open]) > .q-summary::after {
+  transform: rotate(-90deg);
+}
+.q-card details[open] > .q-summary {
+  margin-bottom: var(--space-2);
+}
+
 /* ─── Admin authoring forms ─────────────────────────────── */
 
 .admin-form { display: flex; flex-direction: column; gap: var(--space-4); }
