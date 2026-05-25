@@ -29,6 +29,18 @@ export interface GradingResult {
   correct: boolean;
   // 0.0–1.0. Always set for the four supported question types.
   score: number;
+  // Per-pick breakdown for selection-style questions (multi_choice
+  // with allowMultiple, select_indicators). Lets the UI render a
+  // "3 of 4 correct, 2 extra" hint without revealing which items
+  // are right/wrong. Null on confidence + text_match + single-pick
+  // multi_choice — where there's nothing meaningful to count.
+  selectionFeedback: SelectionFeedback | null;
+}
+
+export interface SelectionFeedback {
+  correctPicked: number;
+  totalPicked: number;
+  totalCorrect: number;
 }
 
 // Local schemas for the expected_json shapes stored on answer_keys.
@@ -75,27 +87,39 @@ export class GradingService {
           return this.gradeTextMatch(input);
       }
     } catch {
-      return { correct: false, score: 0 };
+      return { correct: false, score: 0, selectionFeedback: null };
     }
     // The switch above is exhaustive over the current QuestionType
     // enum. This fallback exists only for defense in depth — if a
     // future enum value reaches the grader before its case lands,
     // mark it incorrect instead of silently returning undefined.
-    return { correct: false, score: 0 };
+    return { correct: false, score: 0, selectionFeedback: null };
   }
 
   private gradeMultiChoice(input: GradingInput): GradingResult {
     const expected = ExpectedMc.safeParse(input.expectedJson);
-    if (!expected.success) return { correct: false, score: 0 };
+    if (!expected.success) {
+      return { correct: false, score: 0, selectionFeedback: null };
+    }
     const response = McResponse.safeParse(unwrapData("multi_choice", input.responseJson));
-    if (!response.success) return { correct: false, score: 0 };
+    if (!response.success) {
+      return { correct: false, score: 0, selectionFeedback: null };
+    }
 
     const correct = new Set(expected.data.correctIds);
     const picked = new Set(response.data.selectedIds);
     const exactMatch =
       correct.size === picked.size &&
       [...correct].every((id) => picked.has(id));
-    if (exactMatch) return { correct: true, score: 1 };
+
+    // Selection feedback is meaningful only for multi-pick questions.
+    // Single-pick MC is already a "right vs wrong" with no per-item
+    // breakdown to give back.
+    const feedback: SelectionFeedback | null = expected.data.allowMultiple
+      ? selectionBreakdown(correct, picked)
+      : null;
+
+    if (exactMatch) return { correct: true, score: 1, selectionFeedback: feedback };
 
     // Partial credit (subset with no false positives) is *reported* as
     // a score so the UI can show "you got 2/3" — but it does not
@@ -103,58 +127,82 @@ export class GradingService {
     if (expected.data.allowMultiple && picked.size > 0) {
       const allCorrect = [...picked].every((id) => correct.has(id));
       if (allCorrect && picked.size < correct.size) {
-        return { correct: false, score: picked.size / correct.size };
+        return {
+          correct: false,
+          score: picked.size / correct.size,
+          selectionFeedback: feedback,
+        };
       }
     }
-    return { correct: false, score: 0 };
+    return { correct: false, score: 0, selectionFeedback: feedback };
   }
 
   private gradeConfidence(input: GradingInput): GradingResult {
     const expected = ExpectedConfidence.safeParse(input.expectedJson);
-    if (!expected.success) return { correct: false, score: 0 };
+    if (!expected.success) {
+      return { correct: false, score: 0, selectionFeedback: null };
+    }
     const response = ConfidenceResponse.safeParse(unwrapData("confidence", input.responseJson));
-    if (!response.success) return { correct: false, score: 0 };
+    if (!response.success) {
+      return { correct: false, score: 0, selectionFeedback: null };
+    }
 
     const [lo, hi] = expected.data.expectedRange;
     const v = response.data.value;
     return v >= lo && v <= hi
-      ? { correct: true, score: 1 }
-      : { correct: false, score: 0 };
+      ? { correct: true, score: 1, selectionFeedback: null }
+      : { correct: false, score: 0, selectionFeedback: null };
   }
 
   private gradeSelectIndicators(input: GradingInput): GradingResult {
     const expected = ExpectedSelectIndicators.safeParse(input.expectedJson);
-    if (!expected.success) return { correct: false, score: 0 };
+    if (!expected.success) {
+      return { correct: false, score: 0, selectionFeedback: null };
+    }
     const response = SelectIndicatorsResponse.safeParse(
       unwrapData("select_indicators", input.responseJson),
     );
-    if (!response.success) return { correct: false, score: 0 };
+    if (!response.success) {
+      return { correct: false, score: 0, selectionFeedback: null };
+    }
 
     const correct = new Set(expected.data.correctIds);
     const picked = new Set(response.data.selectedIds);
     const exactMatch =
       correct.size === picked.size &&
       [...correct].every((id) => picked.has(id));
-    if (exactMatch) return { correct: true, score: 1 };
+    const feedback = selectionBreakdown(correct, picked);
+
+    if (exactMatch) return { correct: true, score: 1, selectionFeedback: feedback };
 
     if (picked.size > 0) {
       const allCorrect = [...picked].every((id) => correct.has(id));
       if (allCorrect && picked.size < correct.size) {
-        return { correct: false, score: picked.size / correct.size };
+        return {
+          correct: false,
+          score: picked.size / correct.size,
+          selectionFeedback: feedback,
+        };
       }
     }
-    return { correct: false, score: 0 };
+    return { correct: false, score: 0, selectionFeedback: feedback };
   }
 
   private gradeTextMatch(input: GradingInput): GradingResult {
     const expected = ExpectedTextMatch.safeParse(input.expectedJson);
-    if (!expected.success) return { correct: false, score: 0 };
+    if (!expected.success) {
+      return { correct: false, score: 0, selectionFeedback: null };
+    }
     const opts = TextMatchOptionsSpec.safeParse(input.optionsJson);
-    if (!opts.success) return { correct: false, score: 0 };
+    if (!opts.success) {
+      return { correct: false, score: 0, selectionFeedback: null };
+    }
     const response = TextMatchResponse.safeParse(
       unwrapData("text_match", input.responseJson),
     );
-    if (!response.success) return { correct: false, score: 0 };
+    if (!response.success) {
+      return { correct: false, score: 0, selectionFeedback: null };
+    }
 
     const submitted = normalizeText(response.data.text, opts.data);
 
@@ -168,14 +216,16 @@ export class GradingService {
       for (const pattern of expected.data.acceptableAnswers) {
         try {
           const re = new RegExp(pattern, flags);
-          if (re.test(submitted)) return { correct: true, score: 1 };
+          if (re.test(submitted)) {
+            return { correct: true, score: 1, selectionFeedback: null };
+          }
         } catch {
           // Malformed regex authored in the answer key. Treat as a
           // grading miss; the author is responsible for valid regex.
           continue;
         }
       }
-      return { correct: false, score: 0 };
+      return { correct: false, score: 0, selectionFeedback: null };
     }
 
     // Literal match. Normalize the acceptable answers the same way we
@@ -183,11 +233,26 @@ export class GradingService {
     // symmetrically.
     for (const accept of expected.data.acceptableAnswers) {
       if (normalizeText(accept, opts.data) === submitted) {
-        return { correct: true, score: 1 };
+        return { correct: true, score: 1, selectionFeedback: null };
       }
     }
-    return { correct: false, score: 0 };
+    return { correct: false, score: 0, selectionFeedback: null };
   }
+}
+
+function selectionBreakdown(
+  correct: Set<string>,
+  picked: Set<string>,
+): SelectionFeedback {
+  let correctPicked = 0;
+  for (const id of picked) {
+    if (correct.has(id)) correctPicked += 1;
+  }
+  return {
+    correctPicked,
+    totalPicked: picked.size,
+    totalCorrect: correct.size,
+  };
 }
 
 // Trainee responseJson is stored as the discriminated-union shape

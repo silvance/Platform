@@ -49,6 +49,9 @@ export function QuestionCard({ scenarioSlug, question, initialState }: Props) {
   const [feedback, setFeedback] = useState<
     null | { correct: boolean; completedJustNow: boolean }
   >(null);
+  const [selectionFeedback, setSelectionFeedback] = useState<
+    SubmitAnswerResponse["selectionFeedback"]
+  >(null);
 
   // Capture "was completed when the page loaded" once. Used to
   // decide whether to start collapsed (returning student already
@@ -72,6 +75,7 @@ export function QuestionCard({ scenarioSlug, question, initialState }: Props) {
     setLastResponse(response);
     setAttemptCount(r.attemptCount);
     setHint(r.hint);
+    setSelectionFeedback(r.selectionFeedback);
     setFeedback({ correct: r.correct, completedJustNow: r.completedJustNow });
     if (r.correct && r.completedJustNow) {
       setCompletedAt(new Date().toISOString());
@@ -112,9 +116,7 @@ export function QuestionCard({ scenarioSlug, question, initialState }: Props) {
       />
 
       {!isCompleted && feedback && !feedback.correct ? (
-        <p className="save-badge save-error" style={{ marginTop: ".5rem" }}>
-          Not yet — try again.
-        </p>
+        <SelectionFeedbackBanner feedback={selectionFeedback} />
       ) : null}
 
       {hint && !isCompleted ? (
@@ -237,4 +239,81 @@ function QuestionForm({
     default:
       return null;
   }
+}
+
+// Banner shown after an incorrect submission on multi-pick / select-
+// indicators questions. Gives the student a count-only view of how
+// close they are — "you have 3 of 4 right, plus 2 extras" — so they
+// can converge without us revealing which specific items are right
+// or wrong. Falls back to the original "Not yet — try again" string
+// when the response carries no breakdown (single-pick MC, text_match,
+// confidence).
+function SelectionFeedbackBanner({
+  feedback,
+}: {
+  feedback: SubmitAnswerResponse["selectionFeedback"];
+}) {
+  if (!feedback) {
+    return (
+      <p className="save-badge save-error" style={{ marginTop: ".5rem" }}>
+        Not yet — try again.
+      </p>
+    );
+  }
+  const { correctPicked, totalPicked, totalCorrect } = feedback;
+  const extras = Math.max(0, totalPicked - correctPicked);
+  const missing = Math.max(0, totalCorrect - correctPicked);
+
+  const lines: string[] = [];
+  if (totalPicked === 0) {
+    lines.push(
+      `You haven't selected anything yet. The answer set has ${totalCorrect} item${
+        totalCorrect === 1 ? "" : "s"
+      }.`,
+    );
+  } else {
+    lines.push(
+      `${correctPicked} of your ${totalPicked} selection${
+        totalPicked === 1 ? " is" : "s are"
+      } part of the answer.`,
+    );
+    if (extras > 0) {
+      lines.push(
+        `${extras} of your selection${
+          extras === 1 ? " is" : "s are"
+        } not part of the answer.`,
+      );
+    }
+    if (missing > 0) {
+      lines.push(
+        `${missing} item${
+          missing === 1 ? "" : "s"
+        } from the answer ${missing === 1 ? "is" : "are"} still missing.`,
+      );
+    }
+    if (extras === 0 && missing === 0) {
+      // Defensive: shouldn't render — if both are zero the answer is right.
+      lines.push("Re-read the question and try again.");
+    }
+  }
+
+  return (
+    <div
+      className="save-badge save-error"
+      style={{
+        marginTop: ".5rem",
+        display: "flex",
+        flexDirection: "column",
+        gap: ".15rem",
+        alignItems: "flex-start",
+      }}
+    >
+      <strong>Not yet.</strong>
+      {lines.map((line, i) => (
+        <span key={i} style={{ fontWeight: 400 }}>
+          {line}
+        </span>
+      ))}
+    </div>
+  );
 }
