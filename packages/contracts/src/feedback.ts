@@ -53,11 +53,7 @@ export const FeedbackListResponse = z.object({
 });
 export type FeedbackListResponse = z.infer<typeof FeedbackListResponse>;
 
-// Boundary-level validation for `GET /admin/feedback?limit=N`. The
-// service additionally caps at 500; defining the schema here lets
-// the controller use ZodValidationPipe and reject negative / NaN /
-// out-of-range values at the request edge.
-export const AdminFeedbackListQuery = z.object({
-  limit: z.coerce.number().int().min(1).max(500).default(200),
-});
-export type AdminFeedbackListQuery = z.infer<typeof AdminFeedbackListQuery>;
+// Note: the boundary `?limit` schema lives in ./common as
+// AdminListQuery — it's shared with /admin/completions and any
+// future admin list endpoint. Callers import it directly from
+// the contracts barrel.

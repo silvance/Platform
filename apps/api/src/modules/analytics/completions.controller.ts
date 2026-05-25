@@ -1,6 +1,6 @@
 import { Controller, Get, Query } from "@nestjs/common";
 import {
-  AdminCompletionsListQuery,
+  AdminListQuery,
   type CompletionListResponse,
 } from "@ci-train/contracts";
 import { CompletionsService } from "./completions.service";
@@ -18,8 +18,8 @@ export class CompletionsController {
 
   @Get()
   async list(
-    @Query(new ZodValidationPipe(AdminCompletionsListQuery))
-    query: AdminCompletionsListQuery,
+    @Query(new ZodValidationPipe(AdminListQuery))
+    query: AdminListQuery,
   ): Promise<CompletionListResponse> {
     return this.completions.listRecent({ limit: query.limit });
   }

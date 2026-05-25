@@ -10,7 +10,16 @@ import { hash, verify, Algorithm } from "@node-rs/argon2";
 import { randomBytes, createHash, timingSafeEqual } from "node:crypto";
 import type { Role } from "@prisma/client";
 import { ACCESS_CODE_REJECT_MESSAGE } from "@ci-train/contracts";
+import { Prisma } from "@prisma/client";
 import { PrismaService } from "../database/prisma.service";
+
+// `revokeAllSessionsForUser` accepts either the standalone Prisma
+// client or a transaction client so callers can run it inside a
+// $transaction(async (tx) => …). Both expose the `.session.updateMany`
+// shape we need; the union is just enough to let TS pick either.
+type SessionRevokeClient =
+  | PrismaService
+  | Prisma.TransactionClient;
 import { AccessCodesService } from "../access-codes/access-codes.service";
 
 export interface AuthenticatedUser {
@@ -286,8 +295,9 @@ export class AuthService implements OnModuleInit {
   async revokeAllSessionsForUser(
     userId: string,
     keepSessionId: string | null,
+    client: SessionRevokeClient = this.prisma,
   ): Promise<{ revoked: number }> {
-    const result = await this.prisma.session.updateMany({
+    const result = await client.session.updateMany({
       where: {
         userId,
         revokedAt: null,
@@ -335,22 +345,14 @@ export class AuthService implements OnModuleInit {
     // race a re-authentication against the still-valid old hash on
     // a replica. Wrapping closes the window — either both writes
     // commit, or neither does.
-    const result = await this.prisma.$transaction(async (tx) => {
+    const { revoked } = await this.prisma.$transaction(async (tx) => {
       await tx.user.update({
         where: { id: userId },
         data: { passwordHash: newHash },
       });
-      const updated = await tx.session.updateMany({
-        where: {
-          userId,
-          revokedAt: null,
-          NOT: { id: currentSessionId },
-        },
-        data: { revokedAt: new Date() },
-      });
-      return { revoked: updated.count };
+      return this.revokeAllSessionsForUser(userId, currentSessionId, tx);
     });
-    return { revokedSessions: result.revoked };
+    return { revokedSessions: revoked };
   }
 
   // SHA-256 of the bearer token. The raw token never lands in the DB;

@@ -1,5 +1,6 @@
 export * from "./health.js";
 export * from "./hello.js";
+export * from "./common.js";
 export * from "./auth.js";
 export * from "./users.js";
 export * from "./admin-stats.js";
