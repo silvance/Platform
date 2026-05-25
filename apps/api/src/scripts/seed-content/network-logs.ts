@@ -156,14 +156,14 @@ What flow records will *not* answer on their own:
         kind: "csv",
         mimeType: "text/csv; charset=utf-8",
         bytes: utf8(
+          // ra -c , -F /usr/local/argus/etc/ra.conf -r corp.argus -s stime,dur,proto,saddr,sport,daddr,dport,pkts,sbytes,dbytes
           [
-            "start_utc,end_utc,src_ip,dst_ip,src_port,dst_port,proto,bytes_sent,bytes_recv,packets",
-            "2026-11-09T13:14:01Z,2026-11-09T13:14:04Z,10.0.4.55,10.0.4.1,52201,53,udp,162,418,4",
-            "2026-11-09T13:14:05Z,2026-11-09T13:15:08Z,10.0.4.55,203.0.113.42,52214,443,tcp,4_812,118_204,182",
-            "2026-11-09T13:18:30Z,2026-11-09T13:22:11Z,10.0.4.55,198.51.100.77,52220,443,tcp,318_004_115,2_204_004,4_204",
-            "2026-11-09T13:30:01Z,2026-11-09T13:30:03Z,10.0.4.55,10.0.4.1,52301,53,udp,140,322,3",
-            "2026-11-09T13:30:08Z,2026-11-09T13:30:09Z,10.0.4.55,8.8.8.8,52302,53,udp,98,260,2",
-            "(Underscores in byte counts are legibility separators; treat as digits.)",
+            "stime,dur,proto,saddr,sport,daddr,dport,pkts,sbytes,dbytes",
+            "2026-11-09 13:14:01.000,3.000,udp,10.0.4.55,52201,10.0.4.1,53,4,162,418",
+            "2026-11-09 13:14:05.000,63.000,tcp,10.0.4.55,52214,203.0.113.42,443,182,4812,118204",
+            "2026-11-09 13:18:30.000,221.000,tcp,10.0.4.55,52220,198.51.100.77,443,4204,318004115,2204004",
+            "2026-11-09 13:30:01.000,2.000,udp,10.0.4.55,52301,10.0.4.1,53,3,140,322",
+            "2026-11-09 13:30:08.000,1.000,udp,10.0.4.55,52302,8.8.8.8,53,2,98,260",
           ].join("\n") + "\n",
         ),
       },
@@ -349,14 +349,16 @@ Reasonable signals that the noise is benign:
         kind: "csv",
         mimeType: "text/csv; charset=utf-8",
         bytes: utf8(
+          // Zeek dns.log exported as CSV via `zeek-cut -d` against a
+          // 5-tuple selector; columns mirror the canonical dns.log fields.
           [
-            "utc,client_ip,qname,qtype,answer,rcode",
+            "ts,id.orig_h,query,qtype_name,answers,rcode_name",
             "2026-11-09T14:00:01Z,10.0.4.55,login.microsoftonline.com,A,40.126.32.74,NOERROR",
-            "2026-11-09T14:00:14Z,10.0.4.55,a1b2c3d4.tracking.example,A,(no record),NXDOMAIN",
+            "2026-11-09T14:00:14Z,10.0.4.55,a1b2c3d4.tracking.example,A,-,NXDOMAIN",
             "2026-11-09T14:00:14Z,10.0.4.55,d3f9e2c1a08c4b7e.akamaiedge.net,A,23.45.122.18,NOERROR",
-            "2026-11-09T14:00:16Z,10.0.4.55,qmkwoiek.dyn-vp.io,A,(no record),NXDOMAIN",
-            "2026-11-09T14:00:17Z,10.0.4.55,sjflapwie.dyn-vp.io,A,(no record),NXDOMAIN",
-            "2026-11-09T14:00:17Z,10.0.4.55,xvueriasdf.dyn-vp.io,A,(no record),NXDOMAIN",
+            "2026-11-09T14:00:16Z,10.0.4.55,qmkwoiek.dyn-vp.io,A,-,NXDOMAIN",
+            "2026-11-09T14:00:17Z,10.0.4.55,sjflapwie.dyn-vp.io,A,-,NXDOMAIN",
+            "2026-11-09T14:00:17Z,10.0.4.55,xvueriasdf.dyn-vp.io,A,-,NXDOMAIN",
             "2026-11-09T14:00:18Z,10.0.4.55,bzqquciopop.dyn-vp.io,A,198.51.100.77,NOERROR",
             "2026-11-09T14:00:20Z,10.0.4.55,e1f2a3b4c5d6e7f8.cloudfront.net,A,52.84.150.39,NOERROR",
             "2026-11-09T14:01:00Z,10.0.4.55,www.bing.com,A,204.79.197.200,NOERROR",
