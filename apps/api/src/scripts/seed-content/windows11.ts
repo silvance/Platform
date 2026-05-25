@@ -387,17 +387,20 @@ question turns on what SRUM does and does not prove.
         kind: "csv",
         mimeType: "text/csv; charset=utf-8",
         bytes: utf8(
+          // srum_dump.py --SRUM_INFILE C:\Cases\WS-W11-008\Windows\System32\SRU\SRUDB.dat
+          //               --REG_HIVE     C:\Cases\WS-W11-008\Windows\System32\config\SOFTWARE
+          //               --XLSX_OUTFILE srum.xlsx --csv-dir srum-csv/
+          // (Excerpt: Network Usage table — `srum-csv/Network Usage.csv`)
           [
-            "hour_bucket_utc,process_image,user_sid,bytes_sent,bytes_recv",
-            "2026-10-14T16:00:00Z,C:\\Program Files\\Microsoft\\OneDrive\\OneDrive.exe,S-1-5-21-...-1404,4_812_339,1_204_088",
-            "2026-10-14T17:00:00Z,C:\\Program Files\\Microsoft\\OneDrive\\OneDrive.exe,S-1-5-21-...-1404,3_109_001,981_240",
-            "2026-10-14T18:00:00Z,C:\\Program Files\\Mozilla Firefox\\firefox.exe,S-1-5-21-...-1404,2_204_440,18_902_115",
-            "2026-10-14T19:00:00Z,C:\\Program Files\\Mozilla Firefox\\firefox.exe,S-1-5-21-...-1404,1_950_000,5_201_004",
-            "2026-10-14T20:00:00Z,C:\\Program Files\\Mozilla Firefox\\firefox.exe,S-1-5-21-...-1404,398_220_115,612_004",
-            "2026-10-14T20:00:00Z,C:\\Program Files\\Microsoft\\OneDrive\\OneDrive.exe,S-1-5-21-...-1404,2_402_991,1_004_558",
-            "2026-10-14T21:00:00Z,C:\\Program Files\\Mozilla Firefox\\firefox.exe,S-1-5-21-...-1404,1_400_222,3_004_001",
-            "2026-10-14T20:00:00Z,C:\\Windows\\System32\\svchost.exe,S-1-5-18,8_400_220,9_004_558",
-            "Note: byte counts above are integers; underscores added for legibility, treat as digits.",
+            "TimeStamp,AppId,UserId,InterfaceLuid,L2ProfileId,L2ProfileFlags,BytesSent,BytesRecvd",
+            "2026-10-14 16:00:00.000,C:\\Program Files\\Microsoft\\OneDrive\\OneDrive.exe,S-1-5-21-1111111111-2222222222-3333333333-1404,1689399632298278912,4,0,4812339,1204088",
+            "2026-10-14 17:00:00.000,C:\\Program Files\\Microsoft\\OneDrive\\OneDrive.exe,S-1-5-21-1111111111-2222222222-3333333333-1404,1689399632298278912,4,0,3109001,981240",
+            "2026-10-14 18:00:00.000,C:\\Program Files\\Mozilla Firefox\\firefox.exe,S-1-5-21-1111111111-2222222222-3333333333-1404,1689399632298278912,4,0,2204440,18902115",
+            "2026-10-14 19:00:00.000,C:\\Program Files\\Mozilla Firefox\\firefox.exe,S-1-5-21-1111111111-2222222222-3333333333-1404,1689399632298278912,4,0,1950000,5201004",
+            "2026-10-14 20:00:00.000,C:\\Program Files\\Mozilla Firefox\\firefox.exe,S-1-5-21-1111111111-2222222222-3333333333-1404,1689399632298278912,4,0,398220115,612004",
+            "2026-10-14 20:00:00.000,C:\\Program Files\\Microsoft\\OneDrive\\OneDrive.exe,S-1-5-21-1111111111-2222222222-3333333333-1404,1689399632298278912,4,0,2402991,1004558",
+            "2026-10-14 21:00:00.000,C:\\Program Files\\Mozilla Firefox\\firefox.exe,S-1-5-21-1111111111-2222222222-3333333333-1404,1689399632298278912,4,0,1400222,3004001",
+            "2026-10-14 20:00:00.000,C:\\Windows\\System32\\svchost.exe,S-1-5-18,1689399632298278912,4,0,8400220,9004558",
           ].join("\n") + "\n",
         ),
       },
@@ -407,14 +410,17 @@ question turns on what SRUM does and does not prove.
         kind: "csv",
         mimeType: "text/csv; charset=utf-8",
         bytes: utf8(
+          // EvtxECmd.exe -f C:\Cases\WS-W11-008\Sysmon.evtx --inc 1 --csv . --csvf sysmon-eid1.csv
+          // (Excerpt: ProcessCreate / EID 1; Sysmon EID 3 NetworkConnect
+          //  was disabled on this host by an exclude rule in
+          //  C:\Sysmon\sysmon-config.xml, so no EID-3 rows are present.)
           [
-            "utc,user,image,command_line,parent_image",
-            "2026-10-14T15:55:12Z,p.singh,C:\\Program Files\\Mozilla Firefox\\firefox.exe,firefox.exe,explorer.exe",
-            "2026-10-14T17:02:40Z,p.singh,C:\\Program Files\\Microsoft\\OneDrive\\OneDrive.exe,onedrive.exe /background,explorer.exe",
-            "2026-10-14T19:58:01Z,p.singh,C:\\Windows\\System32\\cmd.exe,cmd.exe,explorer.exe",
-            "2026-10-14T19:58:30Z,p.singh,C:\\Windows\\System32\\robocopy.exe,\"robocopy.exe C:\\Users\\p.singh\\Desktop\\handoff C:\\Users\\p.singh\\OneDrive\\handoff /MIR\",cmd.exe",
-            "2026-10-14T20:01:14Z,p.singh,C:\\Users\\p.singh\\Downloads\\cb-uploader.exe,\"cb-uploader.exe --target wks-archive --bucket personal-2026\",explorer.exe",
-            "Note: Sysmon network-connect (EID 3) was DISABLED on this host. Only ProcessCreate (EID 1) is available.",
+            "TimeCreated,EventId,User,Image,CommandLine,ProcessId,ParentImage,ParentCommandLine,IntegrityLevel,Hashes",
+            "2026-10-14T15:55:12.4218Z,1,WS-W11-008\\p.singh,C:\\Program Files\\Mozilla Firefox\\firefox.exe,\"\"\"C:\\Program Files\\Mozilla Firefox\\firefox.exe\"\"\",6420,C:\\Windows\\explorer.exe,C:\\Windows\\explorer.exe,Medium,SHA256=8E3F2D7C1A9B4E6A0C2D5F1B8E3A7F0D2C5B8E1A4F7C0D2B5E8A1F4C7D0B3E6A",
+            "2026-10-14T17:02:40.8124Z,1,WS-W11-008\\p.singh,C:\\Program Files\\Microsoft\\OneDrive\\OneDrive.exe,\"\"\"C:\\Program Files\\Microsoft\\OneDrive\\OneDrive.exe\"\" /background\",7912,C:\\Windows\\explorer.exe,C:\\Windows\\explorer.exe,Medium,SHA256=3D2B1A4C5E6F7081A2B3C4D5E6F708192A3B4C5D6E7F8091A2B3C4D5E6F70819",
+            "2026-10-14T19:58:01.1390Z,1,WS-W11-008\\p.singh,C:\\Windows\\System32\\cmd.exe,\"\"\"C:\\Windows\\system32\\cmd.exe\"\"\",10428,C:\\Windows\\explorer.exe,C:\\Windows\\explorer.exe,Medium,SHA256=ABCDEF01234567890ABCDEF01234567890ABCDEF01234567890ABCDEF0123456",
+            "2026-10-14T19:58:30.0419Z,1,WS-W11-008\\p.singh,C:\\Windows\\System32\\robocopy.exe,\"robocopy.exe C:\\Users\\p.singh\\Desktop\\handoff C:\\Users\\p.singh\\OneDrive\\handoff /MIR\",11104,C:\\Windows\\System32\\cmd.exe,\"\"\"C:\\Windows\\system32\\cmd.exe\"\"\",Medium,SHA256=F1E2D3C4B5A69788F1E2D3C4B5A69788F1E2D3C4B5A69788F1E2D3C4B5A69788",
+            "2026-10-14T20:01:14.7732Z,1,WS-W11-008\\p.singh,C:\\Users\\p.singh\\Downloads\\cb-uploader.exe,\"\"\"C:\\Users\\p.singh\\Downloads\\cb-uploader.exe\"\" --target wks-archive --bucket personal-2026\",12044,C:\\Windows\\explorer.exe,C:\\Windows\\explorer.exe,Medium,SHA256=DEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEF",
           ].join("\n") + "\n",
         ),
       },
@@ -1254,13 +1260,19 @@ virtual switch and appears on the wire as the host's IP.
         kind: "csv",
         mimeType: "text/csv; charset=utf-8",
         bytes: utf8(
+          // EvtxECmd.exe -f C:\Cases\WS-W11-008\Sysmon.evtx --inc 1,3 --csv . --csvf sysmon-host.csv
+          // (Excerpt: Sysmon EID 1 ProcessCreate + EID 3 NetworkConnect.
+          //  Sysmon runs on the WINDOWS host; it cannot see processes
+          //  inside the WSL2 utility VM. The EID-3 connections below
+          //  are attributed to vmcompute.exe, the Host Compute Service,
+          //  because that's the kernel-side socket owner — not because
+          //  vmcompute.exe initiated the connection itself.)
           [
-            "utc,eid,user,image,command_line,destination_ip,destination_port,note",
-            "2026-11-04T22:14:08Z,1,a.romero,C:\\Windows\\System32\\wsl.exe,wsl -d kali-linux,,,",
-            "2026-11-04T22:14:09Z,1,SYSTEM,C:\\Windows\\System32\\wslhost.exe,wslhost.exe ...,,,",
-            "2026-11-04T22:14:35Z,3,SYSTEM,C:\\Windows\\System32\\vmcompute.exe,,198.51.100.23,22,Process attribution: vmcompute.exe (Hyper-V host-compute). Sysmon cannot see processes INSIDE the utility VM.",
-            "2026-11-04T22:14:35Z,3,SYSTEM,C:\\Windows\\System32\\vmcompute.exe,,140.82.121.4,443,(github traffic — same vmcompute attribution)",
-            "Note: Sysmon is installed on the Windows host. It records host-side process and connection events. It does NOT see Linux processes (e.g., ssh) executing inside the WSL VM.",
+            "TimeCreated,EventId,User,Image,CommandLine,DestinationIp,DestinationPort,Protocol,Initiated",
+            "2026-11-04T22:14:08.4912Z,1,WS-W11-008\\a.romero,C:\\Windows\\System32\\wsl.exe,\"wsl -d kali-linux\",,,,",
+            "2026-11-04T22:14:09.0118Z,1,NT AUTHORITY\\SYSTEM,C:\\Windows\\System32\\wslhost.exe,\"\\\"C:\\Windows\\System32\\wslhost.exe\\\" {a8e4...} 1212 0 ...\",,,,",
+            "2026-11-04T22:14:35.8210Z,3,NT AUTHORITY\\SYSTEM,C:\\Windows\\System32\\vmcompute.exe,,198.51.100.23,22,tcp,true",
+            "2026-11-04T22:14:35.9442Z,3,NT AUTHORITY\\SYSTEM,C:\\Windows\\System32\\vmcompute.exe,,140.82.121.4,443,tcp,true",
           ].join("\n") + "\n",
         ),
       },
@@ -1575,14 +1587,17 @@ yet.
         kind: "csv",
         mimeType: "text/csv; charset=utf-8",
         bytes: utf8(
+          // srum_dump.py --SRUM_INFILE C:\Cases\WS-BECKER\Windows\System32\SRU\SRUDB.dat
+          //               --REG_HIVE     C:\Cases\WS-BECKER\Windows\System32\config\SOFTWARE
+          //               --csv-dir srum-csv/
+          // (Excerpt: Network Usage table — `srum-csv/Network Usage.csv`)
           [
-            "hour_bucket_utc,process_image,bytes_sent,bytes_recv",
-            "2026-12-02T18:00:00Z,C:\\Program Files\\7-Zip\\7zG.exe,1_204,2_002,",
-            "2026-12-02T19:00:00Z,C:\\Program Files\\Microsoft\\OneDrive\\OneDrive.exe,42_115_004,3_204_111",
-            "2026-12-02T20:00:00Z,C:\\Program Files\\Microsoft\\OneDrive\\OneDrive.exe,18_204_009,1_004_112",
-            "2026-12-03T20:00:00Z,C:\\Users\\d.becker\\Downloads\\rclone.exe,114_220_115,8_004_558",
-            "2026-12-03T21:00:00Z,C:\\Program Files\\Mozilla Firefox\\firefox.exe,2_400_220,18_004_558",
-            "Underscores added for legibility — treat byte counts as integers.",
+            "TimeStamp,AppId,UserId,InterfaceLuid,L2ProfileId,L2ProfileFlags,BytesSent,BytesRecvd",
+            "2026-12-02 18:00:00.000,C:\\Program Files\\7-Zip\\7zG.exe,S-1-5-21-1111111111-2222222222-3333333333-1822,1689399632298278912,4,0,1204,2002",
+            "2026-12-02 19:00:00.000,C:\\Program Files\\Microsoft\\OneDrive\\OneDrive.exe,S-1-5-21-1111111111-2222222222-3333333333-1822,1689399632298278912,4,0,42115004,3204111",
+            "2026-12-02 20:00:00.000,C:\\Program Files\\Microsoft\\OneDrive\\OneDrive.exe,S-1-5-21-1111111111-2222222222-3333333333-1822,1689399632298278912,4,0,18204009,1004112",
+            "2026-12-03 20:00:00.000,C:\\Users\\d.becker\\Downloads\\rclone.exe,S-1-5-21-1111111111-2222222222-3333333333-1822,1689399632298278912,4,0,114220115,8004558",
+            "2026-12-03 21:00:00.000,C:\\Program Files\\Mozilla Firefox\\firefox.exe,S-1-5-21-1111111111-2222222222-3333333333-1822,1689399632298278912,4,0,2400220,18004558",
           ].join("\n") + "\n",
         ),
       },
