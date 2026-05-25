@@ -259,62 +259,6 @@ satisfy the ask.
         ),
       },
     ],
-    indicatorSets: [
-      {
-        slug: "cellebrite-extraction-indicators",
-        displayName: "Observations from the extraction summary + inventory",
-        items: [
-          {
-            id: "method-advanced-logical",
-            label:
-              "The extraction method is recorded as Advanced Logical (iOS) — not File System, not Physical.",
-            evidenceRef: "extraction-summary.txt",
-          },
-          {
-            id: "signal-not-present",
-            label:
-              "Signal messages (active and deleted) are explicitly not present in the inventory — the Signal sandbox database is not exposed by an Advanced Logical extraction on iOS 17.",
-            evidenceRef: "data-inventory.csv",
-          },
-          {
-            id: "deleted-imessages-not-recovered",
-            label:
-              "Deleted iMessages are not recovered in this extraction type; only active threads are.",
-            evidenceRef: "data-inventory.csv",
-          },
-          {
-            id: "recently-deleted-album-missing",
-            label:
-              "Photos in the \"Recently Deleted\" album are not parsed by an Advanced Logical extraction.",
-            evidenceRef: "data-inventory.csv",
-          },
-          {
-            id: "keychain-missing",
-            label:
-              "Keychain entries are zero; the extraction-summary note states keychain decoding requires FFS or GRAYKEY.",
-            evidenceRef: "data-inventory.csv",
-          },
-          {
-            id: "wifi-pre-shared-keys-missing",
-            label:
-              "Wi-Fi SSIDs are present but their pre-shared keys are not — they live in the keychain, which this extraction did not capture.",
-            evidenceRef: "data-inventory.csv",
-          },
-          {
-            id: "knowledgec-biome-missing",
-            label:
-              "knowledgeC.db / biome / powerlog (pattern-of-life and app-usage attribution stores) are not present — they require FFS.",
-            evidenceRef: "data-inventory.csv",
-          },
-          {
-            id: "active-imessages-present",
-            label:
-              "5,611 active SMS / iMessage rows ARE present — the Advanced Logical does cover active iMessage history.",
-            evidenceRef: "data-inventory.csv",
-          },
-        ],
-      },
-    ],
     questions: [
       {
         ordinal: 1,
@@ -370,36 +314,101 @@ satisfy the ask.
       },
       {
         ordinal: 2,
-        type: "select_indicators",
-        weight: 2,
-        indicatorSetSlug: "cellebrite-extraction-indicators",
+        type: "multi_choice",
+        weight: 1,
         promptMd:
-          "Pick the observations that **directly support** the position 'this image cannot, by itself, answer the deleted-Signal-messages part of the request.'",
+          "What does the extraction summary record as the **acquisition method** for this image?",
+        options: [
+          { id: "logical", label: "Cellebrite Logical (the lightest tier)." },
+          { id: "advanced-logical", label: "Cellebrite Advanced Logical (iOS)." },
+          { id: "ffs", label: "Cellebrite File System (FFS)." },
+          { id: "physical", label: "Cellebrite Physical (NAND chip-off)." },
+        ],
+        allowMultiple: false,
         expected: {
-          type: "select_indicators",
-          correctIds: [
-            "method-advanced-logical",
-            "signal-not-present",
-            "deleted-imessages-not-recovered",
-            "recently-deleted-album-missing",
-          ],
+          type: "multi_choice",
+          correctIds: ["advanced-logical"],
+          allowMultiple: false,
         },
-        debriefMd: [
-          "**Directly supporting:**",
-          "",
-          "- The recorded method (Advanced Logical) is the upstream cause — every other absence flows from it.",
-          "- Signal sandbox is explicitly not present; there is no `messages.db` to carve from at all in this artefact set.",
-          "- Deleted iMessages aren't recovered either, a corroborating sign that this extraction tier doesn't surface deleted records on iOS 17.",
-          "- The \"Recently Deleted\" album not being parsed is the same pattern for photos.",
-          "",
-          "**Related but not directly load-bearing for the Signal-specific ask:**",
-          "",
-          "- *Keychain missing / Wi-Fi PSKs missing / knowledgeC missing* — these matter for other parts of the case (Bluetooth pairing, pattern-of-life, account credentials) but don't speak to the Signal-deleted question on their own.",
-          "- *Active iMessages present* — that's what we *can* honestly claim; it isn't an indicator about the Signal limitation.",
-        ].join("\n"),
+        debriefMd:
+          "**Advanced Logical (iOS).** The `Extraction type:` field in the summary header names it. That single field decides most of what you can honestly claim from this image — Advanced Logical does not expose third-party app sandboxes, the keychain, or filesystem-level pattern-of-life stores.",
       },
       {
         ordinal: 3,
+        type: "multi_choice",
+        weight: 1,
+        promptMd:
+          "Per the data-inventory CSV, what does the **Signal-messages row** tell you about the deleted-Signal-messages part of the case agent's request?",
+        options: [
+          {
+            id: "active-yes-deleted-needs-carver",
+            label:
+              "Several thousand active Signal messages are present; deleted Signal requires a SQLite-WAL carver against the recovered DB.",
+          },
+          {
+            id: "zero-zero-not-answerable",
+            label:
+              "Zero — the Signal sandbox database is not exposed by an Advanced Logical extraction on iOS 17 at all (active OR deleted), so the deleted-Signal request cannot be answered from this image.",
+          },
+          {
+            id: "zero-active-deleted-yes",
+            label:
+              "Zero active, several deleted — Advanced Logical surfaces only the deleted Signal messages on iOS 17.",
+          },
+          {
+            id: "not-installed",
+            label:
+              "The Signal row is absent because Signal isn't installed on this device.",
+          },
+        ],
+        allowMultiple: false,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["zero-zero-not-answerable"],
+          allowMultiple: false,
+        },
+        debriefMd:
+          "**Zero / zero / not answerable.** The inventory shows `Signal messages (active): 0` and `Signal messages (deleted): 0`, with the explicit note that the Signal sandbox is not exposed by an Advanced Logical on iOS 17. There is no Signal `messages.db` in this artefact set at all — no carve is possible from data that wasn't acquired. \"Signal isn't installed\" would require positive evidence (e.g. no bundle install record) that this image type doesn't carry.",
+      },
+      {
+        ordinal: 4,
+        type: "multi_choice",
+        weight: 1,
+        promptMd:
+          "Per the data-inventory CSV, what is the status of **(a) deleted iMessages** and **(b) photos in the 'Recently Deleted' album** in this image?",
+        options: [
+          {
+            id: "both-recovered",
+            label:
+              "Both fully recovered — an Advanced Logical extraction exposes both deleted iMessages and the Recently-Deleted album.",
+          },
+          {
+            id: "imessages-yes-photos-no",
+            label:
+              "Deleted iMessages recovered; Recently-Deleted photos require a separate Photos parser.",
+          },
+          {
+            id: "photos-yes-imessages-no",
+            label:
+              "Recently-Deleted photos recovered; deleted iMessages require FFS.",
+          },
+          {
+            id: "both-absent",
+            label:
+              "Both absent — Advanced Logical surfaces active iMessages and the active Camera Roll only; deleted content of either type requires the FFS pathway on iOS 17.",
+          },
+        ],
+        allowMultiple: false,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["both-absent"],
+          allowMultiple: false,
+        },
+        debriefMd:
+          "**Both absent.** The inventory's notes are explicit: *\"deleted iMessages not recovered from this extraction type\"* and *\"'Recently Deleted' album not parsed by Advanced Logical.\"* The pattern is the same — Advanced Logical surfaces *active* content but does not surface the deleted/journaled records on iOS 17. The 5,611 active iMessage rows is what you *can* claim; the deleted material is what needs the FFS pathway.",
+      },
+      {
+        ordinal: 5,
         type: "multi_choice",
         weight: 2,
         promptMd:
@@ -450,7 +459,7 @@ satisfy the ask.
         ].join("\n"),
       },
       {
-        ordinal: 4,
+        ordinal: 6,
         type: "confidence",
         weight: 1,
         promptMd:
@@ -745,62 +754,6 @@ office honestly, and name the next acquisition step.
         ),
       },
     ],
-    indicatorSets: [
-      {
-        slug: "graykey-bfu-indicators",
-        displayName: "Observations from the GRAYKEY status + inventory + reference card",
-        items: [
-          {
-            id: "image-is-bfu",
-            label:
-              "GRAYKEY records image_type = BFU; the device has not been unlocked since boot.",
-            evidenceRef: "graykey-status.txt",
-          },
-          {
-            id: "passcode-not-recovered",
-            label:
-              "Passcode has not been recovered in this session; BFU brute-force is still queued and not exhausted.",
-            evidenceRef: "graykey-status.txt",
-          },
-          {
-            id: "afu-not-produced",
-            label:
-              "No AFU image and no FFS image was produced — both require either a known passcode or an AFU state at the time of acquisition.",
-            evidenceRef: "graykey-status.txt",
-          },
-          {
-            id: "bluetooth-pairings-readable",
-            label:
-              "Bluetooth pairings ARE typically readable in BFU because the pair cache is in a Data-Protection-None scope so the radio can come up without unlock.",
-            evidenceRef: "bfu-image-inventory.txt",
-          },
-          {
-            id: "notes-not-readable",
-            label:
-              "Apple Notes content (including the secure / locked notes) is NOT readable in BFU; per-note Data Protection keys are not yet derived.",
-            evidenceRef: "bfu-image-inventory.txt",
-          },
-          {
-            id: "maps-not-readable",
-            label:
-              "Apple Maps history is NOT readable in BFU.",
-            evidenceRef: "bfu-image-inventory.txt",
-          },
-          {
-            id: "knowledgec-not-readable",
-            label:
-              "knowledgeC.db / biome / powerlog (pattern-of-life and app-usage attribution) are NOT readable in BFU.",
-            evidenceRef: "bfu-image-inventory.txt",
-          },
-          {
-            id: "image-not-broken",
-            label:
-              "The image is NOT corrupted or broken — BFU is a structural data-protection limit, not a tool error. Treating the absence as a tool failure leads to wasted re-extractions.",
-            evidenceRef: "bfu-image-inventory.txt",
-          },
-        ],
-      },
-    ],
     questions: [
       {
         ordinal: 1,
@@ -856,36 +809,101 @@ office honestly, and name the next acquisition step.
       },
       {
         ordinal: 2,
-        type: "select_indicators",
-        weight: 2,
-        indicatorSetSlug: "graykey-bfu-indicators",
+        type: "multi_choice",
+        weight: 1,
         promptMd:
-          "Pick the observations that **directly support** the position 'this BFU image cannot, by itself, satisfy the Notes + Maps parts of the ACI request.'",
+          "Per the GRAYKEY session log, what is the recorded **acquisition state** of the image?",
+        options: [
+          { id: "afu", label: "AFU (After First Unlock)." },
+          { id: "bfu", label: "BFU (Before First Unlock)." },
+          { id: "ffs", label: "FFS (Full File System)." },
+          { id: "not-recorded", label: "Trust state not recorded in this session." },
+        ],
+        allowMultiple: false,
         expected: {
-          type: "select_indicators",
-          correctIds: [
-            "image-is-bfu",
-            "passcode-not-recovered",
-            "notes-not-readable",
-            "maps-not-readable",
-          ],
+          type: "multi_choice",
+          correctIds: ["bfu"],
+          allowMultiple: false,
         },
-        debriefMd: [
-          "**Directly supporting:**",
-          "",
-          "- The image being BFU is the upstream cause; every other Notes/Maps limitation flows from it.",
-          "- The passcode not being recovered means there is no pivot to AFU within this image; the keys to decrypt Notes / Maps are not derivable.",
-          "- The inventory explicitly names Notes and Maps as not readable in BFU.",
-          "",
-          "**Related but not direct support for the Notes/Maps ask specifically:**",
-          "",
-          "- *Bluetooth readable* — that's the *good* news; it speaks to part 3 of the request, not parts 1 and 2.",
-          "- *knowledgeC not readable* — relevant to part 4 of the request, not directly to Notes / Maps.",
-          "- *AFU not produced / image not broken* — those are general framing, not specific Notes/Maps limits.",
-        ].join("\n"),
+        debriefMd:
+          "**BFU.** The session-summary block lists `image-type: BFU` and the per-line log shows `trust-state -> BFU` immediately after boot, before any unlock. The structural data-protection implications flow from that single field — BFU keeps everything in the `AfterFirstUnlock` (and equivalent) Data Protection classes encrypted on disk, with keys not derivable from the current boot state.",
       },
       {
         ordinal: 3,
+        type: "multi_choice",
+        weight: 1,
+        promptMd:
+          "Per the BFU image inventory, what is the readability of **Apple Notes content** (including the secure / locked notes) from this image?",
+        options: [
+          {
+            id: "fully-readable",
+            label:
+              "Fully readable — Notes lives in a `DataProtectionNone` scope so it can come up before unlock.",
+          },
+          {
+            id: "not-readable-dp-class",
+            label:
+              "Not readable — `notes.sqlite` sits in the `AfterFirstUnlock` Data Protection class; per-note Data Protection keys are not derivable in BFU.",
+          },
+          {
+            id: "headers-only",
+            label:
+              "Note headers readable; bodies encrypted with a per-note passphrase.",
+          },
+          {
+            id: "only-locked-blocked",
+            label:
+              "Only the locked / secure notes are unreadable; regular notes are fine in BFU.",
+          },
+        ],
+        allowMultiple: false,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["not-readable-dp-class"],
+          allowMultiple: false,
+        },
+        debriefMd:
+          "**Not readable.** The inventory explicitly lists Notes as `DP: AfterFirstUnlock`. Apple's locked-notes feature double-encrypts the body with a per-note passphrase on top, but the *primary* Data Protection class for the entire `notes.sqlite` is `AfterFirstUnlock` — meaning BFU can't reach either layer. There is no \"headers-only\" middle state on this DB.",
+      },
+      {
+        ordinal: 4,
+        type: "multi_choice",
+        weight: 1,
+        promptMd:
+          "Per the BFU image inventory, what is the readability of **Apple Maps search + route history** from this image?",
+        options: [
+          {
+            id: "fully-readable",
+            label:
+              "Fully readable — Maps history is in a `DataProtectionNone` scope so navigation works before unlock.",
+          },
+          {
+            id: "search-yes-route-no",
+            label:
+              "Search history readable; route history requires AFU.",
+          },
+          {
+            id: "not-readable-dp-class",
+            label:
+              "Not readable — `GeoHistory.mapsdata` sits in the `CompleteUntilFirstUserAuth` Data Protection class; keys are not derivable in BFU.",
+          },
+          {
+            id: "icloud-only",
+            label:
+              "Readable only after iCloud Maps has synced to a paired Mac.",
+          },
+        ],
+        allowMultiple: false,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["not-readable-dp-class"],
+          allowMultiple: false,
+        },
+        debriefMd:
+          "**Not readable.** The inventory shows `Apple Maps (GeoHistory.mapsdata — DP: CompleteUntilFirstUserAuth)`. The `CompleteUntilFirstUserAuth` class is the modern equivalent of `AfterFirstUnlock` for system-managed databases — same effect in BFU: encrypted on disk, keys not derivable until the first user unlock.",
+      },
+      {
+        ordinal: 5,
         type: "multi_choice",
         weight: 2,
         promptMd:
@@ -955,7 +973,7 @@ office honestly, and name the next acquisition step.
         ].join("\n"),
       },
       {
-        ordinal: 4,
+        ordinal: 6,
         type: "confidence",
         weight: 1,
         promptMd:
@@ -1220,56 +1238,6 @@ to verify?"*
         ),
       },
     ],
-    indicatorSets: [
-      {
-        slug: "axiom-verify-indicators",
-        displayName: "Observations bearing on the verification posture",
-        items: [
-          {
-            id: "tool-disagreement",
-            label:
-              "AXIOM and UFED PA disagree on deleted-message and orphan-message counts on the same FFS image (AXIOM = 0, PA = 11 deleted + 3 orphan).",
-            evidenceRef: "ufed-pa-comparison.txt",
-          },
-          {
-            id: "parser-skew",
-            label:
-              "AXIOM's bundled WhatsApp parser is ~9 months older than the WhatsApp build on the device and is 2 schema revisions behind.",
-            evidenceRef: "parser-versions.txt",
-          },
-          {
-            id: "active-counts-agree",
-            label:
-              "AXIOM and UFED PA agree on active message + thread + attachment counts — the discrepancy is specifically in deleted / orphan rows, not in active content.",
-            evidenceRef: "ufed-pa-comparison.txt",
-          },
-          {
-            id: "sop-requires-second-tool",
-            label:
-              "The lab SOP requires mobile-app findings to be verified by a second tool or by direct SQLite inspection (WAL + journal + free-list) before external-report sign-off.",
-            evidenceRef: "lab-sop-tool-verification.txt",
-          },
-          {
-            id: "sop-forbids-100-percent-language",
-            label:
-              "The lab SOP explicitly forbids \"100% recovered / complete / nothing else exists\" language in findings; the junior's draft uses that exact framing.",
-            evidenceRef: "lab-sop-tool-verification.txt",
-          },
-          {
-            id: "deleted-rows-not-operationally-significant",
-            label:
-              "The 14 deleted / orphan rows that UFED PA surfaces are not, on first read, obviously of operational significance — short text messages and two image references.",
-            evidenceRef: "ufed-pa-comparison.txt",
-          },
-          {
-            id: "image-itself-is-fine",
-            label:
-              "The FFS image itself is not in question — both tools open it cleanly and agree on the active counts; the question is which parser surfaces what on the same input.",
-            evidenceRef: "ufed-pa-comparison.txt",
-          },
-        ],
-      },
-    ],
     questions: [
       {
         ordinal: 1,
@@ -1325,37 +1293,117 @@ to verify?"*
       },
       {
         ordinal: 2,
-        type: "select_indicators",
-        weight: 2,
-        indicatorSetSlug: "axiom-verify-indicators",
+        type: "multi_choice",
+        weight: 1,
         promptMd:
-          "Pick the observations that **directly require** the junior's draft finding to be revised before sign-off, regardless of which tool's count turns out to be correct.",
+          "Comparing the **AXIOM case summary** and the **UFED PA project-tree view** on the same FFS image, which statement accurately describes the disagreement?",
+        options: [
+          {
+            id: "agree-everywhere",
+            label:
+              "Both tools agree on every count (active, threads, attachments, deleted, orphan).",
+          },
+          {
+            id: "image-corrupt",
+            label:
+              "AXIOM and PA disagree on active message + thread counts; the underlying image is corrupt.",
+          },
+          {
+            id: "pa-surfaces-deleted-orphan",
+            label:
+              "The tools agree on active counts; UFED PA surfaces 11 deleted (WAL / journal) + 3 orphan (free-list) rows that AXIOM reports as zero.",
+          },
+          {
+            id: "axiom-more-current",
+            label:
+              "AXIOM surfaces 14 deleted / orphan rows that PA reports as zero — AXIOM is the more current parser here.",
+          },
+        ],
+        allowMultiple: false,
         expected: {
-          type: "select_indicators",
-          correctIds: [
-            "tool-disagreement",
-            "parser-skew",
-            "sop-requires-second-tool",
-            "sop-forbids-100-percent-language",
-          ],
+          type: "multi_choice",
+          correctIds: ["pa-surfaces-deleted-orphan"],
+          allowMultiple: false,
         },
-        debriefMd: [
-          "**Directly require revision:**",
-          "",
-          "- Tool disagreement on the same image is itself a reportable observation per SOP; a finding that suppresses it isn't defensible.",
-          "- The parser skew triggers the SOP's re-parse-or-second-tool requirement on its own, before any disagreement is even observed.",
-          "- The SOP rule on second-tool verification is the explicit gate.",
-          "- The SOP rule on \"100% recovered\" language disallows the finding's framing regardless of the underlying counts.",
-          "",
-          "**Important but not direct gating for the rewrite itself:**",
-          "",
-          "- *Active counts agree* — useful framing for the revised finding (\"active counts confirmed across two tools\"), but doesn't drive the revision itself.",
-          "- *Deleted rows not operationally significant* — content-of-the-deleted-rows is a *separate* analytic question; even if the rows are mundane, the finding still has to be rewritten because the *posture* is wrong.",
-          "- *Image itself is fine* — same as the disagreement framing.",
-        ].join("\n"),
+        debriefMd:
+          "**PA surfaces 11 deleted + 3 orphan rows AXIOM does not.** PA's WhatsApp section shows `Total messages 1,847 (matches AXIOM)` but `Deleted messages 11 (DIFFERS from AXIOM (0))` and `Orphan messages 3 (DIFFERS from AXIOM (0))`. The disagreement is specifically in the deleted + orphan rows, not in the active dataset — and it's PA, not AXIOM, that surfaces them.",
       },
       {
         ordinal: 3,
+        type: "multi_choice",
+        weight: 1,
+        promptMd:
+          "Per the parser-version cross-reference, how does **AXIOM's bundled WhatsApp parser** compare to the WhatsApp build actually on the device?",
+        options: [
+          {
+            id: "current",
+            label:
+              "Current — AXIOM ships the v64-aware parser that matches the on-device schema.",
+          },
+          {
+            id: "nine-months-behind",
+            label:
+              "About 9 months older than the WhatsApp build on the device; 2 schema revisions behind (parser knows v62, device runs v64).",
+          },
+          {
+            id: "parser-ahead",
+            label:
+              "Ahead of the on-device version (parser knows v66, device runs v64).",
+          },
+          {
+            id: "not-recorded",
+            label:
+              "Parser version is not recorded in this case file.",
+          },
+        ],
+        allowMultiple: false,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["nine-months-behind"],
+          allowMultiple: false,
+        },
+        debriefMd:
+          "**~9 months behind, 2 schema revisions.** The cross-reference records AXIOM's WhatsApp parser as `2024.11.x` with highest-known schema `v62`, against an on-device WhatsApp `2.25.6.x (Mar 2026 build)` with schema `v64`. That two-revision gap is the most likely reason AXIOM's decoder doesn't trigger the WAL / free-list deleted-row paths on this image.",
+      },
+      {
+        ordinal: 4,
+        type: "multi_choice",
+        weight: 1,
+        promptMd:
+          "Per the lab's standing tool-verification SOP, what is the rule about findings phrased as **\"100% recovered\" / \"complete\" / \"nothing else exists\"**?",
+        options: [
+          {
+            id: "permitted-tools-agree",
+            label:
+              "Permitted when both tools agree on counts.",
+          },
+          {
+            id: "permitted-primary-tool",
+            label:
+              "Permitted when the primary tool's count is signed off by a reviewer.",
+          },
+          {
+            id: "permitted-with-footnote",
+            label:
+              "Permitted only with an accompanying confidence-5 footnote.",
+          },
+          {
+            id: "forbidden",
+            label:
+              "Forbidden — a defensible finding states what was recovered, by what method, and what categories of additional material would require a different parser or acquisition.",
+          },
+        ],
+        allowMultiple: false,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["forbidden"],
+          allowMultiple: false,
+        },
+        debriefMd:
+          "**Forbidden.** SOP item 3 says: *\"Findings expressed as '100% recovered' / 'complete' / 'nothing else exists' shall be avoided.\"* The rule applies regardless of whether the underlying tool counts agree — the framing overclaims by asserting a *negative* (the absence of anything more), which is structurally undecidable from a single image set with a single parser.",
+      },
+      {
+        ordinal: 5,
         type: "multi_choice",
         weight: 2,
         promptMd:
@@ -1418,7 +1466,7 @@ to verify?"*
         ].join("\n"),
       },
       {
-        ordinal: 4,
+        ordinal: 6,
         type: "confidence",
         weight: 1,
         promptMd:
