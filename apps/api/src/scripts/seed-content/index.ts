@@ -8,6 +8,7 @@ import { INSIDER_SCENARIOS } from "./insider";
 import { RF_AWARENESS_SCENARIOS } from "./rf-awareness";
 import { REPORT_WRITING_SCENARIOS } from "./report-writing";
 import { NETWORK_LOGS_SCENARIOS } from "./network-logs";
+import { MOBILE_FORENSICS_SCENARIOS } from "./mobile";
 import { EVIDENCE_HANDLING_SCENARIOS } from "./evidence-handling";
 
 // Single combined catalogue. Order is family-grouped, with each
@@ -29,6 +30,7 @@ export const SCENARIOS: ScenarioSeed[] = [
   ...WINDOWS11_SCENARIOS,
   ...INSIDER_SCENARIOS,
   ...NETWORK_LOGS_SCENARIOS,
+  ...MOBILE_FORENSICS_SCENARIOS,
   ...RF_AWARENESS_SCENARIOS,
   ...EVIDENCE_HANDLING_SCENARIOS,
   ...REPORT_WRITING_SCENARIOS,
