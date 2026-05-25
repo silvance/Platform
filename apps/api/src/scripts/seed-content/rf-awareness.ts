@@ -1,4 +1,4 @@
-import { utf8, tinyPngBytes, RF_AWARENESS_DISCLAIMER } from "./util";
+import { utf8, tinyPngBytes } from "./util";
 import type { ScenarioSeed } from "./types";
 
 // RF-awareness family. Every scenario in this family carries the
@@ -20,7 +20,6 @@ export const RF_AWARENESS_SCENARIOS: ScenarioSeed[] = [
     lane: "rf_awareness",
     module: "Reports & observations",
     sequence: 1,
-    disclaimer: RF_AWARENESS_DISCLAIMER,
     brief: `
 # Brief
 
@@ -221,7 +220,6 @@ language that collapses that distinction.
     module: "Reports & observations",
     sequence: 2,
     status: "draft",
-    disclaimer: RF_AWARENESS_DISCLAIMER,
     brief: `
 # Brief (DRAFT)
 
@@ -333,7 +331,6 @@ language should say and what the operational next step is.
     difficulty: 2,
     estimatedMinutes: 18,
     tags: ["rf_awareness", "travel", "report_writing", "inference_discipline"],
-    disclaimer: RF_AWARENESS_DISCLAIMER,
     lane: "rf_awareness",
     module: "Post-trip debrief",
     sequence: 1,
