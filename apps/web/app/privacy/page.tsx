@@ -54,7 +54,7 @@ export default function PrivacyPage() {
           </li>
           <li>
             CI Cyber Lab does <strong>not ask users to upload real case
-            data</strong>. Every artefact and scenario shipped with the
+            data</strong>. Every artifact and scenario shipped with the
             platform is fictional and sanitized.
           </li>
         </ul>

@@ -817,7 +817,7 @@ matter for response:
 
 Your job: identify the OSINT-tell indicators that mark this as
 targeted, decide what changes in the response, and call out what
-the artefacts do and do not establish about the attacker.
+the artifacts do and do not establish about the attacker.
 
 Reporting goes to both the supporting ACI office (CI angle) and
 the unit's ISSM under AR 25-2 (Army Cybersecurity) for the
@@ -1071,7 +1071,7 @@ What you don't have (yet):
 
 The exercise is to read the pattern carefully and decide what
 warrants escalation, what doesn't, and what additional
-artefacts would close the question.
+artifacts would close the question.
 
 Witting-insider cases on DODIN-Army systems escalate through the
 **Army Insider Threat Program** (AR 381-12 para 4-6) with the
@@ -1262,17 +1262,17 @@ need-to-know.
           allowMultiple: true,
         },
         debriefMd:
-          "Share-link recipient + reuse audit is the highest-yield artefact — it converts a *shape* observation into a *destination* observation. Extending the window confirms whether the pattern is a recent change or stable behaviour. The structured interview is the right human step; do it through ACI, not casually. A polygraph is a downstream tool managed under separate authority and procedure — it isn't the first move on a quarterly review.",
+          "Share-link recipient + reuse audit is the highest-yield artifact — it converts a *shape* observation into a *destination* observation. Extending the window confirms whether the pattern is a recent change or stable behaviour. The structured interview is the right human step; do it through ACI, not casually. A polygraph is a downstream tool managed under separate authority and procedure — it isn't the first move on a quarterly review.",
       },
       {
         ordinal: 4,
         type: "confidence",
         weight: 1,
         promptMd:
-          "Confidence (1–5) that d.kowalski is wittingly exfiltrating program material, based ONLY on these artefacts.",
+          "Confidence (1–5) that d.kowalski is wittingly exfiltrating program material, based ONLY on these artifacts.",
         expected: { type: "confidence", expectedRange: [2, 4] },
         debriefMd:
-          "**3 (or thereabouts).** The pattern is too consistent and too out-of-scope to dismiss, but the artefacts do not show *where* the share-links resolve or *who* (if anyone) the material reached. A confidence-5 finding here would be over-claim. Close the recipient / reuse question and run the structured interview; that's where 3 either rises or drops.",
+          "**3 (or thereabouts).** The pattern is too consistent and too out-of-scope to dismiss, but the artifacts do not show *where* the share-links resolve or *who* (if anyone) the material reached. A confidence-5 finding here would be over-claim. Close the recipient / reuse question and run the structured interview; that's where 3 either rises or drops.",
       },
     ],
   },
@@ -1506,7 +1506,7 @@ accounts.
           "Confidence (1–5) that the SG-sourced activity is a **second actor driving the account**, not m.santos herself.",
         expected: { type: "confidence", expectedRange: [4, 5] },
         debriefMd:
-          "**4 or 5.** Geo-impossibility + concurrent US-sourced normal behaviour + the forward-and-delete rule + the resource-pattern shift to a financially-relevant artefact is a compound signal that's hard to interpret any other way. Hold at 4 unless you've eliminated the (rare but real) possibility of a delegated session, a session token already exfiltrated and replayed from a different ASN, or another technical wrinkle — the interview answers most of those quickly.",
+          "**4 or 5.** Geo-impossibility + concurrent US-sourced normal behaviour + the forward-and-delete rule + the resource-pattern shift to a financially-relevant artifact is a compound signal that's hard to interpret any other way. Hold at 4 unless you've eliminated the (rare but real) possibility of a delegated session, a session token already exfiltrated and replayed from a different ASN, or another technical wrinkle — the interview answers most of those quickly.",
       },
     ],
   },
@@ -1551,11 +1551,11 @@ loop.
 > combining them.
 
 This is a routing exercise. There is no malicious-actor finding
-hidden in the artefacts; the exercise is to demonstrate that you
+hidden in the artifacts; the exercise is to demonstrate that you
 can put each observation in front of the correct owner under
 the existing Army cybersecurity / counterintelligence framework.
 
-## Artefacts
+## Artifacts
 
 - **help-desk-ticket.txt** — the original ticket text and the
   technician's forwarding note.
@@ -2222,7 +2222,7 @@ You will read:
           "",
           "**Wrong:**",
           "",
-          "- *Delete-and-move-on* destroys the very artefact (the live account, with its current credentials and the failed-logon trail) the credential-access investigation needs to identify the actor and the entry technique. Disable + preserve, don't delete, until the investigation closes.",
+          "- *Delete-and-move-on* destroys the very artifact (the live account, with its current credentials and the failed-logon trail) the credential-access investigation needs to identify the actor and the entry technique. Disable + preserve, don't delete, until the investigation closes.",
           "- *Discipline Albright* on workstation attribution alone confuses a host observation with a human conclusion — the same error pattern the witting-insider scenario warned against.",
         ].join("\n"),
       },

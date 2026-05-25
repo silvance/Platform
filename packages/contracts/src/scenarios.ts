@@ -192,7 +192,7 @@ export const LANE_DESCRIPTIONS: Record<Lane, string> = {
   email_bec:
     "Business Email Compromise (BEC) and phishing triage. Read headers, attachments, and lure mechanics; separate spoof from compromise.",
   windows_artifacts:
-    "Windows-specific artefacts: execution evidence, registry, recent files, Windows 11 additions.",
+    "Windows-specific artifacts: execution evidence, registry, recent files, Windows 11 additions.",
   removable_media_spillage:
     "USB / removable-media handling and the spillage scenarios that come with it.",
   insider_risk:
@@ -206,7 +206,7 @@ export const LANE_DESCRIPTIONS: Record<Lane, string> = {
   evidence_handling:
     "Custody documents, descriptive vs speculative wording, and the corrective steps when a chain has gaps.",
   report_writing:
-    "Turning what the artefacts prove into defensible written findings.",
+    "Turning what the artifacts prove into defensible written findings.",
 };
 
 // Trimmed shape for catalog listings — no brief body, smaller payloads.

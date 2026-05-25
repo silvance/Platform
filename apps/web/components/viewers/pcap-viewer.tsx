@@ -9,7 +9,7 @@ interface Props {
 // packet contents inline — opening in Wireshark / tshark /
 // tcpdump is the analyst's job. The card shows file metadata,
 // a download link, and a one-line nudge about the expected
-// tooling. A companion text artefact (when one is present in
+// tooling. A companion text artifact (when one is present in
 // the scenario) carries the human-readable summary so the
 // challenge stays solvable without leaving the browser.
 export function PcapViewer({ artifact, proxyUrl }: Props) {
@@ -38,8 +38,8 @@ export function PcapViewer({ artifact, proxyUrl }: Props) {
         </span>
       </div>
       <p style={{ margin: 0, color: "var(--muted)", fontSize: ".88rem" }}>
-        Packet-capture artefact. Download and open in Wireshark, tshark,
-        or tcpdump. A text summary alongside this artefact (if present)
+        Packet-capture artifact. Download and open in Wireshark, tshark,
+        or tcpdump. A text summary alongside this artifact (if present)
         carries the same information for browser-only triage.
       </p>
       <div>
