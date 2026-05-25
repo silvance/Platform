@@ -23,6 +23,14 @@ export const BEC_SCENARIOS: ScenarioSeed[] = [
     brief: `
 # Brief
 
+This is a **Business Email Compromise (BEC)** triage — a
+financial-fraud lure that arrives as a plausible message from a
+trusted counterparty (usually a vendor or executive) and asks
+for a routing change, an off-cycle wire, or a credential. The
+attacker's goal is to bend a routine money-movement workflow off
+its normal path; the analyst's job is to separate what the
+headers *prove* from what they only *suggest*.
+
 At 14:07 local, the controller of a partner firm working a unit
 acquisition received an email purportedly from
 \`jane.doe@vendor.example\` — a familiar vendor finance contact —
@@ -331,6 +339,11 @@ Distinguish:
     status: "draft",
     brief: `
 # Brief (DRAFT)
+
+This is a payroll-flavoured **Business Email Compromise (BEC)**
+attempt — the attacker impersonates an employee and asks HR to
+redirect direct-deposit details, intercepting the next pay run
+before anyone notices.
 
 HR received an email purportedly from \`a.morales@partner.example\`
 asking to update direct-deposit routing for next pay run. The

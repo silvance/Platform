@@ -13,7 +13,7 @@ export const REPORT_WRITING_SCENARIOS: ScenarioSeed[] = [
     slug: "report-writing-ambiguous-evidence-001",
     title: "Report Writing: Mixed Evidence, Careful Finding",
     summary:
-      "Given mixed evidence on a possible BEC, write a defensible one-paragraph finding that names facts, assumptions, and recommended leads — without overclaiming.",
+      "Given mixed evidence on a possible Business Email Compromise (BEC), write a defensible one-paragraph finding that names facts, assumptions, and recommended leads — without overclaiming.",
     skillAreas: ["report_writing", "inference_discipline", "bec"],
     difficulty: 3,
     estimatedMinutes: 30,
@@ -24,7 +24,10 @@ export const REPORT_WRITING_SCENARIOS: ScenarioSeed[] = [
     brief: `
 # Brief
 
-Triage on a suspected BEC has produced mixed evidence:
+Triage on a suspected **Business Email Compromise (BEC)** — a
+financial-fraud lure that impersonates a trusted counterparty
+to bend a routine money-movement workflow off its normal path
+— has produced mixed evidence:
 
 - The email had DMARC fail + Reply-To divergence.
 - The recipient (a controller) **did reply** but **did not** send
