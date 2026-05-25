@@ -910,4 +910,401 @@ host-side process attribution and destination identification.
       },
     ],
   },
+
+  // ─── 5. Cross-Mission-Area: PIT diagnostic on a BMA port ────
+  {
+    slug: "network-pit-on-bma-port-001",
+    title: "Cross-MA Triage: A PIT Diagnostic Kit on a BMA Switch Port",
+    summary:
+      "A device joins a Business-Mission-Area switch port whose fingerprint matches a Platform-IT diagnostic kit normally on the Warfighting side. Read what the port logs do and don't establish — and decide which authorities own this.",
+    skillAreas: ["network_logs", "df_artifacts", "report_writing", "inference_discipline"],
+    difficulty: 3,
+    estimatedMinutes: 22,
+    tags: ["network", "pit", "mission_area", "boundary", "owner_routing", "ar25_2", "inference_discipline"],
+    lane: "network_logs",
+    module: "Cross-Mission-Area routing",
+    sequence: 1,
+    brief: `
+# Brief
+
+Routine NAC review of yesterday's switch logs flags an unknown
+device that joined a wall port in **Bldg 4250, room 214**
+(garrison HR / finance suite — a Business Mission Area
+network segment). The device drew a DHCP lease, exchanged ARP
+with the segment gateway, and went quiet after ~14 minutes.
+
+The MAC OUI and the LLDP / mDNS chatter the device emitted
+match the fingerprint of a **PIT (Platform IT) diagnostic
+kit** — specifically, a vehicle-system maintenance laptop
+catalogued to a motor-pool support detachment whose normal
+operating environment is the WMA-segment maintenance enclave
+in Bldg 6190.
+
+> **A note on Mission Areas.** DODIN-Army segregates IT into
+> Mission Areas — broadly: **WMA** (Warfighting), **BMA**
+> (Business), **EIEMA** (Enterprise Information Environment),
+> **DIMA** (Defense Intelligence). **PIT** is a category of
+> IT embedded in platforms / weapons systems and accredited
+> through a separate authorisation chain (a Platform AO),
+> distinct from the unit's network ATO. A PIT asset
+> showing up on a BMA segment is by definition a boundary
+> event regardless of intent — the two networks live under
+> different authorisations.
+
+What you have:
+
+- **switch-port-log.txt** — the relevant entries from the
+  edge switch (port up, MAC-learn, LLDP frame, mDNS
+  announcement, port down).
+- **dhcp-lease.txt** — the lease the BMA DHCP server handed
+  out, with the OUI / vendor parsed and a short note from
+  the NAC tool.
+- **pit-inventory-row.json** — the inventory record for the
+  device whose fingerprint matched (its catalogue entry,
+  Platform AO, normal home enclave).
+- **mission-area-owners.txt** — a short reference card of
+  who-owns-what across Mission Areas when a cross-boundary
+  observation surfaces.
+
+This is a routing-first exercise. The exercise is **not**
+"was this an attack" — the artefacts don't establish intent.
+The exercise is to extract what the artefacts **do**
+establish, and put the right authorities on notice in
+parallel.
+`.trim(),
+    artifacts: [
+      {
+        ordinal: 1,
+        displayName: "switch-port-log.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "Switch: edge-sw-4250-2 (Bldg 4250, BMA access closet)",
+            "Port:   Gi1/0/14  (wall port, room 214, desk #3)",
+            "VLAN:   220 (bma-user)",
+            "",
+            "2026-11-20 09:02:11Z  %LINK-3-UPDOWN: Interface Gi1/0/14, changed state to up",
+            "2026-11-20 09:02:14Z  %LINEPROTO-5-UPDOWN: Line protocol on Gi1/0/14 up",
+            "2026-11-20 09:02:18Z  MAC-LEARN  port=Gi1/0/14  vlan=220  mac=00:1B:21:AA:BB:CC  (OUI: Intel — common laptop NIC)",
+            "2026-11-20 09:02:22Z  LLDP-RX     port=Gi1/0/14  system-name=\"PIT-DIAG-LT-014\"  port-id=\"eth0\"  capabilities=Station",
+            "2026-11-20 09:02:24Z  DHCP-RELAY  port=Gi1/0/14  client=00:1B:21:AA:BB:CC  → forwarded to dhcp-bma-01",
+            "2026-11-20 09:02:29Z  MDNS-ANNOUNCE  port=Gi1/0/14  service=_tactical-diag._tcp  instance=\"PIT-DIAG-LT-014 ConfigSvc\"  txt=\"vendor=ArmyMaintTools; profile=wheeled-vehicle-diag-v6\"",
+            "2026-11-20 09:02:30Z  ARP-LEARN   port=Gi1/0/14  ip=10.220.4.118  mac=00:1B:21:AA:BB:CC",
+            "2026-11-20 09:14:55Z  ARP-AGEOUT  ip=10.220.4.118 (no traffic since 09:11:42Z)",
+            "2026-11-20 09:16:02Z  %LINK-3-UPDOWN: Interface Gi1/0/14, changed state to down",
+            "",
+            "Notes:",
+            "  * BMA-user VLAN 220 is a routed L3 segment that has no",
+            "    permitted path to the WMA maintenance enclave. East/west",
+            "    ACLs on the core block 10.220.0.0/16 ↔ 10.66.0.0/16.",
+            "  * No 802.1X EAP exchange occurred on this port — the wall",
+            "    drop is MAB-fallback configured (a known posture",
+            "    deviation tracked under POAM 4250-NAC-04).",
+            "",
+          ].join("\n"),
+        ),
+      },
+      {
+        ordinal: 2,
+        displayName: "dhcp-lease.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "DHCP server: dhcp-bma-01 (scope: 10.220.4.0/24, bma-user)",
+            "",
+            "Lease granted:",
+            "  ip:          10.220.4.118",
+            "  mac:         00:1B:21:AA:BB:CC  (OUI 00:1B:21 — Intel Corporate)",
+            "  hostname:    PIT-DIAG-LT-014   (option 12, as advertised by client)",
+            "  vendor-id:   \"ArmyMaintTools/wheeled-diag-v6\"  (option 60)",
+            "  lease-time:  3600s",
+            "  granted:     2026-11-20 09:02:25Z",
+            "  released:    (never; lease expired by ageout at 10:02:25Z)",
+            "",
+            "NAC tool note:",
+            "  Hostname / vendor-id pair matches PIT inventory fingerprint",
+            "  for asset PIT-DIAG-LT-014. NAC posture rule:",
+            "    \"PIT-fingerprinted assets are not permitted on VLAN 220",
+            "     (bma-user). Quarantine action FAILED to apply because",
+            "     port Gi1/0/14 is in MAB-fallback with no quarantine VLAN",
+            "     defined — POAM 4250-NAC-04.\"",
+            "",
+          ].join("\n"),
+        ),
+      },
+      {
+        ordinal: 3,
+        displayName: "pit-inventory-row.json",
+        kind: "json",
+        mimeType: "application/json; charset=utf-8",
+        bytes: utf8(
+          JSON.stringify(
+            {
+              asset_tag: "PIT-DIAG-LT-014",
+              category: "Platform IT (PIT) — wheeled-vehicle maintenance diagnostic kit",
+              hand_receipt_holder: "SFC J. Marquez, 4-118 BSB Motor Pool",
+              normal_operating_enclave: "WMA / maint-diag-enclave (Bldg 6190, isolated; no garrison routed path)",
+              platform_ao: "PEO CS&CSS Platform AO (vehicle-diagnostics ATO bundle)",
+              network_ato_unit_boundary: "Does NOT operate on the unit's garrison ATO boundary. Cross-segment use requires a documented exception coordinated through the unit ISSM and the Platform AO.",
+              last_inventory_sighting: "Bldg 6190 maint bay, 2026-11-18 (visual; no network sighting because the enclave is normally air-gapped to wired backhaul).",
+              note: "Standard procedure for off-enclave use is a written request to the Platform AO with concurrence from the unit ISSM; a sticker is affixed to the chassis with the authorisation number when granted. The chassis sticker for PIT-DIAG-LT-014 currently shows no off-enclave authorisation.",
+            },
+            null,
+            2,
+          ) + "\n",
+        ),
+      },
+      {
+        ordinal: 4,
+        displayName: "mission-area-owners.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "Cross-Mission-Area owner-routing reference (training extract)",
+            "-------------------------------------------------------------",
+            "",
+            "* Unit ISSM (AR 25-2)",
+            "    Owns the unit's network ATO boundary. Any device that",
+            "    appears on a unit-owned segment without authorisation is",
+            "    a boundary event the ISSM must see — independent of",
+            "    intent and independent of which Mission Area the device",
+            "    'belongs' to.",
+            "",
+            "* Platform AO (the PIT system's authorisation chain)",
+            "    Owns the accreditation of the PIT device itself. When",
+            "    a PIT asset operates outside its accredited enclave, the",
+            "    Platform AO has the authoritative say on what the device",
+            "    is allowed to do, and is the party that can authorise",
+            "    (or refuse) continued off-enclave operation.",
+            "",
+            "* Supporting ACI office (AR 381-12)",
+            "    Owns the counterintelligence-attribution angle if and",
+            "    when the boundary crossing develops articulable facts",
+            "    suggesting a witting actor. A first observation of an",
+            "    accidental wall-port misconnect is not, on its own, a",
+            "    CI referral; a pattern of unexplained PIT appearances",
+            "    on BMA segments would be.",
+            "",
+            "* J6 / network operations",
+            "    Owns the operational response: port shut, MAC quarantine,",
+            "    physical recovery of the device. Acts under the ISSM's",
+            "    direction for incident-response decisions.",
+            "",
+            "* USACIDC",
+            "    Engaged downstream only if a criminal predicate develops",
+            "    (e.g. confirmed unauthorised cross-domain data transfer",
+            "    or destruction of evidence). Not a first responder for a",
+            "    boundary-event observation.",
+            "",
+          ].join("\n"),
+        ),
+      },
+    ],
+    indicatorSets: [
+      {
+        slug: "pit-bma-indicators",
+        displayName: "Observations from the port logs + DHCP + inventory + reference card",
+        items: [
+          {
+            id: "device-was-on-bma-vlan",
+            label:
+              "A device drew a DHCP lease and went IP-active on VLAN 220 (bma-user) for ~14 minutes from a wall port in Bldg 4250 room 214.",
+            evidenceRef: "switch-port-log.txt",
+          },
+          {
+            id: "fingerprint-matches-pit-asset",
+            label:
+              "The LLDP system-name, mDNS service announcement, and DHCP vendor-id all line up with the catalogue fingerprint for PIT-DIAG-LT-014.",
+            evidenceRef: "dhcp-lease.txt",
+          },
+          {
+            id: "no-off-enclave-authorisation",
+            label:
+              "The PIT inventory record shows no current off-enclave authorisation for this asset; the chassis sticker is blank.",
+            evidenceRef: "pit-inventory-row.json",
+          },
+          {
+            id: "east-west-blocked",
+            label:
+              "Core east/west ACLs block routed traffic between the BMA-user VLAN (10.220.0.0/16) and the WMA maintenance enclave (10.66.0.0/16).",
+            evidenceRef: "switch-port-log.txt",
+          },
+          {
+            id: "no-quarantine-applied",
+            label:
+              "The NAC tool wanted to quarantine the device based on PIT fingerprint, but couldn't — the wall port is in MAB-fallback with no quarantine VLAN configured (POAM 4250-NAC-04).",
+            evidenceRef: "dhcp-lease.txt",
+          },
+          {
+            id: "user-data-not-observed",
+            label:
+              "No application-layer traffic from the device is captured in this artefact set — what was on the device, what it tried to reach, and what (if anything) it carried away are not established by the port log alone.",
+            evidenceRef: "switch-port-log.txt",
+          },
+          {
+            id: "no-eap-on-port",
+            label:
+              "No 802.1X EAP exchange occurred on the port — the device was admitted on MAC-only authentication, which is a known posture deviation tracked under POAM 4250-NAC-04.",
+            evidenceRef: "switch-port-log.txt",
+          },
+        ],
+      },
+    ],
+    questions: [
+      {
+        ordinal: 1,
+        type: "multi_choice",
+        weight: 2,
+        promptMd:
+          "Which statements about the event are **facts** established by the artefacts as written?",
+        options: [
+          {
+            id: "device-on-bma",
+            label:
+              "A device with a Platform-IT fingerprint was active on the BMA-user VLAN for ~14 minutes from a Bldg 4250 wall port.",
+          },
+          {
+            id: "is-the-real-pit-laptop",
+            label:
+              "The device on the port is, in fact, PIT-DIAG-LT-014 (the specific catalogued chassis).",
+          },
+          {
+            id: "off-enclave-without-auth",
+            label:
+              "If the device is the real PIT-DIAG-LT-014, it was off-enclave without the required Platform-AO authorisation.",
+          },
+          {
+            id: "cross-domain-data-transfer",
+            label:
+              "Data was transferred between the WMA maintenance enclave and the BMA segment as a result of this event.",
+          },
+          {
+            id: "deliberate-bridging",
+            label:
+              "A witting human deliberately bridged the two Mission Areas.",
+          },
+        ],
+        allowMultiple: true,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["device-on-bma", "off-enclave-without-auth"],
+          allowMultiple: true,
+        },
+        debriefMd: [
+          "**Fact:**",
+          "",
+          "- The port log + DHCP lease establish the device was IP-active on the BMA-user VLAN for the recorded window. That's an observed event.",
+          "- The PIT inventory row shows no off-enclave authorisation. If this is PIT-DIAG-LT-014, the off-enclave-without-authorisation conclusion follows from the inventory state.",
+          "",
+          "**Not fact (yet):**",
+          "",
+          "- *Is the real PIT-DIAG-LT-014* — the fingerprint matches the catalogue entry, but a fingerprint match is identity by *advertisement*. A second device could spoof the LLDP name, MAC OUI, and mDNS strings. Physical recovery of the chassis (and sticker check) is what converts \"fingerprint matched\" into \"this chassis was on the port.\"",
+          "- *Cross-domain data transfer* — east/west ACLs block routed paths between the two enclaves, and no application-layer data is in the artefact set. The port log doesn't say bytes moved between Mission Areas; it says a device joined one of them.",
+          "- *Deliberate bridging* — intent is not established. An accidental wall-port misconnect is the **mundane** explanation and remains the most likely until evidence of pattern or motive surfaces.",
+        ].join("\n"),
+      },
+      {
+        ordinal: 2,
+        type: "select_indicators",
+        weight: 2,
+        indicatorSetSlug: "pit-bma-indicators",
+        promptMd:
+          "Pick the observations that are **directly relevant** to characterising this as a cross-Mission-Area boundary event (as opposed to a routine BMA-side NAC anomaly).",
+        expected: {
+          type: "select_indicators",
+          correctIds: [
+            "device-was-on-bma-vlan",
+            "fingerprint-matches-pit-asset",
+            "no-off-enclave-authorisation",
+            "no-quarantine-applied",
+          ],
+        },
+        debriefMd: [
+          "**Directly relevant:**",
+          "",
+          "- The presence of the device on the BMA-user VLAN is the boundary event itself.",
+          "- The PIT fingerprint match is what makes this **cross-MA** rather than a generic unknown-device admission — the device's accredited home is on a different Mission Area's accredited enclave.",
+          "- The absence of an off-enclave authorisation is what makes it a **violation** of the PIT accreditation, not just an unusual sighting.",
+          "- The NAC quarantine failure is a control-effectiveness observation that the ISSM owns: the policy fired but the enforcement path didn't, which is itself reportable.",
+          "",
+          "**Context-only (not the boundary-event characterisation):**",
+          "",
+          "- *East/west ACLs blocking BMA↔WMA* is reassuring background on the data-movement question; it doesn't characterise the event itself.",
+          "- *User data not observed* is a scope-of-evidence note for the writeup, not a characterising observation.",
+          "- *No EAP on the port* is a separate, pre-existing posture finding (POAM 4250-NAC-04). It is the **enabling weakness**, but it would still be tracked even with no PIT device involved.",
+        ].join("\n"),
+      },
+      {
+        ordinal: 3,
+        type: "multi_choice",
+        weight: 2,
+        promptMd:
+          "Pick the **correct owner routing** for this observation. Multiple owners may apply in parallel.",
+        options: [
+          {
+            id: "to-issm",
+            label:
+              "Notify the unit ISSM as the owner of the unit's network ATO boundary under AR 25-2 — a PIT-fingerprinted device admitted onto a BMA segment is the ISSM's incident to lead.",
+          },
+          {
+            id: "to-platform-ao",
+            label:
+              "Notify the Platform AO listed for PIT-DIAG-LT-014 — the device operated outside its accredited enclave without authorisation, which is the Platform AO's call to assess.",
+          },
+          {
+            id: "to-j6-netops",
+            label:
+              "Task J6 / network operations to disable port Gi1/0/14 pending recovery and to coordinate physical retrieval of the device with the hand-receipt holder (SFC Marquez).",
+          },
+          {
+            id: "hold-aci-pending-facts",
+            label:
+              "Hold any supporting-ACI-office referral under AR 381-12 pending facts from the recovery + interview about how the device reached the BMA wall port; a first observation is not, on its own, a CI referral.",
+          },
+          {
+            id: "open-cidc-now",
+            label:
+              "Open a USACIDC criminal-investigation case immediately on the strength of the boundary event.",
+          },
+          {
+            id: "do-nothing-blocked-anyway",
+            label:
+              "Take no action — east/west ACLs blocked any data path between the Mission Areas, so the event has no operational consequence.",
+          },
+        ],
+        allowMultiple: true,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["to-issm", "to-platform-ao", "to-j6-netops", "hold-aci-pending-facts"],
+          allowMultiple: true,
+        },
+        debriefMd: [
+          "**Right routes (all four):**",
+          "",
+          "- The unit ISSM owns the network ATO boundary. They get the call regardless of intent.",
+          "- The Platform AO owns the PIT system's accreditation. They are the authority on whether the device may continue to operate after this event.",
+          "- J6 / network operations executes the port-shut + physical-recovery legwork under the ISSM's direction.",
+          "- The supporting ACI office is held in reserve. Send a referral once recovery + interview surfaces facts (e.g. \"the device has been at room 214 three times this month\" or \"the operator can't account for what software was loaded last week\") — not on a single accidental-looking event with no human-conduct facts yet.",
+          "",
+          "**Wrong:**",
+          "",
+          "- *Open USACIDC now* — there is no criminal predicate. A boundary event is not by itself a crime, and a premature CIDC opening confuses the routing.",
+          "- *Do nothing* — the ACLs blocked routed paths between Mission Areas; they did not stop the boundary event from happening on the unit's network. The control-effectiveness gap (the NAC quarantine that didn't apply) is itself a reportable observation under AR 25-2 regardless of data movement.",
+        ].join("\n"),
+      },
+      {
+        ordinal: 4,
+        type: "confidence",
+        weight: 1,
+        promptMd:
+          "Confidence (1–5) that the right writeup should currently read: 'Cross-domain data transfer occurred between the WMA maintenance enclave and the BMA-user segment.'",
+        expected: { type: "confidence", expectedRange: [1, 2] },
+        debriefMd:
+          "**1 or 2.** The artefacts establish *a PIT-fingerprinted device joined a BMA wall port for 14 minutes*. They do not establish that bytes moved between Mission Areas. East/west ACLs block routed paths, no application-layer telemetry is in the artefact set, and what (if anything) was carried into or out of the WMA enclave on the device's local storage is a question for the physical recovery + forensic image, not the port log. A defensible writeup names the boundary event, names the missing artefacts (chassis recovery, host image, operator interview), and reports the control-effectiveness gap (NAC quarantine that did not apply).",
+      },
+    ],
+  },
 ];
