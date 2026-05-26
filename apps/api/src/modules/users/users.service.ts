@@ -242,6 +242,35 @@ export class UsersService {
     }
   }
 
+  // Hard-delete a user account. Used to keep the /admin/users list
+  // from filling up with retired-pilot rows that "disable" leaves
+  // behind. Cascade behaviour is set at the schema layer:
+  //
+  //   Session, ScenarioProgress, QuestionResponse, ScenarioFeedback
+  //     → ON DELETE CASCADE  (per-user data goes with the user)
+  //   Scenario.authorUserId, Scenario.reviewedByUserId,
+  //   AccessCode.createdByUserId
+  //     → ON DELETE SET NULL (authored content + admin-issued codes
+  //                           survive with attribution cleared)
+  //
+  // Self-protection mirrors update():
+  //   - actor can't delete their own row
+  //   - can't delete the last enabled admin
+  async delete(actorId: string, targetId: string): Promise<void> {
+    if (actorId === targetId) {
+      throw new ForbiddenException("You can't delete your own account.");
+    }
+    const target = await this.prisma.user.findUnique({
+      where: { id: targetId },
+      select: { id: true, role: true },
+    });
+    if (!target) throw new NotFoundException("User not found.");
+    if (target.role === "admin") {
+      await this.assertNotLastAdmin(targetId);
+    }
+    await this.prisma.user.delete({ where: { id: targetId } });
+  }
+
   // M17: admin-approve a self-registered (pending) account. Sets
   // approvedAt = now; the user can sign in from the next request
   // onward. Idempotent — approving an already-approved row is a
