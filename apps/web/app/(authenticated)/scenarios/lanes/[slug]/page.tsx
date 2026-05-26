@@ -32,14 +32,16 @@ export default async function LanePage({ params }: Props) {
 
   const { scenarios } = await api.scenarios.list(token!, { lane });
 
-  // Group by module. The service returns scenarios sorted by
-  // (sequence, title), so each module's items end up in
-  // recommended-order order inside its bucket — that part is
-  // good. The order of the *modules themselves* in the lane is
-  // less obvious: sorting by service-returned (sequence, title)
-  // makes module order alphabetical by title, which is wrong for
-  // a tiered lane. Re-sort module groups so easier modules come
-  // first; tiebreak alphabetically for a stable display.
+  // Order: group by module so related challenges stay adjacent, but
+  // render as a single multi-column grid so the page doesn't degrade
+  // into a tall single column on lanes where each module is a
+  // singleton (which is most of them — modules are a tag, not a
+  // unit of progression).
+  //
+  // Within the flat order: easier module-groups come first
+  // (tiebreak alphabetic), then by per-scenario sequence inside
+  // the group. The module name is surfaced as a chip on each card
+  // so the grouping info survives the flatten.
   const groups = new Map<string, ScenarioListItem[]>();
   for (const s of scenarios) {
     const key = s.module ?? "Other";
@@ -55,6 +57,7 @@ export default async function LanePage({ params }: Props) {
       return aName.localeCompare(bName);
     },
   );
+  const flatScenarios = orderedGroups.flatMap(([, items]) => items);
 
   return (
     <main>
@@ -77,62 +80,18 @@ export default async function LanePage({ params }: Props) {
           <p style={{ margin: 0 }}>Nothing here yet.</p>
         </div>
       ) : (
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "1.5rem",
-            marginTop: "1rem",
-          }}
+        <ul
+          className="scenario-list"
+          style={{ listStyle: "none", padding: 0, marginTop: "1rem" }}
         >
-          {(() => {
-            // Ordinals run continuously across modules within the
-            // lane: module A's last challenge is N, module B's first
-            // is N+1. Same number never repeats inside a single lane.
-            //
-            // The module header is shown only when a module groups two
-            // or more scenarios. Singletons render as bare cards in
-            // their place in the curated order — putting an
-            // ALL-CAPS section header above a single card was
-            // structural noise that made the page feel padded.
-            let ordinal = 0;
-            return orderedGroups.map(([moduleName, items]) => {
-              const showHeader = items.length >= 2;
-              return (
-                <section key={moduleName}>
-                  {showHeader && (
-                    <h2
-                      style={{
-                        fontSize: ".95rem",
-                        margin: "0 0 .5rem 0",
-                        color: "var(--muted-strong)",
-                        textTransform: "uppercase",
-                        letterSpacing: ".04em",
-                      }}
-                    >
-                      {moduleName}
-                    </h2>
-                  )}
-                  <ul
-                    className="scenario-list"
-                    style={{ listStyle: "none", padding: 0 }}
-                  >
-                    {items.map((s) => {
-                      ordinal += 1;
-                      return (
-                        <li key={s.id} className="scenario-card">
-                          <Link href={`/scenarios/${s.slug}`}>
-                            <ScenarioCard scenario={s} ordinal={ordinal} />
-                          </Link>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </section>
-              );
-            });
-          })()}
-        </div>
+          {flatScenarios.map((s, idx) => (
+            <li key={s.id} className="scenario-card">
+              <Link href={`/scenarios/${s.slug}`}>
+                <ScenarioCard scenario={s} ordinal={idx + 1} />
+              </Link>
+            </li>
+          ))}
+        </ul>
       )}
     </main>
   );
@@ -163,6 +122,20 @@ function ScenarioCard({
   const hasAwarenessOnly = scenario.skillAreas.some(isAwarenessOnly);
   return (
     <>
+      {scenario.module ? (
+        <div
+          style={{
+            fontSize: ".7rem",
+            textTransform: "uppercase",
+            letterSpacing: ".06em",
+            color: "var(--muted)",
+            fontWeight: 600,
+            marginBottom: ".25rem",
+          }}
+        >
+          {scenario.module}
+        </div>
+      ) : null}
       <div
         style={{
           display: "flex",

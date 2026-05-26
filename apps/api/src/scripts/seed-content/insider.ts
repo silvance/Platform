@@ -1,7 +1,7 @@
 import { utf8 } from "./util";
 import type { ScenarioSeed } from "./types";
 
-// Insider-risk family. Three things this family teaches that the
+// Insider-threat family. Three things this family teaches that the
 // pure-DFIR family doesn't:
 //   - Anomaly ≠ exfil. Suspicious patterns motivate the next step;
 //     they aren't the finding.
@@ -13,7 +13,7 @@ export const INSIDER_SCENARIOS: ScenarioSeed[] = [
   // ─── Tier 1 (polished) ──────────────────────────────────────
   {
     slug: "insider-file-access-timeline-001",
-    title: "Insider Risk: 30-Day-Notice File-Access Timeline",
+    title: "Insider Threat: 30-Day-Notice File-Access Timeline",
     summary:
       "An employee gave 30 days' notice. The week after, file-access counts spike. Read the timeline carefully and decide what's anomaly vs evidence.",
     skillAreas: ["account_compromise", "df_artifacts", "report_writing", "inference_discipline"],
@@ -275,7 +275,7 @@ finding by itself.
   // ─── Tier 2 (drafts) ─────────────────────────────────────────
   {
     slug: "insider-working-hours-pattern-001",
-    title: "Insider Risk: Off-Hours Access Pattern",
+    title: "Insider Threat: Off-Hours Access Pattern",
     summary:
       "Off-hours logons cluster around a specific document set. Is it a sign of exfil, a deadline, or normal team-A behavior?",
     skillAreas: ["account_compromise", "report_writing", "inference_discipline"],
@@ -385,7 +385,7 @@ team is in the final two weeks of a release. Triage.
         ordinal: 3,
         type: "confidence",
         weight: 1,
-        promptMd: "Confidence (1–5) that this pattern is insider risk.",
+        promptMd: "Confidence (1–5) that this pattern is an insider threat.",
         expected: { type: "confidence", expectedRange: [1, 2] },
         debriefMd:
           "Low. The context fully explains the timing.\n\n**Owners.** If the off-hours pattern *did* survive a sanity check (it doesn't here), the insider angle goes to the supporting ACI office under AR 381-12 para 4-6 (Army Insider Threat Program); the access-control / account-hygiene angle goes to the unit ISSM under AR 25-2.",
@@ -395,7 +395,7 @@ team is in the final two weeks of a release. Triage.
 
   {
     slug: "insider-removable-media-with-sensitive-access-001",
-    title: "Insider Risk: USB Mount + Sensitive Doc Access",
+    title: "Insider Threat: USB Mount + Sensitive Doc Access",
     summary:
       "A USB was mounted during access to a restricted document. Determine what the artifacts prove vs what would need EDR file-write data.",
     skillAreas: ["account_compromise", "df_artifacts", "inference_discipline"],
