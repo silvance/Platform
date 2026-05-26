@@ -33,7 +33,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   // No maximumScale / userScalable=no — students must be able to
-  // zoom for legibility on artefact text. Accessibility comes first.
+  // zoom for legibility on artifact text. Accessibility comes first.
 };
 
 export default async function RootLayout({

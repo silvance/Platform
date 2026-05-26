@@ -218,7 +218,7 @@ the attribution inferences.
         kind: "csv",
         mimeType: "text/csv; charset=utf-8",
         bytes: utf8(
-          // Magnet AXIOM Process - USB Devices artefact category,
+          // Magnet AXIOM Process - USB Devices artifact category,
           // pivoted to mounts observed for VID/PID/Serial XX-001 across
           // the workstations in scope (CSV export from AXIOM Examine).
           // Columns mirror the AXIOM "Connected USB Devices" view.
@@ -1171,7 +1171,7 @@ for what it actually records.
 # Brief
 
 A Windows host (\`WS-3104\`, assigned to \`s.alvarez\`) is under
-review. The artefact is a parsed extract of the registry's
+review. The artifact is a parsed extract of the registry's
 \`USBSTOR\` key plus a small slice of \`setupapi.dev.log\`. These
 together are the canonical "what USB devices has this machine
 seen?" record.
@@ -1196,11 +1196,11 @@ subkey carrying:
 
 ## What it does NOT establish on its own
 
-- *Who* plugged the device in. USBSTOR is a per-host artefact;
+- *Who* plugged the device in. USBSTOR is a per-host artifact;
   attribution to a user requires correlating with the logged-on
   user (security event log) at the LastArrivalDate.
 - *What files were copied to or from the device.* That requires
-  file-system / journal / LNK-on-host artefacts and (ideally) the
+  file-system / journal / LNK-on-host artifacts and (ideally) the
   device itself.
 - *Whether the device's reported serial is real.* Some
   mass-storage devices return a zero or generated serial; the
@@ -1307,7 +1307,7 @@ subkey carrying:
           // EvtxECmd.exe -f C:\Cases\WS-104\Security.evtx --inc 4624,4634 --csv . --csvf logons.csv
           // Workstation context: WS-104 is a shared kiosk used by both
           //   accounts on overlapping shifts — captured in the casenotes,
-          //   not in this artefact.
+          //   not in this artifact.
           [
             "TimeCreated,EventId,MapDescription,Computer,UserName,LogonType,WorkstationName,IpAddress",
             "2026-11-04T08:30:01.3201Z,4624,Account successfully logged on,WS-104,CORP\\s.alvarez,2 (Interactive),WS-104,-",
@@ -1324,7 +1324,7 @@ subkey carrying:
         type: "multi_choice",
         weight: 2,
         promptMd:
-          "Which statements are supported by the artefacts as written?",
+          "Which statements are supported by the artifacts as written?",
         options: [
           {
             id: "two-asset-mismatch",
@@ -1349,7 +1349,7 @@ subkey carrying:
           {
             id: "files-copied",
             label:
-              "These artefacts establish whether files were copied to the SanDisk.",
+              "These artifacts establish whether files were copied to the SanDisk.",
           },
         ],
         allowMultiple: true,
@@ -1367,7 +1367,7 @@ subkey carrying:
           "**Not supported:**",
           "",
           "- *USBSTOR names the user* — USBSTOR is per-host. You need the security log (or equivalent session attribution) to name a person.",
-          "- *Files copied* — USBSTOR doesn't see file operations. Copy attribution requires LNK / shellbag / journal artefacts on the host and (ideally) the device itself.",
+          "- *Files copied* — USBSTOR doesn't see file operations. Copy attribution requires LNK / shellbag / journal artifacts on the host and (ideally) the device itself.",
         ].join("\n"),
       },
       {
@@ -1385,7 +1385,7 @@ subkey carrying:
           {
             id: "lnk-shellbags",
             label:
-              "Pull host-side LNK / shellbag artefacts and journal entries that reference the SanDisk's volume during the window.",
+              "Pull host-side LNK / shellbag artifacts and journal entries that reference the SanDisk's volume during the window.",
           },
           {
             id: "interview-greene",
@@ -1412,10 +1412,10 @@ subkey carrying:
         type: "confidence",
         weight: 1,
         promptMd:
-          "Confidence (1–5) that `m.greene` connected the non-asset-register SanDisk during their session at this kiosk, based ONLY on these artefacts.",
+          "Confidence (1–5) that `m.greene` connected the non-asset-register SanDisk during their session at this kiosk, based ONLY on these artifacts.",
         expected: { type: "confidence", expectedRange: [3, 4] },
         debriefMd:
-          "**3 or 4.** USBSTOR + setupapi establish that the SanDisk was enumerated. The security-log slice puts `m.greene` at the console during the window. That's strong session-level attribution. It is NOT conclusive about personal action — a session can be left unlocked, a different person can plug something in during a brief turn — and the artefacts don't speak to that. Pair with a brief interview before naming the person in any report.",
+          "**3 or 4.** USBSTOR + setupapi establish that the SanDisk was enumerated. The security-log slice puts `m.greene` at the console during the window. That's strong session-level attribution. It is NOT conclusive about personal action — a session can be left unlocked, a different person can plug something in during a brief turn — and the artifacts don't speak to that. Pair with a brief interview before naming the person in any report.",
       },
     ],
   },
@@ -1552,13 +1552,13 @@ spillage happens, both of those are in the loop early.
           "",
           "- *A — power-on, network-off, hands-off* — preserves the live state for the forensic examiner. Network-off contains further spread.",
           "- *B — notify ACI + ISSM* — both have authoritative roles in the response; bring them in early.",
-          "- *C — contemporaneous narrative* — the witness's recollection is at its freshest now. A short factual one-pager is the right artefact and feeds the case file.",
+          "- *C — contemporaneous narrative* — the witness's recollection is at its freshest now. A short factual one-pager is the right artifact and feeds the case file.",
           "- *G — image under chain of custody* — once the examiner is on scene, image the workstation with proper custody. Imaging is what makes any subsequent finding defensible.",
           "",
           "**Do NOT:**",
           "",
           "- *D — delete the file* — destroys evidence and may amount to spoliation. The file's existence and metadata are part of the investigation.",
-          "- *E — reboot* — wipes volatile state (running processes, in-memory paths) the examiner may need; can also alter on-disk artefacts.",
+          "- *E — reboot* — wipes volatile state (running processes, in-memory paths) the examiner may need; can also alter on-disk artifacts.",
           "- *F — email it to ACI* — moves the suspect content into a new system (mail server, mailboxes, archive). That's *spreading the spillage*, not containing it. Talk to ACI; do not forward the document.",
           "- *H — broadcast to the bay* — contaminates witnesses, amplifies exposure, and may compromise the response. Need-to-know.",
           "- *I — decide on marker validity now* — that's the examiner's call after triage with the appropriate classification authority. Don't pre-judge.",

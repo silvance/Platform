@@ -199,7 +199,7 @@ Two principles to keep in mind:
     slug: "evidence-custody-gap-mfr-001",
     title: "Evidence Handling: Closing a Custody Gap",
     summary:
-      "A custody narrative has a documented overnight gap. Pick the corrective artefact and the right one-paragraph summary for the MFR.",
+      "A custody narrative has a documented overnight gap. Pick the corrective artifact and the right one-paragraph summary for the MFR.",
     skillAreas: ["report_writing", "inference_discipline", "df_artifacts"],
     difficulty: 2,
     estimatedMinutes: 12,
@@ -217,13 +217,13 @@ isn't to paper the gap over; it's to close it the right way.
 
 Two questions follow:
 
-1. Which **corrective artefact(s)** actually close the gap?
+1. Which **corrective artifact(s)** actually close the gap?
 2. Which **one-paragraph summary** belongs on the Memorandum For
-   Record that accompanies the artefact and goes into the case
+   Record that accompanies the artifact and goes into the case
    file with the custody document?
 
 The right MFR describes what happened, describes what was done
-about it, and cites the artefact — without speculation and
+about it, and cites the artifact — without speculation and
 without minimising the gap.
 `.trim(),
     artifacts: [
@@ -277,7 +277,7 @@ without minimising the gap.
         mimeType: "text/plain; charset=utf-8",
         bytes: utf8(
           [
-            "Candidate corrective artefacts under consideration",
+            "Candidate corrective artifacts under consideration",
             "--------------------------------------------------",
             "",
             "  A. The keycard / door-access log for the evidence room during",
@@ -300,7 +300,7 @@ without minimising the gap.
         type: "multi_choice",
         weight: 2,
         promptMd:
-          "Which of the candidate artefacts are useful for documenting the overnight gap?",
+          "Which of the candidate artifacts are useful for documenting the overnight gap?",
         options: [
           {
             id: "door-log",
@@ -382,7 +382,7 @@ without minimising the gap.
           allowMultiple: false,
         },
         debriefMd:
-          "The right MFR names the period, names what is missing on the face of the document, names the corroborating artefact, and reports the observed end state — no minimising, no speculation about intent, no vagueness. The other three summaries fail in different ways: minimising the gap (and inventing \"normal procedure\" as cover), speculating about motive, or being too brief to actually document anything.",
+          "The right MFR names the period, names what is missing on the face of the document, names the corroborating artifact, and reports the observed end state — no minimising, no speculation about intent, no vagueness. The other three summaries fail in different ways: minimising the gap (and inventing \"normal procedure\" as cover), speculating about motive, or being too brief to actually document anything.",
       },
       {
         ordinal: 3,
@@ -392,7 +392,7 @@ without minimising the gap.
           "Confidence (1–5) that, with the door-access log + duty roster attached and an MFR written as above, the custody document is sufficient to support a downstream forensic exam.",
         expected: { type: "confidence", expectedRange: [3, 5] },
         debriefMd:
-          "**4 (or thereabouts).** The gap is now documented and corroborated. A reviewing attorney can read the document, read the MFR, and verify the corroborating artefacts. That's the disciplined response to a gap. Hold at 4 unless the door log itself raises new questions (e.g., it shows unexplained access events), in which case those become their own follow-up.",
+          "**4 (or thereabouts).** The gap is now documented and corroborated. A reviewing attorney can read the document, read the MFR, and verify the corroborating artifacts. That's the disciplined response to a gap. Hold at 4 unless the door log itself raises new questions (e.g., it shows unexplained access events), in which case those become their own follow-up.",
       },
     ],
   },

@@ -101,7 +101,7 @@ function buildBeaconPcapPackets(): PcapPacket[] {
 
 // Network & logs lane. Each scenario takes a single short log
 // excerpt or flow-record sample and exercises one core reading
-// skill — what the artefact does and does not establish — without
+// skill — what the artifact does and does not establish — without
 // shipping anything resembling a live capture.
 
 export const NETWORK_LOGS_SCENARIOS: ScenarioSeed[] = [
@@ -122,7 +122,7 @@ export const NETWORK_LOGS_SCENARIOS: ScenarioSeed[] = [
 # Brief
 
 A perimeter NetFlow collector exported the records in the
-artefact. Each row records one network flow — a 5-tuple
+artifact. Each row records one network flow — a 5-tuple
 (source IP, destination IP, source port, destination port,
 protocol) plus byte and packet counts, start and end times.
 
@@ -253,7 +253,7 @@ What flow records will *not* answer on their own:
         type: "multi_choice",
         weight: 1,
         promptMd:
-          "Which additional artefacts would most directly let you turn the third flow's shape into an attributed exfil claim?",
+          "Which additional artifacts would most directly let you turn the third flow's shape into an attributed exfil claim?",
         options: [
           {
             id: "dns-log",
@@ -290,7 +290,7 @@ What flow records will *not* answer on their own:
         type: "confidence",
         weight: 1,
         promptMd:
-          "Confidence (1–5) that user `j.delacruz` personally uploaded sensitive material in the 13:18Z flow, based ONLY on these artefacts.",
+          "Confidence (1–5) that user `j.delacruz` personally uploaded sensitive material in the 13:18Z flow, based ONLY on these artifacts.",
         expected: { type: "confidence", expectedRange: [1, 2] },
         debriefMd:
           "**1 or 2.** The flow's *shape* is upload-consistent — that's worth investigating. It is not by itself enough to identify the destination, the content, or the user-vs-process actor. Treat the row as a lead; close the gaps with DNS / proxy / EDR before naming a person in any finding.",
@@ -663,7 +663,7 @@ without independent confirmation.
 
 A small \`tcpdump\` capture from a workstation, taken during a
 ~6-minute window after EDR raised a low-confidence "uncategorised
-outbound TLS" alert. The capture is in two artefacts:
+outbound TLS" alert. The capture is in two artifacts:
 
 - \`capture-window.pcap\` — the raw libpcap binary. Open in
   Wireshark / \`tshark\` / \`tcpdump\` if you have it.
@@ -918,7 +918,7 @@ host-side process attribution and destination identification.
         type: "confidence",
         weight: 1,
         promptMd:
-          "Confidence (1–5) that the 198.51.100.77 traffic is malicious C2 based ONLY on these artefacts.",
+          "Confidence (1–5) that the 198.51.100.77 traffic is malicious C2 based ONLY on these artifacts.",
         expected: { type: "confidence", expectedRange: [2, 3] },
         debriefMd:
           "**2 or 3.** The cadence + direct-IP + uniform payload + no-DNS combination is suspicious enough to pursue. It is not by itself proof: legitimate apps (some VPN clients, telemetry agents, push-notification services) also beacon. Convert to a confidence-5 finding via host-side process identification and destination attribution.\n\n**Owner.** Unit ISSM owns the incident-response track under AR 25-2 (cybersecurity service provider coordination as needed); supporting ACI is involved if attribution links the activity to a foreign intelligence entity.",
@@ -982,8 +982,8 @@ What you have:
   observation surfaces.
 
 This is a routing-first exercise. The exercise is **not**
-"was this an attack" — the artefacts don't establish intent.
-The exercise is to extract what the artefacts **do**
+"was this an attack" — the artifacts don't establish intent.
+The exercise is to extract what the artifacts **do**
 establish, and put the right authorities on notice in
 parallel.
 `.trim(),
@@ -1212,7 +1212,7 @@ parallel.
           {
             id: "user-data-not-observed",
             label:
-              "No application-layer traffic from the device is captured in this artefact set — what was on the device, what it tried to reach, and what (if anything) it carried away are not established by the port log alone.",
+              "No application-layer traffic from the device is captured in this artifact set — what was on the device, what it tried to reach, and what (if anything) it carried away are not established by the port log alone.",
             evidenceRef: "switch-port-log.txt",
           },
           {
@@ -1230,7 +1230,7 @@ parallel.
         type: "multi_choice",
         weight: 2,
         promptMd:
-          "Which statements about the event are **facts** established by the artefacts as written?",
+          "Which statements about the event are **facts** established by the artifacts as written?",
         options: [
           {
             id: "device-on-bma",
@@ -1273,7 +1273,7 @@ parallel.
           "**Not fact (yet):**",
           "",
           "- *Is the real PIT-DIAG-LT-014* — the fingerprint matches the catalogue entry, but a fingerprint match is identity by *advertisement*. A second device could spoof the LLDP name, MAC OUI, and mDNS strings. Physical recovery of the chassis (and sticker check) is what converts \"fingerprint matched\" into \"this chassis was on the port.\"",
-          "- *Cross-domain data transfer* — east/west ACLs block routed paths between the two enclaves, and no application-layer data is in the artefact set. The port log doesn't say bytes moved between Mission Areas; it says a device joined one of them.",
+          "- *Cross-domain data transfer* — east/west ACLs block routed paths between the two enclaves, and no application-layer data is in the artifact set. The port log doesn't say bytes moved between Mission Areas; it says a device joined one of them.",
           "- *Deliberate bridging* — intent is not established. An accidental wall-port misconnect is the **mundane** explanation and remains the most likely until evidence of pattern or motive surfaces.",
         ].join("\n"),
       },
@@ -1374,7 +1374,7 @@ parallel.
           "Confidence (1–5) that the right writeup should currently read: 'Cross-domain data transfer occurred between the WMA maintenance enclave and the BMA-user segment.'",
         expected: { type: "confidence", expectedRange: [1, 2] },
         debriefMd:
-          "**1 or 2.** The artefacts establish *a PIT-fingerprinted device joined a BMA wall port for 14 minutes*. They do not establish that bytes moved between Mission Areas. East/west ACLs block routed paths, no application-layer telemetry is in the artefact set, and what (if anything) was carried into or out of the WMA enclave on the device's local storage is a question for the physical recovery + forensic image, not the port log. A defensible writeup names the boundary event, names the missing artefacts (chassis recovery, host image, operator interview), and reports the control-effectiveness gap (NAC quarantine that did not apply).",
+          "**1 or 2.** The artifacts establish *a PIT-fingerprinted device joined a BMA wall port for 14 minutes*. They do not establish that bytes moved between Mission Areas. East/west ACLs block routed paths, no application-layer telemetry is in the artifact set, and what (if anything) was carried into or out of the WMA enclave on the device's local storage is a question for the physical recovery + forensic image, not the port log. A defensible writeup names the boundary event, names the missing artifacts (chassis recovery, host image, operator interview), and reports the control-effectiveness gap (NAC quarantine that did not apply).",
       },
     ],
   },

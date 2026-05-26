@@ -52,7 +52,7 @@ discipline.
 >   over. Mostly *active* user-visible data (contacts, SMS, call
 >   logs); typically does **not** include third-party app sandbox
 >   databases, deleted records, the keychain, or system-level
->   pattern-of-life artefacts.
+>   pattern-of-life artifacts.
 > - **Advanced Logical** — adds a richer dataset by walking iOS
 >   backup mechanisms more aggressively; closer to a full iTunes
 >   backup. Still does **not** include the full file system or
@@ -61,24 +61,24 @@ discipline.
 >   userland filesystem. Includes app sandboxes (Signal,
 >   WhatsApp, Telegram message DBs), pattern-of-life
 >   (\`knowledgeC.db\`, biome stores), the keychain (with the
->   right unlock state), and most artefacts a forensic examiner
+>   right unlock state), and most artifacts a forensic examiner
 >   wants.
 > - **Physical** — the whole NAND image, including unallocated.
 >   On modern iOS this is rare to impossible without an
 >   exploit-capable acquisition path (e.g. checkm8-class).
 
 This is a routing-first exercise. The exercise is *not* "do the
-deleted-Signal carve" — the artefacts can't support it. The
+deleted-Signal carve" — the artifacts can't support it. The
 exercise is to read the summary, write back to the case agent
 honestly, and name the next acquisition step that would actually
 satisfy the ask.
 
-## Artefacts
+## Artifacts
 
 - **extraction-summary.txt** — the Cellebrite Extraction
   summary header for the \`.ufd\` package: device identity,
   examiner, method, integrity hashes.
-- **data-inventory.csv** — the artefact categories UFED PA
+- **data-inventory.csv** — the artifact categories UFED PA
   surfaced from this extraction, with row counts.
 - **case-request.txt** — the case agent's verbatim ask.
 - **iphone-extraction-matrix.txt** — short reference table
@@ -247,7 +247,7 @@ satisfy the ask.
             "  powerlog, the keychain (when the unlock state permits),",
             "  bundle install records. This is where most useful",
             "  third-party-app, pattern-of-life, and pairing/Bluetooth",
-            "  artefacts live on modern iOS.",
+            "  artifacts live on modern iOS.",
             "",
             "Physical",
             "  Whole-NAND image including unallocated. Rare on modern",
@@ -314,7 +314,7 @@ satisfy the ask.
           "",
           "**Not fact:**",
           "",
-          "- *Deleted Signal* — Signal's sandbox database isn't exposed by an Advanced Logical on iOS 17 at all (active OR deleted). The agent's ask cannot be answered from this image. \"Deleted records exist somewhere in the device\" is true; \"they're in this artefact set\" is not.",
+          "- *Deleted Signal* — Signal's sandbox database isn't exposed by an Advanced Logical on iOS 17 at all (active OR deleted). The agent's ask cannot be answered from this image. \"Deleted records exist somewhere in the device\" is true; \"they're in this artifact set\" is not.",
           "- *Keychain* — the summary's own auto-generated note says keychain decoding requires FFS or GRAYKEY. The keychain holds Wi-Fi PSKs, app tokens, etc.",
           "- *Extraction failed* — the integrity hashes verified at completion and the inventory counts are consistent with a clean Advanced Logical. It didn't fail; it just doesn't include what the agent asked for. Misdiagnosing the absence as a tool failure leads to wasted re-extractions.",
         ].join("\n"),
@@ -375,7 +375,7 @@ satisfy the ask.
           allowMultiple: false,
         },
         debriefMd:
-          "**Zero / zero / not answerable.** The inventory shows `Signal messages (active): 0` and `Signal messages (deleted): 0`, with the explicit note that the Signal sandbox is not exposed by an Advanced Logical on iOS 17. There is no Signal `messages.db` in this artefact set at all — no carve is possible from data that wasn't acquired. \"Signal isn't installed\" would require positive evidence (e.g. no bundle install record) that this image type doesn't carry.",
+          "**Zero / zero / not answerable.** The inventory shows `Signal messages (active): 0` and `Signal messages (deleted): 0`, with the explicit note that the Signal sandbox is not exposed by an Advanced Logical on iOS 17. There is no Signal `messages.db` in this artifact set at all — no carve is possible from data that wasn't acquired. \"Signal isn't installed\" would require positive evidence (e.g. no bundle install record) that this image type doesn't carry.",
       },
       {
         ordinal: 4,
@@ -462,7 +462,7 @@ satisfy the ask.
           "**Wrong:**",
           "",
           "- *Re-running the same extraction* — it's the same tool tier; the result will be the same. The absence is structural, not transient.",
-          "- *Grepping the `.ufd`* — `.ufd` is a Cellebrite project file with a manifest pointing to extracted artefacts; even where strings exist, they're already in the parsed categories. A grep won't conjure data the extraction never collected from the device.",
+          "- *Grepping the `.ufd`* — `.ufd` is a Cellebrite project file with a manifest pointing to extracted artifacts; even where strings exist, they're already in the parsed categories. A grep won't conjure data the extraction never collected from the device.",
         ].join("\n"),
       },
       {
@@ -473,7 +473,7 @@ satisfy the ask.
           "Confidence (1–5) that the deleted-Signal-messages part of the agent's request can be answered from THIS image alone.",
         expected: { type: "confidence", expectedRange: [1, 2] },
         debriefMd:
-          "**1 or 2.** The image is an Advanced Logical; Signal's sandbox database is not exposed by that extraction type on iOS 17 (active *or* deleted). A defensible response to the agent names the image type, names the artefact gap (Signal sandbox + keychain + knowledgeC), names the FFS / GRAYKEY pathway that would close the gap, and recommends a re-acquisition decision rather than promising what the image cannot deliver.\n\n**Owners.** The lab's chief examiner owns the re-acquisition decision; the case agent + supporting legal advisor own the warrant scope if an iCloud pivot is pursued. The unit ISSM is not in this workflow unless DODIN-Army data was on the device.",
+          "**1 or 2.** The image is an Advanced Logical; Signal's sandbox database is not exposed by that extraction type on iOS 17 (active *or* deleted). A defensible response to the agent names the image type, names the artifact gap (Signal sandbox + keychain + knowledgeC), names the FFS / GRAYKEY pathway that would close the gap, and recommends a re-acquisition decision rather than promising what the image cannot deliver.\n\n**Owners.** The lab's chief examiner owns the re-acquisition decision; the case agent + supporting legal advisor own the warrant scope if an iCloud pivot is pursued. The unit ISSM is not in this workflow unless DODIN-Army data was on the device.",
       },
     ],
   },
@@ -541,7 +541,7 @@ This is, like the Cellebrite scenario, a routing-first exercise.
 The exercise is to read what BFU yields, write back to the ACI
 office honestly, and name the next acquisition step.
 
-## Artefacts
+## Artifacts
 
 - **graykey-status.txt** — the GRAYKEY console / status output
   for this device.
@@ -622,7 +622,7 @@ office honestly, and name the next acquisition step.
             "                                          in current trust state)",
             "      Readable surface:       1.39 GiB",
             "",
-            "    [-] Decoded artefact categories",
+            "    [-] Decoded artifact categories",
             "        Device identity (model, IMEI, serial, build)  ............ 1 record",
             "        Activation state (activated, FMI on)  .................... 1 record",
             "        Carrier plist (carrier=Verizon, MCC/MNC)  ................ 1 record",
@@ -753,7 +753,7 @@ office honestly, and name the next acquisition step.
             "  4. If the passcode is recoverable from interview or other",
             "     sources, coordinate an AFU + FFS acquisition under that",
             "     passcode immediately.",
-            "  5. In parallel, pursue iCloud-side artefacts via warrant",
+            "  5. In parallel, pursue iCloud-side artifacts via warrant",
             "     where the scope and lawfulness permit — different",
             "     evidence, different chain.",
             "",
@@ -767,7 +767,7 @@ office honestly, and name the next acquisition step.
         type: "multi_choice",
         weight: 2,
         promptMd:
-          "Which statements about the GRAYKEY image are **facts** as the artefacts present them?",
+          "Which statements about the GRAYKEY image are **facts** as the artifacts present them?",
         options: [
           {
             id: "is-bfu",
@@ -1014,7 +1014,7 @@ package into **Magnet AXIOM**. Their draft report includes the
 finding:
 
 > *"WhatsApp messages: 100% recovered (1,847 messages across 14
-> conversation threads). No deleted artefacts observed."*
+> conversation threads). No deleted artifacts observed."*
 
 You are the senior reviewer. Before you sign off, you check
 three things the junior didn't:
@@ -1045,10 +1045,10 @@ isn't *"AXIOM is wrong\"* — it might be right. The answer is the
 **writeup shape** that survives the question *"what did you do
 to verify?"*
 
-## Artefacts
+## Artifacts
 
 - **axiom-case-summary.txt** — the relevant slice of the AXIOM
-  case: WhatsApp artefact tree, count, parser version recorded
+  case: WhatsApp artifact tree, count, parser version recorded
   in the case file.
 - **ufed-pa-comparison.txt** — the same image opened in UFED
   PA, WhatsApp section.
@@ -1110,7 +1110,7 @@ to verify?"*
             "Draft Finding  (examiner: bauer_l;  pending review by olabode_d)",
             "----------------------------------------------------------------",
             "  \"WhatsApp messages: 100% recovered (1,847 messages across 14",
-            "   conversation threads). No deleted artefacts observed.\"",
+            "   conversation threads). No deleted artifacts observed.\"",
             "",
           ].join("\n"),
         ),
@@ -1217,7 +1217,7 @@ to verify?"*
             "Lab SOP — mobile-app parser verification (extract)",
             "--------------------------------------------------",
             "",
-            "1. Mobile-app artefact findings (messaging, calls, location,",
+            "1. Mobile-app artifact findings (messaging, calls, location,",
             "   pattern-of-life) shall be verified by a second tool whose",
             "   parser handles the on-device app version, OR by direct",
             "   inspection of the underlying database with a SQLite client",
@@ -1251,7 +1251,7 @@ to verify?"*
         type: "multi_choice",
         weight: 2,
         promptMd:
-          "Which statements about the situation are **facts** as the artefacts present them?",
+          "Which statements about the situation are **facts** as the artifacts present them?",
         options: [
           {
             id: "tools-disagree",
@@ -1289,7 +1289,7 @@ to verify?"*
           "**Fact:**",
           "",
           "- The two tools report different counts on the same image. That's a directly observable disagreement.",
-          "- The parser-version cross-reference is a metadata field; the 9-month skew is what the artefact records.",
+          "- The parser-version cross-reference is a metadata field; the 9-month skew is what the artifact records.",
           "",
           "**Not fact (yet):**",
           "",
@@ -1477,7 +1477,7 @@ to verify?"*
         type: "confidence",
         weight: 1,
         promptMd:
-          "Confidence (1–5) that the junior's draft finding — *'WhatsApp messages: 100% recovered (1,847 messages across 14 conversation threads). No deleted artefacts observed.'* — is ready to ship as written.",
+          "Confidence (1–5) that the junior's draft finding — *'WhatsApp messages: 100% recovered (1,847 messages across 14 conversation threads). No deleted artifacts observed.'* — is ready to ship as written.",
         expected: { type: "confidence", expectedRange: [1, 2] },
         debriefMd:
           "**1 or 2.** Two independent SOP rules block sign-off: the parser-version skew triggers re-parsing or second-tool verification, and the \"100% recovered / nothing else observed\" framing is explicitly forbidden. The finding has to be rewritten to state what *was* recovered, by what tool, with the parser version named — and to name the second-tool count + the schema-skew mechanism for the deleted/orphan disagreement. A finding written the way the junior drafted it would not survive the first competent challenge on cross-examination.\n\n**Owners.** The lab's chief examiner owns the verification posture and the SOP. If the deleted rows had operational significance for an active case, the case agent and the supporting ACI office would own the downstream attribution / referral decisions; the unit ISSM enters the picture only if the device's contents touch DODIN-Army systems.",

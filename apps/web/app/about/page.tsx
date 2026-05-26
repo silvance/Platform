@@ -28,7 +28,7 @@ export default function AboutPage() {
         <p>
           I built CI Cyber Lab to train new CI Digital Threat Investigators
           (CDTIs). The ramp into the work is steep — you have to learn to read
-          forensic artefacts, write findings that survive cross-examination,
+          forensic artifacts, write findings that survive cross-examination,
           and stay calibrated about what the evidence does and doesn't
           establish. The trainers I had to learn on were scattered across
           textbooks, official courses, and trial-by-fire. This is the trainer
@@ -37,7 +37,7 @@ export default function AboutPage() {
 
         <p>
           Every challenge is built around a single reading skill: examine an
-          artefact, decide what's supportable, write the finding. Debriefs
+          artifact, decide what's supportable, write the finding. Debriefs
           separate fact from inference and name the over-claims that an
           experienced reviewer (or opposing counsel) will pick on. The
           platform is unclassified, uses only fictional and sanitized
