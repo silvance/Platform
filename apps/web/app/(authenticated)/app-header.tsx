@@ -90,6 +90,10 @@ export function AppHeader({ user, theme, pendingApprovalCount }: Props) {
           href={user.role === "admin" ? "/admin" : "/scenarios"}
           className="brand"
         >
+          {/* Shield mark (CSS background) + live wordmark. Drop a
+              transparent-bg square PNG at apps/web/public/logo-mark.png
+              and the .brand-mark span picks it up automatically. */}
+          <span className="brand-mark" aria-hidden />
           CI Cyber Lab
         </Link>
         <nav className="nav-links" id="primary-nav" aria-label="Primary">
