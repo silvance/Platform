@@ -49,8 +49,6 @@ extracted*.
 
 The two are not the same thing.
 
-Read the short summary below and decide what the counts do and
-don't tell you.
 `.trim(),
     artifacts: [
       {
@@ -175,8 +173,6 @@ collection process, not about the content of the image.
 
 A clean acquisition log says you *captured the image without
 errors*. It doesn't say what's in the image.
-
-Read the short log below.
 `.trim(),
     artifacts: [
       {
@@ -308,8 +304,6 @@ What Prefetch *doesn't* tell you is **which user ran it** or
 **why**. The loader writes the same Prefetch entry regardless of
 which account ran the program; Prefetch is system-wide, not
 per-user.
-
-Read the short summary and answer.
 `.trim(),
     artifacts: [
       {
@@ -438,8 +432,6 @@ That record captures *the device showed up*: vendor / product /
 serial, the time it was first installed, and when it was last
 connected. It does **not** capture what — if anything — happened
 between the connection and the disconnection.
-
-Read the short excerpt and answer.
 `.trim(),
     artifacts: [
       {
@@ -563,8 +555,6 @@ state. It captures the act of *saving the file to disk*.
 It does NOT capture what happens to the file afterwards —
 whether the user opens it, runs it, deletes it, or leaves it on
 disk untouched. Those are separate artifacts.
-
-Read the row and answer.
 `.trim(),
     artifacts: [
       {
@@ -683,10 +673,9 @@ Read the row and answer.
 # Brief
 
 The hardest habit on the OJT bridge is the simplest: write only
-what the evidence supports. A draft below contains four separate
-claims; only some of them are supported by the listed artifacts.
-
-Read the evidence, then pick the rewrite that's honest.
+what the evidence supports. The draft below contains four
+separate claims; only some of them are supported by the listed
+artifacts.
 
 ## Evidence available
 

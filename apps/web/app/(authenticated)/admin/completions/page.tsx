@@ -25,30 +25,18 @@ export default async function CompletionsPage() {
         <div>
           <h1 style={{ marginBottom: ".25rem" }}>Completions</h1>
           <p style={{ margin: 0, color: "var(--muted)" }}>
-            Users who have finished a challenge end-to-end. Most-recent
-            first; up to 200 rows per page.
-            {totalCount > completions.length ? (
-              <>
-                {" "}
-                Showing {completions.length} of {totalCount}.
-              </>
-            ) : totalCount > 0 ? (
-              <>
-                {" "}
-                {totalCount} total completion{totalCount === 1 ? "" : "s"}.
-              </>
-            ) : null}
+            {totalCount > completions.length
+              ? `Showing ${completions.length} of ${totalCount}, newest first.`
+              : totalCount > 0
+                ? `${totalCount} completion${totalCount === 1 ? "" : "s"}, newest first.`
+                : "Newest first."}
           </p>
         </div>
       </header>
 
       {completions.length === 0 ? (
         <div className="card">
-          <p style={{ margin: 0 }}>
-            No completions yet. Once a user gets every question in a
-            challenge right at least once, the completion will appear
-            here newest-first.
-          </p>
+          <p style={{ margin: 0 }}>Nothing here yet.</p>
         </div>
       ) : (
         <div className="card" style={{ padding: 0, overflow: "hidden" }}>
