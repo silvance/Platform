@@ -20,7 +20,7 @@ export default async function AdminPage() {
   }
 
   return (
-    <main style={{ maxWidth: 1080, margin: "0 auto", padding: "1.5rem 1.25rem" }}>
+    <main>
       <header className="page-header">
         <div>
           <h1>Admin</h1>
@@ -32,42 +32,36 @@ export default async function AdminPage() {
       </header>
 
       {stats ? <StatsGrid stats={stats} /> : (
-        <div className="card" style={{ color: "var(--muted)" }}>
+        <div className="card muted">
           Stats unavailable. Check the api container.
         </div>
       )}
 
-      <h2 style={{ marginTop: "2rem" }}>Admin tools</h2>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-          gap: "1rem",
-        }}
-      >
-        <Link href="/admin/challenges" className="card" style={cardStyle}>
-          <strong style={{ fontSize: "1.05rem" }}>Challenges</strong>
-          <p style={pStyle}>
+      <h2>Admin tools</h2>
+      <div className="card-grid">
+        <Link href="/admin/challenges" className="tool-card">
+          <span className="tool-card-title">Challenges</span>
+          <p className="tool-card-body">
             Create, edit, import, and manage scenarios + their artifacts.
           </p>
         </Link>
-        <Link href="/admin/users" className="card" style={cardStyle}>
-          <strong style={{ fontSize: "1.05rem" }}>Users</strong>
-          <p style={pStyle}>
+        <Link href="/admin/users" className="tool-card">
+          <span className="tool-card-title">Users</span>
+          <p className="tool-card-body">
             Add users, approve pending registrations, reset passwords, change
             roles, or disable accounts.
           </p>
         </Link>
-        <Link href="/admin/review" className="card" style={cardStyle}>
-          <strong style={{ fontSize: "1.05rem" }}>Review</strong>
-          <p style={pStyle}>
+        <Link href="/admin/review" className="tool-card">
+          <span className="tool-card-title">Review</span>
+          <p className="tool-card-body">
             Challenge review — mark scenarios approved / needs-rewrite / flagged,
             capture notes without leaving the page.
           </p>
         </Link>
-        <Link href="/admin/completions" className="card" style={cardStyle}>
-          <strong style={{ fontSize: "1.05rem" }}>Completions</strong>
-          <p style={pStyle}>
+        <Link href="/admin/completions" className="tool-card">
+          <span className="tool-card-title">Completions</span>
+          <p className="tool-card-body">
             Recent-completions feed — who finished which challenge, when,
             and how many attempts they took.
           </p>
@@ -79,14 +73,7 @@ export default async function AdminPage() {
 
 function StatsGrid({ stats }: { stats: AdminStatsResponse }) {
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
-        gap: "0.75rem",
-        marginBottom: "1.25rem",
-      }}
-    >
+    <div className="card-grid-tight" style={{ marginBottom: "var(--space-5)" }}>
       <StatCard
         label="Pending approval"
         value={stats.users.pendingApproval}
@@ -140,66 +127,20 @@ function StatCard({
   href?: string;
   accent?: "bad" | "warn";
 }) {
-  const cardCls =
-    accent === "bad"
-      ? "tag-bad"
-      : accent === "warn"
-      ? "tag-warn"
-      : "";
-
   const inner = (
-    <div className="card" style={{ height: "100%" }}>
-      <div
-        style={{
-          color: "var(--muted)",
-          fontSize: ".78rem",
-          textTransform: "uppercase",
-          letterSpacing: ".04em",
-          marginBottom: ".25rem",
-        }}
-      >
-        {label}
-      </div>
-      <div
-        style={{
-          fontSize: "1.75rem",
-          fontWeight: 600,
-          lineHeight: 1.1,
-        }}
-        className={cardCls}
-      >
-        {value}
-      </div>
-      {sub ? (
-        <div
-          style={{
-            color: "var(--muted)",
-            fontSize: ".8rem",
-            marginTop: ".35rem",
-          }}
-        >
-          {sub}
-        </div>
-      ) : null}
-    </div>
+    <>
+      <div className="stat-label">{label}</div>
+      <div className="stat-value">{value.toLocaleString()}</div>
+      {sub ? <div className="stat-sub">{sub}</div> : null}
+    </>
   );
   return href ? (
-    <Link href={href} style={{ textDecoration: "none", color: "inherit" }}>
+    <Link href={href} className="stat-card" data-accent={accent}>
       {inner}
     </Link>
   ) : (
-    inner
+    <div className="stat-card" data-accent={accent}>
+      {inner}
+    </div>
   );
 }
-
-const cardStyle: React.CSSProperties = {
-  display: "block",
-  textDecoration: "none",
-  color: "var(--fg)",
-};
-const pStyle: React.CSSProperties = {
-  color: "var(--muted)",
-  marginTop: ".4rem",
-  marginBottom: 0,
-  fontSize: ".9rem",
-};

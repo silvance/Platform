@@ -61,7 +61,7 @@
   --muted-strong: #aeb6cc;
   --accent:       var(--brand-400);  /* lighter shade reads better on dark */
   --accent-fg:    #0a0f1f;
-  --ring:         rgba(83, 132, 255, 0.45);
+  --ring:         rgba(83, 132, 255, 0.55);
 
   --shadow-sm: 0 1px 2px rgba(0,0,0,0.30);
   --shadow-md: 0 4px 12px rgba(0,0,0,0.35);
@@ -139,6 +139,11 @@ a {
   text-decoration: none;
 }
 a:hover { text-decoration: underline; }
+a:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
 
 main {
   max-width: 1100px;
@@ -156,12 +161,14 @@ h1 {
 h2 {
   font-size: 1.15rem;
   font-weight: 600;
+  letter-spacing: -0.005em;
   margin: var(--space-8) 0 var(--space-2);
   color: var(--fg);
 }
 h3 {
   font-size: 1rem;
   font-weight: 600;
+  letter-spacing: -0.005em;
   margin: var(--space-4) 0 var(--space-2);
   color: var(--fg);
 }
@@ -200,7 +207,7 @@ p { margin: var(--space-3) 0; }
   display: inline-flex;
   align-items: center;
   font-weight: 500;
-  padding: .15rem .55rem;
+  padding: .22rem .65rem;
   border-radius: var(--radius-pill);
   font-size: .8rem;
   border: 1px solid;
@@ -232,7 +239,7 @@ footer { color: var(--muted); font-size: .85rem; margin-top: var(--space-12); }
   outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
-.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn:disabled { opacity: .6; cursor: not-allowed; }
 
 .btn-primary {
   background: var(--accent);
@@ -360,7 +367,7 @@ footer { color: var(--muted); font-size: .85rem; margin-top: var(--space-12); }
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: var(--radius-pill);
-  padding: .12rem .6rem;
+  padding: .2rem .65rem;
   font-size: .75rem;
   color: var(--muted);
   margin: 0 .3rem .3rem 0;
@@ -579,7 +586,7 @@ footer { color: var(--muted); font-size: .85rem; margin-top: var(--space-12); }
   transition: background var(--transition);
 }
 .q-submit:hover:not(:disabled) { background: var(--brand-600); }
-.q-submit:disabled { opacity: .5; cursor: not-allowed; }
+.q-submit:disabled { opacity: .6; cursor: not-allowed; }
 
 .q-completed {
   border-color: var(--status-ok-border);
@@ -678,7 +685,7 @@ footer { color: var(--muted); font-size: .85rem; margin-top: var(--space-12); }
   transition: background var(--transition);
 }
 .admin-btn:hover:not(:disabled) { background: var(--brand-600); }
-.admin-btn:disabled { opacity: .5; cursor: not-allowed; }
+.admin-btn:disabled { opacity: .6; cursor: not-allowed; }
 .admin-btn-danger {
   background: transparent;
   color: var(--status-bad-fg);
@@ -787,6 +794,7 @@ footer { color: var(--muted); font-size: .85rem; margin-top: var(--space-12); }
 .nav-link {
   display: inline-flex;
   align-items: center;
+  gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-md);
   color: var(--muted-strong);
@@ -1020,6 +1028,188 @@ footer { color: var(--muted); font-size: .85rem; margin-top: var(--space-12); }
 .muted { color: var(--muted); }
 .muted-strong { color: var(--muted-strong); }
 
+/* ─── Auto-fit card grids ──────────────────────────────── */
+/* Used by the admin landing (stat tiles + tool cards) and the
+   challenges lane overview. One ruleset, two grid densities. */
+
+.card-grid-tight {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--space-3);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-4);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* ─── Stat card ────────────────────────────────────────── */
+
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-4) var(--space-4);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  color: var(--fg);
+  text-decoration: none;
+  transition: border-color var(--transition), box-shadow var(--transition), transform var(--transition);
+}
+a.stat-card:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+  text-decoration: none;
+}
+.stat-card .stat-label {
+  color: var(--muted);
+  font-size: .72rem;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  font-weight: 600;
+}
+.stat-card .stat-value {
+  font-size: 1.85rem;
+  font-weight: 600;
+  line-height: 1.05;
+  color: var(--fg-strong);
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.stat-card .stat-sub {
+  color: var(--muted);
+  font-size: .8rem;
+  margin-top: var(--space-1);
+}
+/* Accent strip on the left edge for "needs attention" states. */
+.stat-card[data-accent="bad"]  { border-left: 3px solid var(--status-bad-fg); }
+.stat-card[data-accent="bad"]  .stat-value { color: var(--status-bad-fg); }
+.stat-card[data-accent="warn"] { border-left: 3px solid var(--status-warn-fg); }
+.stat-card[data-accent="warn"] .stat-value { color: var(--status-warn-fg); }
+
+/* ─── Tool card (admin landing tiles) ──────────────────── */
+
+.tool-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  color: var(--fg);
+  text-decoration: none;
+  transition: border-color var(--transition), box-shadow var(--transition), transform var(--transition);
+}
+.tool-card:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+  text-decoration: none;
+}
+.tool-card-title {
+  font-size: 1.02rem;
+  font-weight: 600;
+  color: var(--fg-strong);
+  letter-spacing: -0.005em;
+}
+.tool-card-body {
+  color: var(--muted);
+  font-size: .88rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* ─── Lane card (challenges landing) ───────────────────── */
+
+.lane-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  height: 100%;
+  padding: var(--space-4) var(--space-5);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  color: var(--fg);
+  text-decoration: none;
+  transition: border-color var(--transition), box-shadow var(--transition), transform var(--transition);
+}
+.lane-card:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+  text-decoration: none;
+}
+.lane-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.lane-card-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--fg-strong);
+  letter-spacing: -0.005em;
+}
+.lane-card-body {
+  margin: 0;
+  flex: 1;
+  color: var(--muted);
+  font-size: .88rem;
+  line-height: 1.5;
+}
+.lane-card-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+  font-size: .82rem;
+  color: var(--muted);
+}
+.lane-card-foot strong { color: var(--fg); font-weight: 600; }
+
+/* ─── Header nav divider (between learner and admin) ──── */
+
+.nav-divider {
+  width: 1px;
+  align-self: stretch;
+  margin: var(--space-1) var(--space-1);
+  background: var(--border);
+}
+
+/* ─── Pending-approval pill on the Admin nav link ──────── */
+
+.nav-pending-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.15rem;
+  padding: 0 .35rem;
+  border-radius: var(--radius-pill);
+  background: var(--status-bad-bg);
+  color: var(--status-bad-fg);
+  border: 1px solid var(--status-bad-border);
+  font-size: .68rem;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
 /* ─── Header burger button (hidden on desktop) ─────────── */
 /* Always rendered in the DOM so the breakpoint at 768 can flip it
    on without any JS; hidden on wider screens via display:none. */
@@ -1114,6 +1304,14 @@ footer { color: var(--muted); font-size: .85rem; margin-top: var(--space-12); }
     padding: var(--space-3) var(--space-4);
     font-size: 1rem;
     min-height: 44px;
+  }
+  /* Vertical divider collapses to a horizontal hairline in the
+     stacked drawer. */
+  .app-header[data-menu-open="true"] .nav-divider {
+    width: auto;
+    height: 1px;
+    align-self: stretch;
+    margin: var(--space-1) 0;
   }
 
   /* User chip in the drawer: full row, allow wrap, no hard
