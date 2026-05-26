@@ -27,28 +27,14 @@ export default async function ScenariosPage() {
       </header>
 
       <ul
-        className="lane-list"
-        style={{
-          listStyle: "none",
-          padding: 0,
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
-          gap: "1rem",
-          marginTop: "1rem",
-        }}
+        className="card-grid"
+        style={{ marginTop: "var(--space-4)" }}
       >
         {lanes.map((lane) => (
           <li key={lane.lane}>
             <Link
               href={`/scenarios/lanes/${encodeURIComponent(lane.lane)}`}
-              className="card"
-              style={{
-                display: "block",
-                padding: "1rem 1.1rem",
-                textDecoration: "none",
-                color: "inherit",
-                height: "100%",
-              }}
+              className="lane-card"
             >
               <LaneCard lane={lane} />
             </Link>
@@ -62,47 +48,19 @@ export default async function ScenariosPage() {
 function LaneCard({ lane }: { lane: LaneSummary }) {
   const empty = lane.publishedScenarioCount === 0;
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: ".5rem", height: "100%" }}>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "flex-start",
-          justifyContent: "space-between",
-          gap: ".5rem",
-        }}
-      >
-        <h3 style={{ margin: 0, fontSize: "1.05rem" }}>{lane.label}</h3>
+    <>
+      <div className="lane-card-head">
+        <h3 className="lane-card-title">{lane.label}</h3>
         <LaneProgressBadge lane={lane} />
       </div>
-      <p
-        style={{
-          margin: 0,
-          color: "var(--muted)",
-          fontSize: ".88rem",
-          lineHeight: 1.45,
-          flex: 1,
-        }}
-      >
-        {lane.description}
-      </p>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: ".5rem",
-          fontSize: ".82rem",
-          color: "var(--muted)",
-          marginTop: ".25rem",
-        }}
-      >
+      <p className="lane-card-body">{lane.description}</p>
+      <div className="lane-card-foot">
         {empty ? (
           <span>No challenges yet</span>
         ) : (
           <>
             <span>
-              <strong style={{ color: "var(--fg)" }}>
-                {lane.publishedScenarioCount}
-              </strong>{" "}
+              <strong>{lane.publishedScenarioCount}</strong>{" "}
               challenge{lane.publishedScenarioCount === 1 ? "" : "s"}
             </span>
             {lane.inProgressScenarioCount > 0 ? (
@@ -111,7 +69,7 @@ function LaneCard({ lane }: { lane: LaneSummary }) {
           </>
         )}
       </div>
-    </div>
+    </>
   );
 }
 

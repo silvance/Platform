@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import type { PublicUser } from "@ci-train/contracts";
 import type { Theme } from "@/lib/theme";
 import { LogoutButton } from "./logout-button";
@@ -86,54 +86,42 @@ export function AppHeader({ user, theme, pendingApprovalCount }: Props) {
           CI Cyber Lab
         </Link>
         <nav className="nav-links" id="primary-nav" aria-label="Primary">
-          {visibleNav.map((item) => {
+          {visibleNav.map((item, idx) => {
             // The Admin nav link gets a pending-approval badge
             // when self-registrations are waiting. /admin/users
             // is where the admin acts on them.
             const showPendingBadge =
               item.href === "/admin" && pendingApprovalCount > 0;
+            // Drop a thin divider in front of the first admin-only
+            // link to visually separate learner vs operator nav.
+            const showDivider =
+              item.admin && idx > 0 && !visibleNav[idx - 1]?.admin;
             return (
-              <Link
-                key={item.href}
-                href={showPendingBadge ? "/admin/users" : item.href}
-                className="nav-link"
-                data-active={isActive(pathname, item.href)}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "0.4rem",
-                }}
-                title={
-                  showPendingBadge
-                    ? `${pendingApprovalCount} self-registration${
-                        pendingApprovalCount === 1 ? "" : "s"
-                      } awaiting approval`
-                    : undefined
-                }
-              >
-                {item.label}
-                {showPendingBadge ? (
-                  <span
-                    aria-label={`${pendingApprovalCount} pending`}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      minWidth: "1.25rem",
-                      height: "1.25rem",
-                      padding: "0 0.4rem",
-                      borderRadius: "999px",
-                      background: "var(--status-bad-fg)",
-                      color: "#fff",
-                      fontSize: "0.7rem",
-                      fontWeight: 600,
-                      lineHeight: 1,
-                    }}
-                  >
-                    {pendingApprovalCount}
-                  </span>
-                ) : null}
-              </Link>
+              <Fragment key={item.href}>
+                {showDivider ? <span className="nav-divider" aria-hidden /> : null}
+                <Link
+                  href={showPendingBadge ? "/admin/users" : item.href}
+                  className="nav-link"
+                  data-active={isActive(pathname, item.href, visibleNav)}
+                  title={
+                    showPendingBadge
+                      ? `${pendingApprovalCount} self-registration${
+                          pendingApprovalCount === 1 ? "" : "s"
+                        } awaiting approval`
+                      : undefined
+                  }
+                >
+                  {item.label}
+                  {showPendingBadge ? (
+                    <span
+                      aria-label={`${pendingApprovalCount} pending`}
+                      className="nav-pending-badge"
+                    >
+                      {pendingApprovalCount}
+                    </span>
+                  ) : null}
+                </Link>
+              </Fragment>
             );
           })}
         </nav>
@@ -198,9 +186,27 @@ export function AppHeader({ user, theme, pendingApprovalCount }: Props) {
 // pathname sits under the link's section. The /admin link should
 // stay highlighted on /admin/challenges, /admin/users, etc.
 // /scenarios should highlight on /scenarios/<slug>.
-function isActive(pathname: string, href: string): boolean {
+//
+// `siblings` lets a link defer to a more-specific sibling: visiting
+// /admin/review should highlight the Review link, NOT also light up
+// the parent /admin link. The rule: a link is NOT active if some
+// other nav link is a strictly deeper match for the same pathname.
+function isActive(
+  pathname: string,
+  href: string,
+  siblings: Array<{ href: string }>,
+): boolean {
   if (pathname === href) return true;
   if (href === "/") return false;
+  if (!pathname.startsWith(href + "/") && pathname !== href) return false;
+  for (const s of siblings) {
+    if (s.href === href) continue;
+    if (s.href.startsWith(href + "/")) {
+      if (pathname === s.href || pathname.startsWith(s.href + "/")) {
+        return false;
+      }
+    }
+  }
   return pathname.startsWith(href + "/");
 }
 
