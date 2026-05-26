@@ -167,6 +167,7 @@ export const Lane = z.enum([
   "removable_media_spillage",
   "insider_risk",
   "network_logs",
+  "memory_forensics",
   "mobile_forensics",
   "rf_awareness",
   "evidence_handling",
@@ -182,6 +183,7 @@ export const LANE_LABELS: Record<Lane, string> = {
   removable_media_spillage: "Removable Media / Spillage",
   insider_risk: "Insider Risk",
   network_logs: "Network & Logs",
+  memory_forensics: "Memory Forensics",
   mobile_forensics: "Mobile Forensics",
   rf_awareness: "RF Awareness",
   evidence_handling: "Evidence Handling",
@@ -203,6 +205,8 @@ export const LANE_DESCRIPTIONS: Record<Lane, string> = {
     "Risk-indicator triage for leaving employees and unusual access patterns. Anomaly-vs-finding discipline.",
   network_logs:
     "Reading access logs, flow records, and host-side network telemetry without over-claiming.",
+  memory_forensics:
+    "Volatility 3 reads of a memory image. Triage the process tree, network connections, and suspicious memory regions; separate \"this looks off\" from \"this is malware.\"",
   mobile_forensics:
     "Mobile-device extraction triage — Cellebrite UFED, GrayKey, Magnet AXIOM. Read what the tool actually got; decide what an extraction can and cannot prove.",
   rf_awareness:
