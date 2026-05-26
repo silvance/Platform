@@ -77,18 +77,24 @@ finding by itself.
         kind: "csv",
         mimeType: "text/csv; charset=utf-8",
         bytes: utf8(
+          // Microsoft 365 Unified Audit Log export — Search-UnifiedAuditLog
+          //   -StartDate 2026-09-01 -EndDate 2026-09-10
+          //   -Operations FileAccessed,FileDownloaded
+          //   -UserIds l.tran@partner.example
+          //   -ResultSize 5000 | Export-Csv -NoTypeInformation
+          // (Excerpt — relevant SharePoint/OneDrive rows.)
           [
-            "ts_utc,doc_id,doc_title,action,size_bytes",
-            "2026-09-02T09:11:00Z,DOC-1101,Engineering onboarding handbook,view,",
-            "2026-09-02T13:44:00Z,DOC-1101,Engineering onboarding handbook,view,",
-            "2026-09-03T10:01:00Z,DOC-2210,Project Alpha — design review notes,view,",
-            "2026-09-03T10:05:00Z,DOC-2210,Project Alpha — design review notes,download,1822111",
-            "2026-09-03T10:09:00Z,DOC-2211,Project Alpha — schema diagrams,download,488300",
-            "2026-09-03T10:12:00Z,DOC-2212,Project Alpha — integration test scripts,download,210117",
-            "2026-09-03T10:18:00Z,DOC-3001,Performance review template,view,",
-            "2026-09-04T11:42:00Z,DOC-2210,Project Alpha — design review notes,view,",
-            "2026-09-08T08:31:00Z,DOC-2310,Project Beta — high-level overview,view,",
-            "2026-09-08T08:55:00Z,DOC-2311,Project Beta — vendor list,view,",
+            "CreationDate,UserIds,Operations,RecordType,ObjectId,SourceFileName,SourceFileSize,Workload,UserAgent",
+            "2026-09-02T09:11:00Z,l.tran@partner.example,FileAccessed,SharePointFileOperation,/sites/eng/onboarding/handbook.docx,handbook.docx,,SharePoint,Edge/Win10",
+            "2026-09-02T13:44:00Z,l.tran@partner.example,FileAccessed,SharePointFileOperation,/sites/eng/onboarding/handbook.docx,handbook.docx,,SharePoint,Edge/Win10",
+            "2026-09-03T10:01:00Z,l.tran@partner.example,FileAccessed,SharePointFileOperation,/sites/programs/alpha/design-review-notes.docx,design-review-notes.docx,,SharePoint,Edge/Win10",
+            "2026-09-03T10:05:00Z,l.tran@partner.example,FileDownloaded,SharePointFileOperation,/sites/programs/alpha/design-review-notes.docx,design-review-notes.docx,1822111,SharePoint,Edge/Win10",
+            "2026-09-03T10:09:00Z,l.tran@partner.example,FileDownloaded,SharePointFileOperation,/sites/programs/alpha/schema-diagrams.docx,schema-diagrams.docx,488300,SharePoint,Edge/Win10",
+            "2026-09-03T10:12:00Z,l.tran@partner.example,FileDownloaded,SharePointFileOperation,/sites/programs/alpha/integration-test-scripts.docx,integration-test-scripts.docx,210117,SharePoint,Edge/Win10",
+            "2026-09-03T10:18:00Z,l.tran@partner.example,FileAccessed,SharePointFileOperation,/sites/hr/templates/performance-review-template.docx,performance-review-template.docx,,SharePoint,Edge/Win10",
+            "2026-09-04T11:42:00Z,l.tran@partner.example,FileAccessed,SharePointFileOperation,/sites/programs/alpha/design-review-notes.docx,design-review-notes.docx,,SharePoint,Edge/Win10",
+            "2026-09-08T08:31:00Z,l.tran@partner.example,FileAccessed,SharePointFileOperation,/sites/programs/beta/high-level-overview.docx,high-level-overview.docx,,SharePoint,Edge/Win10",
+            "2026-09-08T08:55:00Z,l.tran@partner.example,FileAccessed,SharePointFileOperation,/sites/programs/beta/vendor-list.docx,vendor-list.docx,,SharePoint,Edge/Win10",
           ].join("\n") + "\n",
         ),
       },
@@ -98,10 +104,17 @@ finding by itself.
         kind: "csv",
         mimeType: "text/csv; charset=utf-8",
         bytes: utf8(
+          // Microsoft Defender for Endpoint — Advanced Hunting export:
+          //   DeviceEvents
+          //   | where ActionType in ("UsbDriveMount","UsbDriveUnmount")
+          //   | where DeviceName == "WS-LT-018"
+          //   | project Timestamp, ActionType, DeviceName, AccountName,
+          //             AdditionalFields
+          //   | order by Timestamp asc
           [
-            "ts_utc,event,vid,pid,serial,workstation",
-            "2026-09-03T09:58:00Z,mount,0x0951,0x1666,AA-LT-001,WS-LT-018",
-            "2026-09-03T10:22:00Z,dismount,0x0951,0x1666,AA-LT-001,WS-LT-018",
+            "Timestamp,ActionType,DeviceName,AccountName,AdditionalFields",
+            "2026-09-03T09:58:00Z,UsbDriveMount,WS-LT-018,l.tran,\"{\"\"DriveLetter\"\":\"\"E:\"\",\"\"VendorId\"\":\"\"0x0951\"\",\"\"ProductId\"\":\"\"0x1666\"\",\"\"SerialNumber\"\":\"\"AA-LT-001\"\",\"\"DeviceClass\"\":\"\"DiskDrive\"\"}\"",
+            "2026-09-03T10:22:00Z,UsbDriveUnmount,WS-LT-018,l.tran,\"{\"\"DriveLetter\"\":\"\"E:\"\",\"\"VendorId\"\":\"\"0x0951\"\",\"\"ProductId\"\":\"\"0x1666\"\",\"\"SerialNumber\"\":\"\"AA-LT-001\"\"}\"",
           ].join("\n") + "\n",
         ),
       },
@@ -111,14 +124,17 @@ finding by itself.
         kind: "csv",
         mimeType: "text/csv; charset=utf-8",
         bytes: utf8(
+          // Cisco AnyConnect / ASA syslog export, parsed to CSV.
+          // Original messages were `%ASA-6-722023` (session start) and
+          // `%ASA-6-113019` (session terminated, with elapsed seconds).
           [
-            "ts_utc,event,client_ip,duration_sec",
-            "2026-09-02T09:00:00Z,start,203.0.113.7,",
-            "2026-09-02T17:30:00Z,stop,203.0.113.7,30600",
-            "2026-09-03T08:45:00Z,start,203.0.113.7,",
-            "2026-09-03T17:42:00Z,stop,203.0.113.7,32220",
-            "2026-09-08T08:20:00Z,start,203.0.113.7,",
-            "2026-09-08T16:55:00Z,stop,203.0.113.7,30900",
+            "timestamp,asa_msg,event,username,client_public_ip,assigned_ip,bytes_tx,bytes_rx,duration_sec",
+            "2026-09-02T09:00:00Z,%ASA-6-722023,session_start,l.tran,203.0.113.7,10.40.1.118,,,",
+            "2026-09-02T17:30:00Z,%ASA-6-113019,session_terminated,l.tran,203.0.113.7,10.40.1.118,4194822,18204115,30600",
+            "2026-09-03T08:45:00Z,%ASA-6-722023,session_start,l.tran,203.0.113.7,10.40.1.118,,,",
+            "2026-09-03T17:42:00Z,%ASA-6-113019,session_terminated,l.tran,203.0.113.7,10.40.1.118,38922104,18230099,32220",
+            "2026-09-08T08:20:00Z,%ASA-6-722023,session_start,l.tran,203.0.113.7,10.40.1.118,,,",
+            "2026-09-08T16:55:00Z,%ASA-6-113019,session_terminated,l.tran,203.0.113.7,10.40.1.118,5210443,12004822,30900",
           ].join("\n") + "\n",
         ),
       },
@@ -290,14 +306,19 @@ team is in the final two weeks of a release. Triage.
         kind: "csv",
         mimeType: "text/csv; charset=utf-8",
         bytes: utf8(
+          // EvtxECmd.exe -f C:\Cases\WS-NM-022\Security.evtx
+          //   --inc 4800,4801 --csv . --csvf lock-unlock.csv
+          // EID 4800 = workstation locked; 4801 = workstation unlocked.
+          // Timestamps below are device-local (TimeCreated as written
+          // in the event payload's `tz=` field — n.murphy's home TZ).
           [
-            "ts_local,event,workstation,user",
-            "2026-10-13T23:42:00,console_unlock,WS-NM-022,n.murphy",
-            "2026-10-14T01:08:00,console_lock,WS-NM-022,n.murphy",
-            "2026-10-14T23:51:00,console_unlock,WS-NM-022,n.murphy",
-            "2026-10-15T00:47:00,console_lock,WS-NM-022,n.murphy",
-            "2026-10-15T23:35:00,console_unlock,WS-NM-022,n.murphy",
-            "2026-10-16T01:12:00,console_lock,WS-NM-022,n.murphy",
+            "TimeCreated,EventId,MapDescription,Computer,UserName",
+            "2026-10-13T23:42:00,4801,The workstation was unlocked,WS-NM-022,CORP\\n.murphy",
+            "2026-10-14T01:08:00,4800,The workstation was locked,WS-NM-022,CORP\\n.murphy",
+            "2026-10-14T23:51:00,4801,The workstation was unlocked,WS-NM-022,CORP\\n.murphy",
+            "2026-10-15T00:47:00,4800,The workstation was locked,WS-NM-022,CORP\\n.murphy",
+            "2026-10-15T23:35:00,4801,The workstation was unlocked,WS-NM-022,CORP\\n.murphy",
+            "2026-10-16T01:12:00,4800,The workstation was locked,WS-NM-022,CORP\\n.murphy",
           ].join("\n") + "\n",
         ),
       },
@@ -406,12 +427,21 @@ not a finding.
         kind: "csv",
         mimeType: "text/csv; charset=utf-8",
         bytes: utf8(
+          // Splunk search joining two source-types for the same host
+          // and analyst-time window:
+          //   index=m365 (sourcetype=o365:management:activity OR
+          //               sourcetype=mde:device_events)
+          //   host=WS-ES-010 user=e.silva
+          //   earliest=2026-11-04T15:00:00Z latest=2026-11-04T15:30:00Z
+          //   | table _time, sourcetype, action, user, host, detail
+          //   | sort _time
+          //   | outputcsv events.csv
           [
-            "ts_utc,event,user,workstation,detail",
-            "2026-11-04T15:02:00Z,document_open,e.silva,WS-ES-010,DOC-FIN-9912 (restricted; finance scope)",
-            "2026-11-04T15:02:30Z,usb_mount,e.silva,WS-ES-010,VID 0x0951 PID 0x1666 SERIAL XX-001",
-            "2026-11-04T15:18:00Z,document_close,e.silva,WS-ES-010,DOC-FIN-9912",
-            "2026-11-04T15:20:00Z,usb_dismount,e.silva,WS-ES-010,SERIAL XX-001",
+            "_time,sourcetype,action,user,host,detail",
+            "2026-11-04T15:02:00Z,o365:management:activity,FileAccessed,e.silva,WS-ES-010,\"/sites/finance/restricted/DOC-FIN-9912.docx\"",
+            "2026-11-04T15:02:30Z,mde:device_events,UsbDriveMount,e.silva,WS-ES-010,\"VID=0x0951 PID=0x1666 SerialNumber=XX-001 DriveLetter=E:\"",
+            "2026-11-04T15:18:00Z,o365:management:activity,FileAccessed,e.silva,WS-ES-010,\"/sites/finance/restricted/DOC-FIN-9912.docx (close)\"",
+            "2026-11-04T15:20:00Z,mde:device_events,UsbDriveUnmount,e.silva,WS-ES-010,\"SerialNumber=XX-001\"",
           ].join("\n") + "\n",
         ),
       },
@@ -1087,8 +1117,28 @@ need-to-know.
         kind: "csv",
         mimeType: "text/csv; charset=utf-8",
         bytes: utf8(
+          // Splunk roll-up exported as CSV. Comparison row is the
+          // analyst-team P50 over the same 6-month window so the
+          // shape can be read at a glance.
+          //
+          //   index=m365 sourcetype=o365:management:activity
+          //   Operations IN (FileAccessed, FilePreviewed, PageViewed,
+          //                  FilePrinted, FileShareLinkCreated)
+          //   earliest=2026-05-01 latest=2026-11-01
+          //   | eval program=case(
+          //       like(ObjectId, "/sites/programs/alpha/%"), "in-scope (program-A)",
+          //       like(ObjectId, "/sites/programs/beta/%"),  "out-of-scope (program-B)",
+          //       like(ObjectId, "/sites/programs/gamma/%"), "out-of-scope (program-C)")
+          //   | bin _time span=1mon as month
+          //   | stats count(eval(action=="read"))   as reads
+          //           count(eval(action=="print"))  as prints
+          //           count(eval(action=="share"))  as shares
+          //           by month, program, user
+          //   | join month program [...team-P50 sub-query...]
+          //   | sort month program
+          //   | outputcsv dms-access-summary-6mo.csv
           [
-            "month,category,reads_kowalski,prints_kowalski,share_link_creates_kowalski,team_p50_reads,team_p50_prints,team_p50_share_creates",
+            "month,program,reads_kowalski,prints_kowalski,share_link_creates_kowalski,team_p50_reads,team_p50_prints,team_p50_share_creates",
             "2026-05,in-scope (program-A),412,3,2,408,4,2",
             "2026-05,out-of-scope (program-B),18,0,1,2,0,0",
             "2026-05,out-of-scope (program-C),22,0,0,1,0,0",
@@ -1332,15 +1382,26 @@ accounts.
         kind: "csv",
         mimeType: "text/csv; charset=utf-8",
         bytes: utf8(
+          // Splunk search joining three sourcetypes scoped to one
+          // account over the analyst-time window:
+          //   index=auth (sourcetype=ms:aad:signinlogs
+          //               OR sourcetype=WinEventLog:Security
+          //               OR sourcetype=o365:management:activity)
+          //   user=m.santos@corp.example
+          //   earliest=2026-11-21T08:00:00Z latest=2026-11-22T03:00:00Z
+          //   | table _time, sourcetype, event, source_ip, country,
+          //           device, client, result, details
+          //   | sort _time
+          //   | outputcsv auth-events-24h.csv
           [
-            "utc,event,source_ip,country,device,user_agent_or_workstation,result",
-            "2026-11-21T08:02:14Z,4624 interactive,10.0.5.81,US,WS-1402,(Win10),success",
-            "2026-11-21T08:05:00Z,AzureAD sign-in,10.0.5.81 (via VPN egress),US,WS-1402,Edge/Win10,success",
-            "2026-11-21T11:47:19Z,AzureAD sign-in,203.0.113.66,SG,(unknown device),Chrome/Win11,success (MFA satisfied via push)",
-            "2026-11-21T11:48:02Z,Mailbox-rule create,(via Azure Mgmt),-,-,-,rule \"forward-and-delete\" created on m.santos's mailbox",
-            "2026-11-21T13:14:45Z,AzureAD sign-in,203.0.113.66,SG,(unknown device),Chrome/Win11,success",
-            "2026-11-21T17:30:11Z,4624 interactive,10.0.5.81,US,WS-1402,(Win10),success (end of workday)",
-            "2026-11-22T02:05:30Z,AzureAD sign-in,203.0.113.66,SG,(unknown device),Chrome/Win11,success",
+            "_time,sourcetype,event,source_ip,country,device,client,result,details",
+            "2026-11-21T08:02:14Z,WinEventLog:Security,4624 interactive logon,10.0.5.81,US,WS-1402,Windows 10,Success,\"LogonType=2\"",
+            "2026-11-21T08:05:00Z,ms:aad:signinlogs,SignIn,10.0.5.81,US,WS-1402,Edge 134 on Win10,Success,\"DeviceCompliance=True; MFAMethod=DeviceTrust\"",
+            "2026-11-21T11:47:19Z,ms:aad:signinlogs,SignIn,203.0.113.66,SG,-,Chrome 132 on Win11,Success,\"DeviceCompliance=False; MFAMethod=Push (Microsoft Authenticator)\"",
+            "2026-11-21T11:48:02Z,o365:management:activity,New-InboxRule,-,-,-,Exchange Online PowerShell,Success,\"RuleName='forward-and-delete'; ForwardTo='external'\"",
+            "2026-11-21T13:14:45Z,ms:aad:signinlogs,SignIn,203.0.113.66,SG,-,Chrome 132 on Win11,Success,\"DeviceCompliance=False\"",
+            "2026-11-21T17:30:11Z,WinEventLog:Security,4624 interactive logon,10.0.5.81,US,WS-1402,Windows 10,Success,\"LogonType=2\"",
+            "2026-11-22T02:05:30Z,ms:aad:signinlogs,SignIn,203.0.113.66,SG,-,Chrome 132 on Win11,Success,\"DeviceCompliance=False\"",
           ].join("\n") + "\n",
         ),
       },
@@ -1350,16 +1411,25 @@ accounts.
         kind: "csv",
         mimeType: "text/csv; charset=utf-8",
         bytes: utf8(
+          // Microsoft 365 Unified Audit Log export:
+          //   Search-UnifiedAuditLog
+          //     -UserIds m.santos@corp.example
+          //     -StartDate 2026-11-21T08:00:00Z
+          //     -EndDate   2026-11-22T03:00:00Z
+          //     -Operations FileAccessed,FileDownloaded,New-InboxRule,
+          //                 Set-InboxRule,Set-Mailbox
+          //     -ResultSize 5000
+          //   | Export-Csv -NoTypeInformation
           [
-            "utc,resource,action,source_ip",
-            "2026-11-21T08:15:00Z,DMS / Program-A / weekly-status.docx,read,10.0.5.81",
-            "2026-11-21T09:42:00Z,DMS / Program-A / draft-handoff.docx,read,10.0.5.81",
-            "2026-11-21T11:50:00Z,Mailbox / global rule,modify,203.0.113.66",
-            "2026-11-21T11:55:00Z,SharePoint / Program-A / contacts.xlsx,read,203.0.113.66",
-            "2026-11-21T11:57:00Z,SharePoint / Program-A / vendors-payments-2026.xlsx,read,203.0.113.66",
-            "2026-11-21T11:59:00Z,SharePoint / Program-A / vendors-payments-2026.xlsx,download,203.0.113.66",
-            "2026-11-21T13:20:00Z,DMS / Program-A / weekly-status.docx,read,10.0.5.81",
-            "2026-11-22T02:10:00Z,SharePoint / Program-A / contacts.xlsx,download,203.0.113.66",
+            "CreationDate,UserIds,Operations,RecordType,Workload,ClientIP,ObjectId",
+            "2026-11-21T08:15:00Z,m.santos@corp.example,FileAccessed,SharePointFileOperation,SharePoint,10.0.5.81,/sites/program-A/weekly-status.docx",
+            "2026-11-21T09:42:00Z,m.santos@corp.example,FileAccessed,SharePointFileOperation,SharePoint,10.0.5.81,/sites/program-A/draft-handoff.docx",
+            "2026-11-21T11:50:00Z,m.santos@corp.example,New-InboxRule,ExchangeAdmin,Exchange,203.0.113.66,\"Name='forward-and-delete'; ForwardTo='attacker@external'; DeleteMessage=$true\"",
+            "2026-11-21T11:55:00Z,m.santos@corp.example,FileAccessed,SharePointFileOperation,SharePoint,203.0.113.66,/sites/program-A/contacts.xlsx",
+            "2026-11-21T11:57:00Z,m.santos@corp.example,FileAccessed,SharePointFileOperation,SharePoint,203.0.113.66,/sites/program-A/vendors-payments-2026.xlsx",
+            "2026-11-21T11:59:00Z,m.santos@corp.example,FileDownloaded,SharePointFileOperation,SharePoint,203.0.113.66,/sites/program-A/vendors-payments-2026.xlsx",
+            "2026-11-21T13:20:00Z,m.santos@corp.example,FileAccessed,SharePointFileOperation,SharePoint,10.0.5.81,/sites/program-A/weekly-status.docx",
+            "2026-11-22T02:10:00Z,m.santos@corp.example,FileDownloaded,SharePointFileOperation,SharePoint,203.0.113.66,/sites/program-A/contacts.xlsx",
           ].join("\n") + "\n",
         ),
       },
@@ -1637,12 +1707,16 @@ the existing Army cybersecurity / counterintelligence framework.
         kind: "csv",
         mimeType: "text/csv; charset=utf-8",
         bytes: utf8(
+          // ServiceNow incident-table export — `sys_dictionary_label`
+          // header (selected columns), filtered by caller and date
+          // range. Numbers are the standard INC0000000 sequence;
+          // priorities are 1=Critical … 5=Planning.
           [
-            "date,channel,summary,outcome",
-            "2026-10-29,phone,CAC PIN locked after travel,resolved at RAPIDS same day",
-            "2026-11-10,email,Requested local-admin rights on team-room WS for \"installing a tool\",denied — referred to KO + PMO via change-control process",
-            "2026-11-17,walk-in,Asked to have his account added to the J6 helpdesk-admins group \"to save a step\",denied — outside scope of contract privileges",
-            "2026-11-21,walk-in,Failing CAC + request for local non-CAC account (current ticket),open",
+            "number,opened_at,caller_id,contact_type,short_description,close_notes,priority,state",
+            "INC0014229,2026-10-29 09:12:14,Pham W.,phone,\"CAC PIN locked after travel\",\"Caller stepped to RAPIDS; PIN reset same day. Closed.\",4,Closed",
+            "INC0014401,2026-11-10 13:31:50,Pham W.,email,\"Local-admin rights on team-room WS requested for 'installing a tool'\",\"Denied. Privileged-access change request not on contract. Referred to KO + PMO via change-control process.\",4,Closed",
+            "INC0014502,2026-11-17 15:04:22,Pham W.,walk-in,\"Asked to be added to J6 helpdesk-admins AD group 'to save a step'\",\"Denied. Outside scope of contract privileges.\",4,Closed",
+            "INC0014617,2026-11-21 14:08:11,Pham W.,walk-in,\"Failing CAC + request for local non-CAC account\",,3,In Progress",
           ].join("\n") + "\n",
         ),
       },
@@ -1971,22 +2045,30 @@ You will read:
         kind: "csv",
         mimeType: "text/csv; charset=utf-8",
         bytes: utf8(
+          // EvtxECmd.exe -f C:\Cases\Domain\DC-01-Security.evtx
+          //   --inc 4625
+          //   --start "2026-10-25 00:00" --end "2026-11-22 00:00"
+          //   --search "svc-rebuild-admin"
+          //   --csv . --csvf auth-events-30d.csv
+          // (Excerpt: all 14 rows.  TargetUserName is the account
+          //  being authenticated AGAINST; the workstation that
+          //  initiated the attempt sits in WorkstationName.)
           [
-            "ts_utc,event,source_host,workstation_user,result,error_code",
-            "2026-10-27T13:02:11Z,4625 failed logon,WS-DEV-217,t.albright,failure,0xC000006A (bad password)",
-            "2026-10-27T13:02:14Z,4625 failed logon,WS-DEV-217,t.albright,failure,0xC000006A (bad password)",
-            "2026-10-29T09:18:50Z,4625 failed logon,WS-DEV-217,t.albright,failure,0xC000006A (bad password)",
-            "2026-11-02T17:44:01Z,4625 failed logon,WS-DEV-217,t.albright,failure,0xC000006A (bad password)",
-            "2026-11-02T17:44:03Z,4625 failed logon,WS-DEV-217,t.albright,failure,0xC000006A (bad password)",
-            "2026-11-08T11:21:00Z,4625 failed logon,WS-DEV-217,t.albright,failure,0xC000006A (bad password)",
-            "2026-11-12T08:55:11Z,4625 failed logon,WS-DEV-217,t.albright,failure,0xC000006A (bad password)",
-            "2026-11-12T08:55:13Z,4625 failed logon,WS-DEV-217,t.albright,failure,0xC000006A (bad password)",
-            "2026-11-15T20:02:22Z,4625 failed logon,WS-DEV-217,t.albright,failure,0xC000006A (bad password)",
-            "2026-11-18T07:31:01Z,4625 failed logon,WS-DEV-217,t.albright,failure,0xC000006A (bad password)",
-            "2026-11-18T07:31:04Z,4625 failed logon,WS-DEV-217,t.albright,failure,0xC000006A (bad password)",
-            "2026-11-19T16:42:45Z,4625 failed logon,WS-DEV-217,t.albright,failure,0xC000006A (bad password)",
-            "2026-11-19T16:42:47Z,4625 failed logon,WS-DEV-217,t.albright,failure,0xC000006A (bad password)",
-            "2026-11-21T10:15:00Z,4625 failed logon,WS-DEV-217,t.albright,failure,0xC000006A (bad password)",
+            "TimeCreated,EventId,Computer,TargetUserName,SubStatus,LogonType,WorkstationName,IpAddress",
+            "2026-10-27T13:02:11Z,4625,DC-01.corp,svc-rebuild-admin,0xC000006A,3 (Network),WS-DEV-217,10.40.7.217",
+            "2026-10-27T13:02:14Z,4625,DC-01.corp,svc-rebuild-admin,0xC000006A,3 (Network),WS-DEV-217,10.40.7.217",
+            "2026-10-29T09:18:50Z,4625,DC-01.corp,svc-rebuild-admin,0xC000006A,3 (Network),WS-DEV-217,10.40.7.217",
+            "2026-11-02T17:44:01Z,4625,DC-01.corp,svc-rebuild-admin,0xC000006A,3 (Network),WS-DEV-217,10.40.7.217",
+            "2026-11-02T17:44:03Z,4625,DC-01.corp,svc-rebuild-admin,0xC000006A,3 (Network),WS-DEV-217,10.40.7.217",
+            "2026-11-08T11:21:00Z,4625,DC-01.corp,svc-rebuild-admin,0xC000006A,3 (Network),WS-DEV-217,10.40.7.217",
+            "2026-11-12T08:55:11Z,4625,DC-01.corp,svc-rebuild-admin,0xC000006A,3 (Network),WS-DEV-217,10.40.7.217",
+            "2026-11-12T08:55:13Z,4625,DC-01.corp,svc-rebuild-admin,0xC000006A,3 (Network),WS-DEV-217,10.40.7.217",
+            "2026-11-15T20:02:22Z,4625,DC-01.corp,svc-rebuild-admin,0xC000006A,3 (Network),WS-DEV-217,10.40.7.217",
+            "2026-11-18T07:31:01Z,4625,DC-01.corp,svc-rebuild-admin,0xC000006A,3 (Network),WS-DEV-217,10.40.7.217",
+            "2026-11-18T07:31:04Z,4625,DC-01.corp,svc-rebuild-admin,0xC000006A,3 (Network),WS-DEV-217,10.40.7.217",
+            "2026-11-19T16:42:45Z,4625,DC-01.corp,svc-rebuild-admin,0xC000006A,3 (Network),WS-DEV-217,10.40.7.217",
+            "2026-11-19T16:42:47Z,4625,DC-01.corp,svc-rebuild-admin,0xC000006A,3 (Network),WS-DEV-217,10.40.7.217",
+            "2026-11-21T10:15:00Z,4625,DC-01.corp,svc-rebuild-admin,0xC000006A,3 (Network),WS-DEV-217,10.40.7.217",
           ].join("\n") + "\n",
         ),
       },
