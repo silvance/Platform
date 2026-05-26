@@ -5,6 +5,7 @@ import type { AdminUserSummary, Role } from "@ci-train/contracts";
 import { MIN_PASSWORD_LENGTH } from "@ci-train/contracts";
 import {
   approveUserAction,
+  deleteUserAction,
   resetPasswordAction,
   updateUserAction,
   type UserActionState,
@@ -23,6 +24,7 @@ interface Props {
 
 export function UserRow({ user, isSelf }: Props) {
   const [showReset, setShowReset] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
   const [updateState, updateAction, updating] = useActionState(
     updateUserAction,
     initial,
@@ -35,10 +37,17 @@ export function UserRow({ user, isSelf }: Props) {
     approveUserAction,
     initial,
   );
+  const [deleteState, deleteActionFn, deleting] = useActionState(
+    deleteUserAction,
+    initial,
+  );
 
   // Combined banner: prefer the most recent message across all
-  // three forms (update, reset-password, approve).
-  const banner = pickLatest(pickLatest(updateState, resetState), approveState);
+  // four forms (update, reset-password, approve, delete).
+  const banner = pickLatest(
+    pickLatest(pickLatest(updateState, resetState), approveState),
+    deleteState,
+  );
 
   return (
     <tr style={{ borderTop: "1px solid var(--border)", verticalAlign: "top" }}>
@@ -88,22 +97,41 @@ export function UserRow({ user, isSelf }: Props) {
       </td>
       <td style={{ ...cellStyle, minWidth: 220 }}>
         {!isSelf ? (
-          showReset ? (
-            <ResetPasswordForm
-              userId={user.id}
-              action={resetActionFn}
-              pending={resetting}
-              onCancel={() => setShowReset(false)}
-            />
-          ) : (
-            <button
-              type="button"
-              onClick={() => setShowReset(true)}
-              style={inlineButtonStyle}
-            >
-              Reset password
-            </button>
-          )
+          <div style={{ display: "flex", flexDirection: "column", gap: ".4rem" }}>
+            {showReset ? (
+              <ResetPasswordForm
+                userId={user.id}
+                action={resetActionFn}
+                pending={resetting}
+                onCancel={() => setShowReset(false)}
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowReset(true)}
+                style={inlineButtonStyle}
+              >
+                Reset password
+              </button>
+            )}
+            {showDelete ? (
+              <DeleteUserForm
+                userId={user.id}
+                email={user.email}
+                action={deleteActionFn}
+                pending={deleting}
+                onCancel={() => setShowDelete(false)}
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowDelete(true)}
+                style={dangerButtonStyle}
+              >
+                Delete account
+              </button>
+            )}
+          </div>
         ) : (
           <span style={{ color: "var(--muted)", fontSize: ".85rem" }}>
             Change your own password via{" "}
@@ -265,6 +293,39 @@ function ResetPasswordForm({
   );
 }
 
+function DeleteUserForm({
+  userId,
+  email,
+  action,
+  pending,
+  onCancel,
+}: {
+  userId: string;
+  email: string;
+  action: (formData: FormData) => void;
+  pending: boolean;
+  onCancel: () => void;
+}) {
+  return (
+    <form action={action} style={{ display: "flex", gap: ".4rem", flexWrap: "wrap", alignItems: "center" }}>
+      <input type="hidden" name="id" value={userId} />
+      <span style={{ fontSize: ".8rem", color: "var(--muted)" }}>
+        Delete {email}? Cannot be undone.
+      </span>
+      <button type="submit" disabled={pending} style={dangerButtonStyle}>
+        {pending ? "Deleting…" : "Confirm delete"}
+      </button>
+      <button
+        type="button"
+        onClick={onCancel}
+        style={{ ...inlineButtonStyle, background: "transparent" }}
+      >
+        Cancel
+      </button>
+    </form>
+  );
+}
+
 function pickLatest(
   a: UserActionState,
   b: UserActionState,
@@ -294,4 +355,9 @@ const inlineButtonStyle: React.CSSProperties = {
   padding: ".3rem .65rem",
   fontSize: ".85rem",
   cursor: "pointer",
+};
+const dangerButtonStyle: React.CSSProperties = {
+  ...inlineButtonStyle,
+  borderColor: "var(--danger, #c0392b)",
+  color: "var(--danger, #c0392b)",
 };

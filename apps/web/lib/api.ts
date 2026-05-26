@@ -218,6 +218,13 @@ export const api = {
           token,
         }),
       ),
+    remove: async (token: string, id: string): Promise<void> => {
+      await request(`/admin/users/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        token,
+        expect: "empty",
+      });
+    },
   },
   scenarios: {
     list: async (token: string, query: ScenarioListQuery = {}): Promise<ScenarioListResponse> =>

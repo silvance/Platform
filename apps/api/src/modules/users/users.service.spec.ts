@@ -15,6 +15,7 @@ function makeFakePrisma() {
     findUnique: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
+    delete: jest.fn(),
     count: jest.fn(),
   };
   const session = {
@@ -195,6 +196,53 @@ describe("UsersService", () => {
       const sessWhere = fake.session.updateMany.mock.calls[0][0].where;
       expect(sessWhere.userId).toBe("u2");
       expect(sessWhere.NOT).toBeUndefined();
+    });
+  });
+
+  describe("delete", () => {
+    it("refuses to let the actor delete themselves", async () => {
+      const fake = makeFakePrisma();
+      const svc = new UsersService(fake.api, makeAuth(fake.api));
+
+      await expect(svc.delete("self", "self")).rejects.toBeInstanceOf(
+        ForbiddenException,
+      );
+      expect(fake.user.delete).not.toHaveBeenCalled();
+    });
+
+    it("404s when the target doesn't exist", async () => {
+      const fake = makeFakePrisma();
+      const svc = new UsersService(fake.api, makeAuth(fake.api));
+      fake.user.findUnique.mockResolvedValue(null);
+
+      await expect(svc.delete("admin1", "ghost")).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      expect(fake.user.delete).not.toHaveBeenCalled();
+    });
+
+    it("refuses to delete the last enabled admin", async () => {
+      const fake = makeFakePrisma();
+      const svc = new UsersService(fake.api, makeAuth(fake.api));
+      fake.user.findUnique.mockResolvedValue({ id: "admin1", role: "admin" });
+      fake.user.count.mockResolvedValue(0);
+
+      await expect(
+        svc.delete("other-admin", "admin1"),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(fake.user.delete).not.toHaveBeenCalled();
+    });
+
+    it("deletes a regular user without consulting the last-admin guard", async () => {
+      const fake = makeFakePrisma();
+      const svc = new UsersService(fake.api, makeAuth(fake.api));
+      fake.user.findUnique.mockResolvedValue({ id: "u2", role: "user" });
+      fake.user.delete.mockResolvedValue(undefined);
+
+      await svc.delete("admin1", "u2");
+
+      expect(fake.user.count).not.toHaveBeenCalled();
+      expect(fake.user.delete).toHaveBeenCalledWith({ where: { id: "u2" } });
     });
   });
 

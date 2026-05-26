@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -80,6 +81,21 @@ export class UsersController {
   ): Promise<AdminUserResponse> {
     const user = await this.users.approve(id);
     return { user };
+  }
+
+  // Hard-delete. Distinct from disable: a disabled account stays
+  // in the table (and in the /admin/users list) but can't sign in;
+  // a deleted account is gone, cascade-cleaning per-user data and
+  // null-ing out authorship on anything they wrote. Used to retire
+  // pilot accounts without leaving the list cluttered.
+  @Delete(":id")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async remove(
+    @Param("id", new ParseUUIDPipe({ version: "4" })) id: string,
+    @CurrentSession() session: SessionContext | undefined,
+  ): Promise<void> {
+    if (!session) throw new UnauthorizedException();
+    await this.users.delete(session.user.id, id);
   }
 
   @Post(":id/password")

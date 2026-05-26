@@ -134,6 +134,28 @@ export async function approveUserAction(
   return initialOk("User approved. They can now sign in.");
 }
 
+export async function deleteUserAction(
+  _prev: UserActionState,
+  formData: FormData,
+): Promise<UserActionState> {
+  const token = await readToken();
+  if (!token) return initialErr("Session expired. Reload and sign in again.");
+
+  const id = formData.get("id");
+  if (typeof id !== "string" || id.length === 0) {
+    return initialErr("Missing user id.");
+  }
+
+  try {
+    await api.users.remove(token, id);
+  } catch (err) {
+    return describeError(err, "Failed to delete user.");
+  }
+
+  revalidatePath("/admin/users");
+  return initialOk("Account deleted.");
+}
+
 export async function resetPasswordAction(
   _prev: UserActionState,
   formData: FormData,
