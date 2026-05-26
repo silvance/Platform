@@ -38,7 +38,7 @@ enum SkillArea {
 // Order in this enum is the canonical user-facing display order
 // for the /scenarios lane overview.
 enum Lane {
-  analyst_on_ramp
+  ojt_bridge
   foundations
   email_bec
   windows_artifacts

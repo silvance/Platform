@@ -1,4 +1,5 @@
 import type { ScenarioSeed } from "./types";
+import { OJT_BRIDGE_SCENARIOS } from "./ojt-bridge";
 import { ANALYST_ON_RAMP_SCENARIOS } from "./on-ramp";
 import { BEGINNER_SCENARIOS } from "./beginner";
 import { BEC_SCENARIOS } from "./bec";
@@ -20,15 +21,17 @@ import { EVIDENCE_HANDLING_SCENARIOS } from "./evidence-handling";
 // as the user-visible launch curation.
 
 export const SCENARIOS: ScenarioSeed[] = [
-  // Analyst On-Ramp leads. Lowest-difficulty lane in the
-  // catalogue — for students whose baseline is closer to A+ /
-  // DC3-Intro than analytic forensic experience. Foundations
-  // assumes the inference-discipline frame; the on-ramp builds
-  // it.
+  // OJT Bridge leads. Short bridge scenarios for new CDTIs who
+  // have completed introductory coursework (INCH / CIRC /
+  // WFE-A / AXIOM). Foundations + every later lane assumes the
+  // bridge has been crossed.
+  ...OJT_BRIDGE_SCENARIOS,
+  // The earlier "Analyst On-Ramp" entries ship `status:
+  // "archived"` and are kept here so the seed idempotently
+  // demotes them on each reseed (rather than orphaning them in
+  // the DB). They no longer appear in the user-facing list.
   ...ANALYST_ON_RAMP_SCENARIOS,
-  // Beginner family next — the on-ramp for students with an
-  // intro-DF background. Foundations-tier scenarios surfaced
-  // toward the top of /scenarios after the on-ramp.
+  // Beginner family — Foundations-tier scenarios.
   ...BEGINNER_SCENARIOS,
   ...BEC_SCENARIOS,
   ...PHISHING_SCENARIOS,

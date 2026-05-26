@@ -46,7 +46,7 @@ const VALID_STATUSES = new Set<string>(["draft", "published", "archived"]);
 
 // Mirrored from the Prisma schema's Lane enum.
 const VALID_LANES = new Set<string>([
-  "analyst_on_ramp",
+  "ojt_bridge",
   "foundations",
   "email_bec",
   "windows_artifacts",
