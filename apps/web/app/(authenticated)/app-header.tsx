@@ -17,10 +17,17 @@ interface Props {
   pendingApprovalCount: number;
 }
 
-const NAV_ITEMS: Array<{ href: string; label: string; admin?: boolean }> = [
+const NAV_ITEMS: Array<{
+  href: string;
+  label: string;
+  admin?: boolean;
+  external?: boolean;
+}> = [
   { href: "/scenarios", label: "Challenges" },
   { href: "/me/progress", label: "Progress" },
   { href: "/me/security", label: "Security" },
+  // External reference site. Opens in a new tab.
+  { href: "https://codeworld.codes", label: "Reference", external: true },
   { href: "/admin", label: "Admin", admin: true },
  // surface Review directly in the nav. Buried as a tile
   // on /admin in M21b — feedback was that operators couldn't
@@ -96,6 +103,26 @@ export function AppHeader({ user, theme, pendingApprovalCount }: Props) {
             // link to visually separate learner vs operator nav.
             const showDivider =
               item.admin && idx > 0 && !visibleNav[idx - 1]?.admin;
+            // External links bypass next/link and just render an
+            // <a target="_blank"> with a trailing arrow glyph.
+            if (item.external) {
+              return (
+                <Fragment key={item.href}>
+                  {showDivider ? <span className="nav-divider" aria-hidden /> : null}
+                  <a
+                    href={item.href}
+                    className="nav-link"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {item.label}
+                    <span aria-hidden style={{ fontSize: ".75em", opacity: 0.7 }}>
+                      ↗
+                    </span>
+                  </a>
+                </Fragment>
+              );
+            }
             return (
               <Fragment key={item.href}>
                 {showDivider ? <span className="nav-divider" aria-hidden /> : null}
