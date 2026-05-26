@@ -176,7 +176,7 @@ export const Lane = z.enum([
 export type Lane = z.infer<typeof Lane>;
 
 export const LANE_LABELS: Record<Lane, string> = {
-  ojt_bridge: "OJT Bridge",
+  ojt_bridge: "Starting Point",
   foundations: "Foundations",
   email_bec: "Email & BEC",
   windows_artifacts: "Windows Artifacts",
@@ -192,7 +192,7 @@ export const LANE_LABELS: Record<Lane, string> = {
 
 export const LANE_DESCRIPTIONS: Record<Lane, string> = {
   ojt_bridge:
-    "Short bridge scenarios for new CDTIs who have completed introductory coursework. Practice turning familiar tool outputs into evidence-safe findings.",
+    "Short scenarios that warm you up on the platform. Practice turning familiar tool outputs into evidence-safe findings before working through the topical lanes.",
   foundations:
     "Core DF concepts every analyst needs first — hashes, MAC times, magic bytes, custody fundamentals.",
   email_bec:

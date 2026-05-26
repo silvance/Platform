@@ -672,7 +672,7 @@ disk untouched. Those are separate artifacts.
     brief: `
 # Brief
 
-The hardest habit on the OJT bridge is the simplest: write only
+The hardest habit at this stage is the simplest: write only
 what the evidence supports. The draft below contains four
 separate claims; only some of them are supported by the listed
 artifacts.
