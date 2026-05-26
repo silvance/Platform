@@ -1,24 +1,19 @@
 import { utf8 } from "./util";
 import type { ScenarioSeed } from "./types";
 
-// Analyst On-Ramp family. The lowest-difficulty lane in the
-// catalogue — for students whose baseline is closer to A+ /
-// DC3-Intro than analytic forensic experience. Each scenario:
+// Archived "Analyst On-Ramp" scenarios. These shipped briefly as
+// an A+ / DC3-Intro on-ramp before the lane was retargeted to a
+// CDTI audience (INCH / CIRC / WFE-A / AXIOM graduates) and
+// renamed OJT Bridge. The content is too entry-level for that
+// cohort and is kept here in `status: "archived"` so the seed
+// idempotently demotes it on each VPS reseed; users no longer
+// see these scenarios in /scenarios, but admins can still
+// reference them via /admin/challenges if anything was learned
+// from how they read.
 //
-//   - has ONE artifact
-//   - has 3-4 questions, mostly single-pick MC
-//   - uses plain language first, technical term second
-//   - never references regulations or vendor-specific UIs
-//   - teaches the five-question frame:
-//       * What do I see?
-//       * What does it prove?
-//       * What does it NOT prove?
-//       * What would I need next?
-//       * How do I say it without overclaiming?
-//
-// These are deliberately not trivia. They build the inference-
-// discipline reflex that Foundations + every later lane assumes
-// the student already trusts.
+// Keep the lane field as `ojt_bridge` (post-rename) so the
+// scenarios remain valid against the current Lane enum even
+// while archived.
 
 export const ANALYST_ON_RAMP_SCENARIOS: ScenarioSeed[] = [
   // ─── 1. Reading a Windows file path ─────────────────────────
@@ -31,7 +26,8 @@ export const ANALYST_ON_RAMP_SCENARIOS: ScenarioSeed[] = [
     difficulty: 1,
     estimatedMinutes: 5,
     tags: ["on-ramp", "windows", "paths", "inference_discipline"],
-    lane: "analyst_on_ramp",
+    lane: "ojt_bridge",
+    status: "archived",
     module: "Reading the basics",
     sequence: 1,
     brief: `
@@ -165,7 +161,8 @@ challenge is to notice what the path does *not* tell you.
     difficulty: 1,
     estimatedMinutes: 6,
     tags: ["on-ramp", "timestamps", "inference_discipline"],
-    lane: "analyst_on_ramp",
+    lane: "ojt_bridge",
+    status: "archived",
     module: "Reading the basics",
     sequence: 2,
     brief: `
@@ -310,7 +307,8 @@ order proves and what it doesn't.
     difficulty: 1,
     estimatedMinutes: 6,
     tags: ["on-ramp", "hashes", "inference_discipline"],
-    lane: "analyst_on_ramp",
+    lane: "ojt_bridge",
+    status: "archived",
     module: "What evidence proves",
     sequence: 1,
     brief: `
@@ -490,7 +488,8 @@ decide what the match does and doesn't tell you.
     difficulty: 1,
     estimatedMinutes: 7,
     tags: ["on-ramp", "tool_output", "report_writing", "inference_discipline"],
-    lane: "analyst_on_ramp",
+    lane: "ojt_bridge",
+    status: "archived",
     module: "What evidence proves",
     sequence: 2,
     brief: `
@@ -671,7 +670,8 @@ and which are over-claims.
     difficulty: 1,
     estimatedMinutes: 7,
     tags: ["on-ramp", "report_writing", "inference_discipline"],
-    lane: "analyst_on_ramp",
+    lane: "ojt_bridge",
+    status: "archived",
     module: "Saying what's proven",
     sequence: 1,
     brief: `
