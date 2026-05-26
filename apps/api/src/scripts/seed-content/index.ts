@@ -1,4 +1,5 @@
 import type { ScenarioSeed } from "./types";
+import { ANALYST_ON_RAMP_SCENARIOS } from "./on-ramp";
 import { BEGINNER_SCENARIOS } from "./beginner";
 import { BEC_SCENARIOS } from "./bec";
 import { PHISHING_SCENARIOS } from "./phishing";
@@ -19,10 +20,15 @@ import { EVIDENCE_HANDLING_SCENARIOS } from "./evidence-handling";
 // as the user-visible launch curation.
 
 export const SCENARIOS: ScenarioSeed[] = [
-  // Beginner family lists first — these are the on-ramp for
-  // students with only an intro-DF background, and surfacing
-  // them at the top of the /scenarios list helps the right
-  // audience find them fast.
+  // Analyst On-Ramp leads. Lowest-difficulty lane in the
+  // catalogue — for students whose baseline is closer to A+ /
+  // DC3-Intro than analytic forensic experience. Foundations
+  // assumes the inference-discipline frame; the on-ramp builds
+  // it.
+  ...ANALYST_ON_RAMP_SCENARIOS,
+  // Beginner family next — the on-ramp for students with an
+  // intro-DF background. Foundations-tier scenarios surfaced
+  // toward the top of /scenarios after the on-ramp.
   ...BEGINNER_SCENARIOS,
   ...BEC_SCENARIOS,
   ...PHISHING_SCENARIOS,

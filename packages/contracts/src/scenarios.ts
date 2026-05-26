@@ -160,6 +160,7 @@ export type ScenarioSlug = z.infer<typeof ScenarioSlug>;
 // The order here is the canonical user-facing display order for
 // the lane overview at /scenarios.
 export const Lane = z.enum([
+  "analyst_on_ramp",
   "foundations",
   "email_bec",
   "windows_artifacts",
@@ -174,6 +175,7 @@ export const Lane = z.enum([
 export type Lane = z.infer<typeof Lane>;
 
 export const LANE_LABELS: Record<Lane, string> = {
+  analyst_on_ramp: "Analyst On-Ramp",
   foundations: "Foundations",
   email_bec: "Email & BEC",
   windows_artifacts: "Windows Artifacts",
@@ -187,6 +189,8 @@ export const LANE_LABELS: Record<Lane, string> = {
 };
 
 export const LANE_DESCRIPTIONS: Record<Lane, string> = {
+  analyst_on_ramp:
+    "Short orientation challenges for new analysts: read simple artifacts, identify what they show, and practice evidence-safe wording before moving into full scenarios.",
   foundations:
     "Core DF concepts every analyst needs first — hashes, MAC times, magic bytes, custody fundamentals.",
   email_bec:

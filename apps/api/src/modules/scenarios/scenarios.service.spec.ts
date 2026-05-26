@@ -223,8 +223,12 @@ describe("ScenariosService (unit)", () => {
       const svc = new ScenariosService(prisma);
       const { lanes } = await svc.laneOverview("user", "test-user-id");
 
-      // 10 canonical lanes returned regardless of contents.
-      expect(lanes).toHaveLength(10);
+      // 11 canonical lanes returned regardless of contents
+      // (analyst_on_ramp, foundations, email_bec, windows_artifacts,
+      // removable_media_spillage, insider_risk, network_logs,
+      // mobile_forensics, rf_awareness, evidence_handling,
+      // report_writing).
+      expect(lanes).toHaveLength(11);
       const foundations = lanes.find((l) => l.lane === "foundations");
       const win = lanes.find((l) => l.lane === "windows_artifacts");
       const empty = lanes.find((l) => l.lane === "rf_awareness");
