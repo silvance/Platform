@@ -774,18 +774,19 @@ footer { color: var(--muted); font-size: .85rem; margin-top: var(--space-12); }
   text-decoration: none;
 }
 .brand:hover { text-decoration: none; }
+/* Shield brand mark. Renders /logo-mark.png as a background so a
+   missing asset shows an empty box instead of a broken-image icon.
+   Drop a transparent-bg square PNG at apps/web/public/logo-mark.png. */
 .brand-mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  display: inline-block;
   width: 28px;
   height: 28px;
   border-radius: var(--radius-sm);
-  background: linear-gradient(135deg, var(--brand-500), var(--brand-700));
-  color: #fff;
-  font-weight: 700;
-  font-size: .82rem;
-  letter-spacing: -0.04em;
+  flex-shrink: 0;
+  background-image: url("/logo-mark.png");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
 }
 .nav-links {
   display: flex;
@@ -914,12 +915,12 @@ footer { color: var(--muted); font-size: .85rem; margin-top: var(--space-12); }
   letter-spacing: -0.01em;
 }
 .auth-brand-mark .brand-mark {
-  width: 36px;
-  height: 36px;
-  font-size: 1rem;
+  width: 40px;
+  height: 40px;
   border-radius: var(--radius-md);
-  background: rgba(255,255,255,0.12);
-  border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.10);
+  border: 1px solid rgba(255,255,255,0.18);
+  padding: 4px;
 }
 .auth-tagline {
   max-width: 26rem;

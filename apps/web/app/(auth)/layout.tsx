@@ -9,7 +9,12 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
     <div className="auth-shell">
       <aside className="auth-brand-panel">
+        {/* Shield mark + wordmark. Same /logo-mark.png as the
+            authenticated header; the chip background gives the
+            transparent PNG enough contrast against the dark navy
+            auth gradient. */}
         <a href="/login" className="auth-brand-mark">
+          <span className="brand-mark" aria-hidden />
           CI Cyber Lab
         </a>
         <div className="auth-tagline">
