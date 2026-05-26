@@ -23,24 +23,16 @@ export default async function FeedbackPage() {
         <div>
           <h1 style={{ marginBottom: ".25rem" }}>Feedback</h1>
           <p style={{ margin: 0, color: "var(--muted)" }}>
-            Notes submitted by users from the bottom of each challenge.
-            Most-recent first; up to 200 rows per page.
-            {totalCount > feedback.length ? (
-              <>
-                {" "}
-                Showing {feedback.length} of {totalCount}.
-              </>
-            ) : null}
+            {totalCount > feedback.length
+              ? `Showing ${feedback.length} of ${totalCount}, newest first.`
+              : "Newest first."}
           </p>
         </div>
       </header>
 
       {feedback.length === 0 ? (
         <div className="card">
-          <p style={{ margin: 0 }}>
-            No feedback yet. Once users submit notes from the widget at the
-            bottom of a challenge, they'll appear here newest-first.
-          </p>
+          <p style={{ margin: 0 }}>Nothing here yet.</p>
         </div>
       ) : (
         <ul

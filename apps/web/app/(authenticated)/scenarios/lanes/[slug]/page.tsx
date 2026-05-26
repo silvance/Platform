@@ -74,9 +74,7 @@ export default async function LanePage({ params }: Props) {
 
       {scenarios.length === 0 ? (
         <div className="card" style={{ marginTop: "1rem" }}>
-          <p style={{ margin: 0 }}>
-            No published challenges in this lane yet.
-          </p>
+          <p style={{ margin: 0 }}>Nothing here yet.</p>
         </div>
       ) : (
         <div

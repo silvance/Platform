@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 // Each card links to /scenarios/lanes/<slug>, which renders the
 // challenges in their recommended sequence within the lane.
 export default async function ScenariosPage() {
-  const user = await requireUser();
+  await requireUser();
   const token = await readToken();
   const { lanes } = await api.scenarios.lanes(token!);
 
@@ -21,7 +21,7 @@ export default async function ScenariosPage() {
         <div>
           <h1>Challenges</h1>
           <p>
-            Welcome, {user.displayName}. Pick a lane to start.
+            Pick a lane. Each one groups challenges by mission area.
           </p>
         </div>
       </header>

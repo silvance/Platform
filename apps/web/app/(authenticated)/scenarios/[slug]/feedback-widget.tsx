@@ -67,8 +67,8 @@ export function FeedbackWidget({ slug }: Props) {
         Feedback on this challenge
       </h2>
       <p style={{ margin: "0 0 0.75rem 0", color: "var(--muted)", fontSize: "0.85rem" }}>
-        Found a typo, an unclear question, or a debrief that helped /
-        didn't? Drop a quick note. Visible only to admins.
+        Quick note for the admin. Anything broken, confusing, or that
+        landed well? Visible to admins only.
       </p>
 
       {result?.ok ? (
