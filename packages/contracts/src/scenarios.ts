@@ -181,7 +181,7 @@ export const LANE_LABELS: Record<Lane, string> = {
   email_bec: "Email & BEC",
   windows_artifacts: "Windows Artifacts",
   removable_media_spillage: "Removable Media / Spillage",
-  insider_risk: "Insider Risk",
+  insider_risk: "Insider Threat",
   network_logs: "Network & Logs",
   memory_forensics: "Memory Forensics",
   mobile_forensics: "Mobile Forensics",
@@ -202,7 +202,7 @@ export const LANE_DESCRIPTIONS: Record<Lane, string> = {
   removable_media_spillage:
     "USB / removable-media handling and the spillage scenarios that come with it.",
   insider_risk:
-    "Risk-indicator triage for leaving employees and unusual access patterns. Anomaly-vs-finding discipline.",
+    "Insider-threat indicator triage for leaving employees and unusual access patterns. Anomaly-vs-finding discipline.",
   network_logs:
     "Reading access logs, flow records, and host-side network telemetry without over-claiming.",
   memory_forensics:

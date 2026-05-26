@@ -56,7 +56,7 @@ Every challenge in the library obeys these rules:
 | `dfir-deleted-file-attribution-001` | 2 | 2 | Recycle-bin metadata names the deleting user, not the author. |
 | `dfir-lnk-jumplist-mru-001` | 2 | 2 | LNK + jumplist agreement; UserAssist's absence is a weak signal. |
 
-### Insider risk / CI reasoning
+### Insider threat / CI reasoning
 
 | Slug | Tier | Difficulty | Focus |
 |---|---|---|---|
