@@ -89,14 +89,18 @@ export default async function EditChallengePage({ params }: Props) {
           >
             Download pack ↓
           </a>
-          {scenario.status === "published" ? (
-            <Link
-              href={`/scenarios/${scenario.slug}`}
-              style={{ color: "var(--accent)" }}
-            >
-              View as user →
-            </Link>
-          ) : null}
+          {/* "Solve as user" link is available for drafts too — the
+              scenarios endpoint already lets admins view drafts, and
+              clicking through to solve the challenge before flipping
+              it to published is the common pre-publish loop. Label
+              changes from "Preview" → "View" once published, so the
+              admin knows it's the same page the learner sees. */}
+          <Link
+            href={`/scenarios/${scenario.slug}`}
+            style={{ color: "var(--accent)" }}
+          >
+            {scenario.status === "published" ? "View as user →" : "Preview as user →"}
+          </Link>
         </div>
       </header>
 

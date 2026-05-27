@@ -61,13 +61,33 @@ export default async function ScenarioWorkspacePage({ params }: Props) {
 
   return (
     <main>
-      <div style={{ fontSize: ".9rem", marginBottom: ".5rem" }}>
+      <div
+        style={{
+          fontSize: ".9rem",
+          marginBottom: ".5rem",
+          display: "flex",
+          gap: "1rem",
+          alignItems: "center",
+          flexWrap: "wrap",
+        }}
+      >
         <Link
           href={`/scenarios/lanes/${encodeURIComponent(scenario.lane)}`}
           style={{ color: "var(--accent)" }}
         >
           ← {LANE_LABELS[scenario.lane]}
         </Link>
+        {/* Admins coming from the editor want a one-click path back
+            to the editor — typical loop is "preview as user → see a
+            bug or want to publish → return to edit." */}
+        {user.role === "admin" ? (
+          <Link
+            href={`/admin/challenges/${encodeURIComponent(scenario.slug)}/edit`}
+            style={{ color: "var(--accent)" }}
+          >
+            Edit this challenge ↗
+          </Link>
+        ) : null}
       </div>
 
       <h1>{scenario.title}</h1>
