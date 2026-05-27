@@ -102,7 +102,14 @@ export default async function EditChallengePage({ params }: Props) {
 
       <h2>Metadata</h2>
       <div className="card">
+        {/* Key on scenario.updatedAt so the form is unmounted +
+            remounted after every server-side write. Without this,
+            the form's uncontrolled <input defaultValue> /
+            <select defaultValue> never see the freshly-revalidated
+            server data, and visible changes (notably status flips
+            from draft → published) silently revert in the UI. */}
         <MetadataForm
+          key={scenario.updatedAt}
           scenario={scenario}
           skillAreas={SkillArea.options}
           action={metadataAction}
