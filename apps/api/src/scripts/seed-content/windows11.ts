@@ -237,7 +237,7 @@ and execution-of-tool sit in different reporting buckets.
           {
             id: "no-foreground-bam",
             label:
-              "BAM has no record of `bitsadmin.exe` being a foreground program for any tracked user. Absence in BAM is suggestive, not proof — corroborate with Prefetch / Amcache / EDR before claiming non-execution.",
+              "BAM has no record of `bitsadmin.exe` being a foreground program for any tracked user. Absence in BAM is suggestive, not proof — corroborate with Prefetch / Amcache / EDR (Endpoint Detection and Response — host-side security telemetry like CrowdStrike Falcon, Microsoft Defender for Endpoint, etc.) before claiming non-execution.",
           },
           {
             id: "ran-as-background",
@@ -270,7 +270,7 @@ and execution-of-tool sit in different reporting buckets.
           { id: "amcache", label: "Amcache (`Amcache.hve`)." },
           { id: "userassist", label: "UserAssist (per-user, ROT13-encoded)." },
           { id: "wpndatabase", label: "Windows Notification Database (`wpndatabase.db`)." },
-          { id: "edr-process-create", label: "EDR / Sysmon process-create events (EID 1 / EID 4688)." },
+          { id: "edr-process-create", label: "EDR / Sysmon process-create events (EID 1 / EID 4688). (Sysmon = Microsoft System Monitor, a free Windows service that emits structured process / network / file events to the Event Log.)" },
         ],
         allowMultiple: true,
         expected: {
@@ -330,8 +330,9 @@ A possible exfiltration. Two days ago, a DA-civilian developer
 (\`p.singh\`) gave 30-day notice. Yesterday evening the
 data-loss-prevention team alerted on a 380 MiB upload from her
 workstation to a cloud-storage service that isn't on the unit
-allow-list. EDR coverage on the host is patchy — process-create
-is on, network telemetry is off.
+allow-list. EDR (Endpoint Detection and Response — host-side security
+telemetry) coverage on the host is patchy: process-create is on,
+network telemetry is off.
 
 The supporting ACI Special Agent in Charge has scoped the
 review and your workstation imaging was receipted on
@@ -372,8 +373,10 @@ question turns on what SRUM does and does not prove.
 - **srum-network-bytes.csv** — per-app, per-user, per-hour
   bytes sent and received (parsed from SRUDB.dat).
 - **sysmon-process-create.csv** — Sysmon EID 1 process-create
-  events for the relevant window. Network telemetry (EID 3)
-  was NOT enabled.
+  events for the relevant window. (Sysmon = Microsoft System
+  Monitor, free Windows service that emits structured process /
+  network / file events to the Event Log.) Network telemetry
+  (EID 3) was NOT enabled.
 - **dlp-alert.json** — the DLP alert that started the case.
 - **dns-resolver-cache.txt** — host-side DNS cache snapshot
   from the same window (rotates fast — partial coverage only).

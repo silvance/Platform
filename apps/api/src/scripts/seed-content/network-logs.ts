@@ -122,9 +122,11 @@ export const NETWORK_LOGS_SCENARIOS: ScenarioSeed[] = [
 # Brief
 
 A perimeter NetFlow collector exported the records in the
-artifact. Each row records one network flow — a 5-tuple
-(source IP, destination IP, source port, destination port,
-protocol) plus byte and packet counts, start and end times.
+artifact. (NetFlow is Cisco-originated flow telemetry — one
+record per connection, headers only, no payload.) Each row
+records one network flow — a 5-tuple (source IP, destination
+IP, source port, destination port, protocol) plus byte and
+packet counts, start and end times.
 
 NetFlow records are **metadata**, not payload. They tell you
 *who talked to whom, how much, and for how long.* They do NOT
@@ -144,8 +146,9 @@ A reasonable analyst's first read of a flow row should answer:
 What flow records will *not* answer on their own:
 
 - Destination hostname (need DNS log or SNI capture).
-- Whether the bytes sent were sensitive material (need EDR /
-  proxy / DLP correlation).
+- Whether the bytes sent were sensitive material (need EDR
+  (Endpoint Detection and Response — host-side security
+  telemetry) / proxy / DLP correlation).
 - Whether the user at the keyboard was the actor (need host-side
   process attribution).
 `.trim(),
@@ -662,8 +665,9 @@ without independent confirmation.
 # Brief
 
 A small \`tcpdump\` capture from a workstation, taken during a
-~6-minute window after EDR raised a low-confidence "uncategorised
-outbound TLS" alert. The capture is in two artifacts:
+~6-minute window after EDR (Endpoint Detection and Response —
+host-side security telemetry) raised a low-confidence
+"uncategorised outbound TLS" alert. The capture is in two artifacts:
 
 - \`capture-window.pcap\` — the raw libpcap binary. Open in
   Wireshark / \`tshark\` / \`tcpdump\` if you have it.

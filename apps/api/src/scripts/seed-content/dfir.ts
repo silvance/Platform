@@ -376,7 +376,8 @@ the attribution inferences.
     brief: `
 # Brief
 
-EDR alerted on a hash match for a known credential-dumping tool on
+EDR (Endpoint Detection and Response — host-side security telemetry)
+alerted on a hash match for a known credential-dumping tool on
 \`WS-118\`, a workstation in DA-personnel use. Triage. The artifacts
 on hand cover browser, filesystem, and a partial execution-artifact
 set. The user (M. WONG) is on leave and hasn't been interviewed.
@@ -402,7 +403,9 @@ incident. Don't conflate them.
   entries on the host. Includes a note about whether Prefetch is
   enabled.
 - **sysmon-process-create.csv** — a 24-hour window of Sysmon
-  ProcessCreate events on the host.
+  ProcessCreate events on the host. (Sysmon = Microsoft System
+  Monitor, a free Windows service that logs process, network, and
+  file activity to the Event Log.)
 
 ## Reasoning discipline
 
