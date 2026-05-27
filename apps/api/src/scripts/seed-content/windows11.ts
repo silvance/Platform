@@ -67,6 +67,16 @@ But the read has classic traps:
 - **host-context.json** — Windows build, BAM service state,
   acquisition timestamp.
 
+## A note on the tool names you'll see in the question options
+
+This scenario's questions reference **EDR** (Endpoint Detection
+and Response — host-side security telemetry like CrowdStrike
+Falcon or Microsoft Defender for Endpoint) and **Sysmon**
+(Microsoft's free System Monitor service, which emits structured
+process / network / file events to the Event Log). You will not
+need to recite their internals — only recognize that they
+complement BAM as **execution-evidence** sources.
+
 ## Reporting framing
 
 For ACI reporting, name BAM findings at the level the artifact
@@ -237,7 +247,7 @@ and execution-of-tool sit in different reporting buckets.
           {
             id: "no-foreground-bam",
             label:
-              "BAM has no record of `bitsadmin.exe` being a foreground program for any tracked user. Absence in BAM is suggestive, not proof — corroborate with Prefetch / Amcache / EDR (Endpoint Detection and Response — host-side security telemetry like CrowdStrike Falcon, Microsoft Defender for Endpoint, etc.) before claiming non-execution.",
+              "BAM has no record of `bitsadmin.exe` being a foreground program for any tracked user. Absence in BAM is suggestive, not proof — corroborate with Prefetch / Amcache / EDR before claiming non-execution.",
           },
           {
             id: "ran-as-background",
@@ -270,7 +280,7 @@ and execution-of-tool sit in different reporting buckets.
           { id: "amcache", label: "Amcache (`Amcache.hve`)." },
           { id: "userassist", label: "UserAssist (per-user, ROT13-encoded)." },
           { id: "wpndatabase", label: "Windows Notification Database (`wpndatabase.db`)." },
-          { id: "edr-process-create", label: "EDR / Sysmon process-create events (EID 1 / EID 4688). (Sysmon = Microsoft System Monitor, a free Windows service that emits structured process / network / file events to the Event Log.)" },
+          { id: "edr-process-create", label: "EDR / Sysmon process-create events (EID 1 / EID 4688)." },
         ],
         allowMultiple: true,
         expected: {

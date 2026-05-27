@@ -190,6 +190,13 @@ What netscan doesn't support:
 - the *history* — connections opened and closed before the
   capture aren't here;
 - whether a destination is malicious.
+
+> **A note on the option text.** The question options below
+> mention **EDR** (Endpoint Detection and Response — the
+> enterprise security-agent class: CrowdStrike Falcon, Microsoft
+> Defender for Endpoint, etc.) as a possible source for the
+> *content* of a connection. You don't need to know the agent
+> internals — only that EDR is a host-side telemetry source.
 `.trim(),
     artifacts: [
       {
@@ -259,7 +266,7 @@ What netscan doesn't support:
           {
             id: "no-no-payload",
             label:
-              "No. Netscan captures the socket's existence and state at the capture moment; it carries no payload bytes. \"Bytes were sent\" needs full packet capture or an EDR (Endpoint Detection and Response — host-side security telemetry) file-transfer event scoped to that process.",
+              "No. Netscan captures the socket's existence and state at the capture moment; it carries no payload bytes. \"Bytes were sent\" needs full packet capture or an EDR file-transfer event scoped to that process.",
           },
           {
             id: "yes-established-means-sent",

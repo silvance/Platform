@@ -432,6 +432,16 @@ That record captures *the device showed up*: vendor / product /
 serial, the time it was first installed, and when it was last
 connected. It does **not** capture what — if anything — happened
 between the connection and the disconnection.
+
+> **Heads-up on terminology in the options.** Q2 mentions
+> **EDR** and **Sysmon** — both are *host-side* sources that
+> observe what happens on a workstation. EDR (Endpoint Detection
+> and Response) is the enterprise security agent class
+> (CrowdStrike Falcon, Microsoft Defender for Endpoint, etc.);
+> Sysmon is Microsoft's free System Monitor service that emits
+> structured process / network / file events to the Event Log.
+> Both can record per-file writes — including writes to a USB
+> volume.
 `.trim(),
     artifacts: [
       {
@@ -497,7 +507,7 @@ between the connection and the disconnection.
           {
             id: "edr-file-write",
             label:
-              "An EDR / Sysmon `FileCreate` event scoped to the USB volume during the connection window, naming the specific file. (EDR = Endpoint Detection and Response, e.g. CrowdStrike Falcon or Microsoft Defender for Endpoint; Sysmon = Microsoft's free System Monitor service. Both emit per-file-write events.)",
+              "An EDR / Sysmon `FileCreate` event scoped to the USB volume during the connection window, naming the specific file.",
           },
           {
             id: "more-usbstor",
