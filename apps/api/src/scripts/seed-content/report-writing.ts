@@ -405,10 +405,14 @@ Rewrite the sentence.
         ordinal: 3,
         type: "confidence",
         weight: 1,
-        promptMd: "Confidence (1–5) that this writeup is ready to send.",
+        promptMd: [
+          "Confidence (1–5) that the **calibrated rewrite** you picked in Q1 is ready to send.",
+          "",
+          "> *util-x.exe was downloaded to WS-118 at 14:08:23Z. No execution-artifact evidence (Prefetch, Sysmon ProcessCreate) was observed in the available window. User has not been interviewed.*",
+        ].join("\n"),
         expected: { type: "confidence", expectedRange: [4, 5] },
         debriefMd:
-          "High — for the *calibrated* version. It states what's known, what's looked for, and what's missing. That's a defensible writeup.",
+          "High — the calibrated rewrite states what's known, what's looked for, and what's missing. That's a defensible writeup.",
       },
     ],
   },
