@@ -389,7 +389,7 @@ per-user.
           allowMultiple: false,
         },
         debriefMd:
-          "**UserAssist.** It's a per-user registry artifact that records GUI-launched programs under that user's NTUSER.DAT. Sysmon Event 1 (ProcessCreate) or 4688 audit events with the SubjectUserName field are stronger if you have them — but among the three options, UserAssist is the one that ties an execution to a specific user.",
+          "**UserAssist.** It's a per-user registry artifact that records GUI-launched programs under that user's NTUSER.DAT. Sysmon Event 1 (ProcessCreate) — Sysmon is Microsoft's free System Monitor service that emits structured process / network / file events to the Event Log — or 4688 audit events with the SubjectUserName field are stronger if you have them; but among the three options, UserAssist is the one that ties an execution to a specific user.",
       },
       {
         ordinal: 3,
@@ -497,7 +497,7 @@ between the connection and the disconnection.
           {
             id: "edr-file-write",
             label:
-              "An EDR / Sysmon `FileCreate` event scoped to the USB volume during the connection window, naming the specific file.",
+              "An EDR / Sysmon `FileCreate` event scoped to the USB volume during the connection window, naming the specific file. (EDR = Endpoint Detection and Response, e.g. CrowdStrike Falcon or Microsoft Defender for Endpoint; Sysmon = Microsoft's free System Monitor service. Both emit per-file-write events.)",
           },
           {
             id: "more-usbstor",
@@ -609,7 +609,7 @@ disk untouched. Those are separate artifacts.
           allowMultiple: false,
         },
         debriefMd:
-          "**The file was saved to disk.** The download row records exactly that. \"Executed\" and \"intentional\" are bigger claims that need separate evidence: execution needs Prefetch / Amcache / Sysmon / 4688; intent needs context the artifact doesn't carry.",
+          "**The file was saved to disk.** The download row records exactly that. \"Executed\" and \"intentional\" are bigger claims that need separate evidence: execution needs Prefetch / Amcache / Sysmon (Microsoft System Monitor — free Windows service that emits per-process events) / 4688; intent needs context the artifact doesn't carry.",
       },
       {
         ordinal: 2,
@@ -685,7 +685,9 @@ artifacts.
 > - **Browser-history** row: \`q3-targets.xlsx\` was opened in
 >   Excel at 14:30 UTC on the same workstation.
 > - **No EDR file-write events** to the USB volume were captured
->   during the connection window.
+>   during the connection window. (EDR = Endpoint Detection and
+>   Response — host-side security telemetry like CrowdStrike
+>   Falcon, Microsoft Defender for Endpoint, or Sysmon.)
 
 ## Draft finding (overclaims)
 

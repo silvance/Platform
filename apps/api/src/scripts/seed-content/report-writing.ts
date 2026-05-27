@@ -325,7 +325,9 @@ category the writeup should treat it as.
 A junior analyst wrote: *"util-x.exe was downloaded and executed
 on WS-118."* The artifacts on hand show the download cleanly, but
 no Prefetch entry and no Sysmon ProcessCreate within the 24-hour
-window.
+window. (Sysmon = Microsoft System Monitor, a free Windows service
+that emits structured process / network / file events to the Event
+Log; ProcessCreate / EID 1 is its per-process-start event.)
 
 Rewrite the sentence.
 `.trim(),
