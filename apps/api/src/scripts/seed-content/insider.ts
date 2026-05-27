@@ -51,7 +51,11 @@ events, VPN logons, and one page of role / project context.
 - **removable-media.csv** — USB / SD-card mount + dismount events
   from the workstation EDR. (EDR = Endpoint Detection and Response
   — host-side security telemetry, e.g. CrowdStrike Falcon,
-  Microsoft Defender for Endpoint.)
+  Microsoft Defender for Endpoint, or Sysmon — Microsoft's free
+  System Monitor service. The question options below mention these
+  alongside other source types; you don't need to know their
+  internals, only that EDR / Sysmon are host-side sources that
+  observe file writes.)
 - **vpn-logons.csv** — VPN session starts + ends for this user.
 - **employee-context.json** — role, projects, manager, last
   performance review notes (sanitized).
@@ -247,7 +251,7 @@ finding by itself.
         promptMd:
           "Which **single** additional source would most directly turn 'USB was mounted' into 'these specific files were written to the USB'?",
         options: [
-          { id: "edr-filewrite", label: "EDR / Sysmon FileCreate (file-write) events scoped to the USB volume during the mount window. (Sysmon = Microsoft System Monitor, free Windows service that emits structured process / file / network events to the Event Log; FileCreate / EID 11 is its file-write event.)" },
+          { id: "edr-filewrite", label: "EDR / Sysmon FileCreate (file-write) events scoped to the USB volume during the mount window." },
           { id: "more-vpn-logons", label: "More VPN logon records for Tran" },
           { id: "dms-view-events", label: "Additional DMS view-events for the same documents" },
           { id: "usb-serial-history", label: "USB VID/PID/serial history from the OS USB registry" },
