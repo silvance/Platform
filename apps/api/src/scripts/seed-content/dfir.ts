@@ -1127,6 +1127,16 @@ for what it actually records.
             "2026-08-15 10:14:00Z",
             "2026-08-15 10:14:00",
             "2026-08-15T10:14:00 UTC",
+            "2026-08-15 10:14:00 UTC",
+            // Bare-time variants. The reader who typed "10:14:00"
+            // identified the correct field in the artifact (all three
+            // target timestamps happen to coincide at 10:14:00,
+            // distinct from the source row's 10:14:02); penalising
+            // them with NOT YET teaches writeup form, not field
+            // identification, and this question is the latter.
+            "10:14:00",
+            "10:14:00Z",
+            "10:14:00 UTC",
           ],
           hint: "Look at the `target last-access:` line in the LNK artifact (NOT the LNK's own creation/modification times — those are a few seconds later).",
           hintAfterTries: 2,
@@ -1139,6 +1149,10 @@ for what it actually records.
             "2026-08-15 10:14:00Z",
             "2026-08-15 10:14:00",
             "2026-08-15T10:14:00 UTC",
+            "2026-08-15 10:14:00 UTC",
+            "10:14:00",
+            "10:14:00Z",
+            "10:14:00 UTC",
           ],
           regex: false,
         },
