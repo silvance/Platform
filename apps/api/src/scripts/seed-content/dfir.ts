@@ -1119,7 +1119,7 @@ for what it actually records.
         type: "text_match",
         weight: 1,
         promptMd:
-          "What time did the **target document's** last-access show in the LNK? **(ISO-8601 as written; trailing `Z` and the `T` separator both optional.)**",
+          "What **date and time** did the **target document's** last-access show in the LNK? Quote the full timestamp the way the artifact prints it — shape is `YYYY-MM-DD HH:MM:SS` (or with a `T` separator and a trailing `Z`).",
         textMatch: {
           acceptableAnswers: [
             "2026-08-15T10:14:00Z",
