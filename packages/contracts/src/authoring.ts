@@ -48,15 +48,21 @@ export const ScenarioBriefDraft = z.object({
 });
 export type ScenarioBriefDraft = z.infer<typeof ScenarioBriefDraft>;
 
-// Tag bounds: lowercase + hyphen, ≤40 chars, ≤20 per scenario. Keeps
-// admin-typed input from blowing up the catalog `tags` chip cluster.
+// Tag bounds: lowercase + hyphen or underscore, ≤40 chars, ≤20 per
+// scenario. Keeps admin-typed input from blowing up the catalog
+// `tags` chip cluster. Underscores are allowed because the seed
+// corpus and the Lane / SkillArea Prisma enums all use snake_case
+// (`rf_awareness`, `windows_artifacts`, `report_writing` …), and
+// tags conventionally mirror those identifiers. A hyphen-only
+// validator would reject every legacy tag and brick the admin
+// metadata save.
 export const ScenarioTag = z
   .string()
   .min(1)
   .max(40)
   .regex(
-    /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/,
-    "Tags must be lowercase alphanumeric with hyphens.",
+    /^[a-z0-9](?:[a-z0-9_-]*[a-z0-9])?$/,
+    "Tags must be lowercase alphanumeric with hyphens or underscores.",
   );
 
 export const CreateScenarioRequest = z.object({
