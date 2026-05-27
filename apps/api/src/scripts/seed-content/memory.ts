@@ -259,7 +259,7 @@ What netscan doesn't support:
           {
             id: "no-no-payload",
             label:
-              "No. Netscan captures the socket's existence and state at the capture moment; it carries no payload bytes. \"Bytes were sent\" needs full packet capture or an EDR file-transfer event scoped to that process.",
+              "No. Netscan captures the socket's existence and state at the capture moment; it carries no payload bytes. \"Bytes were sent\" needs full packet capture or an EDR (Endpoint Detection and Response — host-side security telemetry) file-transfer event scoped to that process.",
           },
           {
             id: "yes-established-means-sent",
