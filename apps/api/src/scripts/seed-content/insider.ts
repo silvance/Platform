@@ -49,7 +49,9 @@ events, VPN logons, and one page of role / project context.
   management system. \`action\` is what the DMS recorded (view,
   download, share-link-created).
 - **removable-media.csv** — USB / SD-card mount + dismount events
-  from the workstation EDR.
+  from the workstation EDR. (EDR = Endpoint Detection and Response
+  — host-side security telemetry, e.g. CrowdStrike Falcon,
+  Microsoft Defender for Endpoint.)
 - **vpn-logons.csv** — VPN session starts + ends for this user.
 - **employee-context.json** — role, projects, manager, last
   performance review notes (sanitized).
@@ -245,7 +247,7 @@ finding by itself.
         promptMd:
           "Which **single** additional source would most directly turn 'USB was mounted' into 'these specific files were written to the USB'?",
         options: [
-          { id: "edr-filewrite", label: "EDR / Sysmon FileCreate (file-write) events scoped to the USB volume during the mount window" },
+          { id: "edr-filewrite", label: "EDR / Sysmon FileCreate (file-write) events scoped to the USB volume during the mount window. (Sysmon = Microsoft System Monitor, free Windows service that emits structured process / file / network events to the Event Log; FileCreate / EID 11 is its file-write event.)" },
           { id: "more-vpn-logons", label: "More VPN logon records for Tran" },
           { id: "dms-view-events", label: "Additional DMS view-events for the same documents" },
           { id: "usb-serial-history", label: "USB VID/PID/serial history from the OS USB registry" },
@@ -485,7 +487,7 @@ not a finding.
           allowMultiple: true,
         },
         debriefMd:
-          "Open + mount are events you observed. *Write* is not observable from mount events alone — you need EDR FileCreate/Write events on the USB volume. *Policy violation* depends on whether the data-handling portal approved this USB write (logs not included).",
+          "Open + mount are events you observed. *Write* is not observable from mount events alone — you need EDR (Endpoint Detection and Response — host-side security telemetry like CrowdStrike Falcon, Microsoft Defender for Endpoint, or Sysmon) FileCreate/Write events on the USB volume. *Policy violation* depends on whether the data-handling portal approved this USB write (logs not included).",
       },
       {
         ordinal: 2,
