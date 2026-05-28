@@ -51,7 +51,7 @@ export function UserRow({ user, isSelf }: Props) {
 
   return (
     <tr style={{ borderTop: "1px solid var(--border)", verticalAlign: "top" }}>
-      <td style={cellStyle}>
+      <td style={cellStyle} data-label="User">
         <div style={{ fontWeight: 500 }}>{user.email}</div>
         <div style={{ color: "var(--muted)", fontSize: ".85rem" }}>
           {user.displayName}
@@ -62,7 +62,7 @@ export function UserRow({ user, isSelf }: Props) {
           </div>
         ) : null}
       </td>
-      <td style={cellStyle}>
+      <td style={cellStyle} data-label="Role">
         <RoleControl
           userId={user.id}
           role={user.role}
@@ -71,7 +71,7 @@ export function UserRow({ user, isSelf }: Props) {
           pending={updating}
         />
       </td>
-      <td style={cellStyle}>
+      <td style={cellStyle} data-label="Status">
         {user.approvedAt === null ? (
           <PendingApprovalControl
             userId={user.id}
@@ -88,14 +88,14 @@ export function UserRow({ user, isSelf }: Props) {
           />
         )}
       </td>
-      <td style={cellStyle}>
+      <td style={cellStyle} data-label="Last login">
         <div style={{ color: "var(--muted)", fontSize: ".85rem" }}>
           {user.lastLoginAt
             ? new Date(user.lastLoginAt).toLocaleString()
             : "—"}
         </div>
       </td>
-      <td style={{ ...cellStyle, minWidth: 220 }}>
+      <td style={{ ...cellStyle, minWidth: 220 }} data-label="Password / actions">
         {!isSelf ? (
           <div style={{ display: "flex", flexDirection: "column", gap: ".4rem" }}>
             {showReset ? (

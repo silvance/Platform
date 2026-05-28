@@ -1446,20 +1446,65 @@ a.stat-card:hover {
      20% of horizontal space on chrome. */
   .card { padding: var(--space-4); }
 
-  /* Admin tables: don't shrink to fit (unreadable at 9px).
-     Wrap the table in horizontal-scroll behavior via a
-     scrollable parent. We can't add a wrapper retroactively,
-     so the table itself becomes a horizontally-scrolling
-     block. Cells get tighter padding to claw some space back. */
+  /* Admin tables on mobile: stack each row as a card. The
+     previous design used horizontal-scroll (display:block +
+     overflow-x:auto) which left rows tall enough for the widest
+     cell + buried off-screen controls. Now each <tr> becomes a
+     vertical card and each <td> a labeled block; the column
+     header row is hidden because every cell is self-labelled via
+     a data-label attribute. */
   .admin-table {
     display: block;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    white-space: nowrap;
-    font-size: .85rem;
+    font-size: .9rem;
+    border-collapse: separate;
+    border-spacing: 0;
   }
-  .admin-table th, .admin-table td {
-    padding: var(--space-2) var(--space-2);
+  .admin-table thead { display: none; }
+  .admin-table tbody { display: block; }
+  .admin-table tbody tr {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-4);
+    border-top: 1px solid var(--border);
+  }
+  .admin-table tbody tr:first-child { border-top: 0; }
+  /* Drop the alternating-row background — looks weird in card form. */
+  .admin-table tbody tr:nth-child(odd) td,
+  .admin-table tbody tr:nth-child(odd) th,
+  .admin-table tbody tr:hover td {
+    background: transparent;
+  }
+  .admin-table tbody td {
+    display: block;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+  /* Per-cell labels: each <td data-label="X"> gets the label
+     above its content. Empty cells suppress the label. */
+  .admin-table tbody td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    font-size: .7rem;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--muted);
+    margin-bottom: var(--space-1);
+    font-weight: 600;
+  }
+  .admin-table tbody td[data-label]:empty::before { display: none; }
+  /* Forms inside cells: stretch to full width so submit-row
+     buttons don't sit awkwardly half-width. */
+  .admin-table tbody td form {
+    width: 100%;
+  }
+  .admin-table tbody td .input,
+  .admin-table tbody td input[type="text"],
+  .admin-table tbody td input[type="email"],
+  .admin-table tbody td input[type="password"],
+  .admin-table tbody td select {
+    width: 100%;
   }
 
   /* Page header: tighter row gap. */
