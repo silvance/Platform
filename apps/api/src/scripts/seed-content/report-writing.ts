@@ -412,7 +412,7 @@ Rewrite the sentence.
         ].join("\n"),
         expected: { type: "confidence", expectedRange: [4, 5] },
         debriefMd:
-          "High — the calibrated rewrite states what's known, what's looked for, and what's missing. That's a defensible writeup.",
+          "High. The calibrated rewrite says what's known, what was looked for, and what's missing. That's enough to send.",
       },
     ],
   },

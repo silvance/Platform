@@ -428,20 +428,17 @@ key:
 HKLM\\SYSTEM\\CurrentControlSet\\Enum\\USBSTOR
 \`\`\`
 
-That record captures *the device showed up*: vendor / product /
+That record captures *the device showed up*: vendor, product,
 serial, the time it was first installed, and when it was last
 connected. It does **not** capture what — if anything — happened
-between the connection and the disconnection.
+between connect and disconnect.
 
-> **Heads-up on terminology in the options.** Q2 mentions
-> **EDR** and **Sysmon** — both are *host-side* sources that
-> observe what happens on a workstation. EDR (Endpoint Detection
-> and Response) is the enterprise security agent class
-> (CrowdStrike Falcon, Microsoft Defender for Endpoint, etc.);
-> Sysmon is Microsoft's free System Monitor service that emits
-> structured process / network / file events to the Event Log.
-> Both can record per-file writes — including writes to a USB
-> volume.
+Q2 references EDR and Sysmon. EDR (Endpoint Detection and
+Response) is the enterprise security agent class — Falcon,
+Defender for Endpoint, and similar. Sysmon is Microsoft's free
+System Monitor service that emits structured process, network, and
+file events to the Event Log. Both can record per-file writes,
+including writes to a USB volume.
 `.trim(),
     artifacts: [
       {
@@ -767,7 +764,7 @@ evidence supports some of those claims and not others.
           allowMultiple: false,
         },
         debriefMd:
-          "**The calibrated rewrite.** It names what the artifacts show (USB connect window; file opened; no EDR file-write), names what they don't show (no observed copy; no evidence of ownership), and stops at *opportunity*. The assertive rewrite imports four claims (`knowingly`, `removed`, `personal`, `Kingston`) that the evidence does not back. The denial rewrite over-corrects in the opposite direction — \"no observed write\" is not the same as \"no write occurred,\" since the EDR's coverage of the window isn't itself proven complete.",
+          "The middle rewrite. It names what the artifacts show (USB connect window, file opened, no EDR file-write), names what they don't show (no observed copy, no evidence of ownership), and stops at opportunity. The first imports four claims — `knowingly`, `removed`, `personal`, `Kingston` — that the evidence does not back. The third over-corrects: *no observed write* is not the same as *no write occurred*, because the EDR's coverage of the window isn't itself proven complete.",
       },
       {
         ordinal: 2,
@@ -831,28 +828,20 @@ evidence supports some of those claims and not others.
     brief: `
 # Brief
 
-Every prior scenario in this lane drilled one skill on one
-artifact. This one bundles them. A workstation (\`WS-OPS-058\`)
-was flagged by the security manager because of a "possible
-USB-based exfiltration" report from a teammate. You receive five
-small artifacts and a draft finding from a junior analyst:
+A workstation (\`WS-OPS-058\`) was flagged after a teammate
+reported a possible USB-based exfiltration. You have five small
+artifacts and a draft finding from a junior analyst:
 
-- the AXIOM-style case summary,
+- an AXIOM-style case summary,
 - the acquisition log,
-- a Prefetch listing for a tool of interest,
+- a Prefetch listing for one binary of interest,
 - a USBSTOR record,
 - a browser-download row.
 
-Your tasking is short:
-
-1. For each sub-question, identify the **right artifact** to read.
-2. Read it carefully — the same discipline as the prior scenarios.
-3. Pick the calibrated finding from three drafts at the end.
-
-Nothing in this case requires a new tool or a deeper artifact
-than the lane has already shown you. The new skill is the
-synthesis — *which artifact answers which claim*, and *do not
-let one artifact's evidence be borrowed by a different claim*.
+For each question, decide which artifact carries the answer, and
+don't let one artifact's evidence get stretched onto a claim it
+doesn't cover. Then pick the finding that says what the evidence
+supports — no more, no less.
 `.trim(),
     artifacts: [
       {
@@ -1121,7 +1110,7 @@ let one artifact's evidence be borrowed by a different claim*.
         type: "multi_choice",
         weight: 2,
         promptMd: [
-          "Pick the **calibrated** rewrite of the junior analyst's draft. The other two over-claim or under-claim.",
+          "Which rewrite of the junior analyst's draft would you actually send to a reviewer?",
           "",
           "Junior analyst's draft:",
           "",
@@ -1151,7 +1140,7 @@ let one artifact's evidence be borrowed by a different claim*.
           allowMultiple: false,
         },
         debriefMd:
-          "**The calibrated rewrite.** It names each event at the level the evidence supports, calls out the **custody gap** on the 4137 (which the other two ignore), and explicitly flags the file-write question as **open** rather than answered in either direction. The over-claim asserts `exfiltrated` and `personal` — neither is in the artifact set. The under-claim treats *absence of evidence of writes* as *evidence of absence of writes*; without removable-media file-write telemetry, the right posture is *open, pending review*, not *no*.",
+          "The middle one is the rewrite to send. It names each event at the resolution the evidence supports, flags the 4137's custody gap (which the other two ignore), and leaves the file-write question explicitly open rather than answering it in either direction. The first imports `exfiltrated` and `personal` — neither is in the artifact set. The third treats *no observed writes* as *no writes occurred*; without removable-media file-write telemetry, that's *open, pending review*, not *no*.",
       },
     ],
   },
