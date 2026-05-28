@@ -233,6 +233,7 @@ footer { color: var(--muted); font-size: .85rem; margin-top: var(--space-12); }
   line-height: 1;
   cursor: pointer;
   border: 1px solid transparent;
+  white-space: nowrap;
   transition: background var(--transition), border-color var(--transition), color var(--transition);
 }
 .btn:focus-visible {
@@ -772,6 +773,8 @@ footer { color: var(--muted); font-size: .85rem; margin-top: var(--space-12); }
   color: var(--fg-strong);
   letter-spacing: -0.01em;
   text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .brand:hover { text-decoration: none; }
 /* Shield brand mark. Renders /logo-mark.png as a background so a
@@ -802,6 +805,7 @@ footer { color: var(--muted); font-size: .85rem; margin-top: var(--space-12); }
   font-size: .9rem;
   font-weight: 500;
   text-decoration: none;
+  white-space: nowrap;
   transition: background var(--transition), color var(--transition);
 }
 .nav-link:hover {
@@ -812,6 +816,93 @@ footer { color: var(--muted); font-size: .85rem; margin-top: var(--space-12); }
 .nav-link[data-active="true"] {
   background: var(--bg-active);
   color: var(--accent);
+}
+
+/* ─── Admin dropdown (desktop) ──────────────────────────── */
+/* The Admin link itself stays a plain nav-link; the chevron
+   button next to it toggles a popover with the sub-pages. On
+   mobile the popover is hidden and the sub-links render as flat
+   rows below "Admin" via .nav-link-mobile-only. */
+.admin-dropdown {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+}
+.admin-dropdown-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 32px;
+  margin-left: -.15rem;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-md);
+  color: var(--muted-strong);
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition), transform var(--transition);
+}
+.admin-dropdown-toggle:hover {
+  background: var(--bg-hover);
+  color: var(--fg);
+}
+.admin-dropdown-toggle:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.admin-dropdown[data-open="true"] .admin-dropdown-toggle {
+  background: var(--bg-hover);
+  color: var(--fg);
+}
+.admin-dropdown[data-open="true"] .admin-dropdown-toggle svg {
+  transform: rotate(180deg);
+}
+.admin-dropdown-toggle svg {
+  transition: transform var(--transition);
+}
+.admin-dropdown-menu {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  right: 0;
+  min-width: 180px;
+  padding: var(--space-1);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  z-index: 30;
+}
+.admin-dropdown-item {
+  display: block;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  color: var(--muted-strong);
+  font-size: .9rem;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background var(--transition), color var(--transition);
+}
+.admin-dropdown-item:hover {
+  background: var(--bg-hover);
+  color: var(--fg);
+  text-decoration: none;
+}
+.admin-dropdown-item[data-active="true"] {
+  background: var(--bg-active);
+  color: var(--accent);
+}
+
+/* Desktop hides the flat mobile-only admin sub-links — the
+   dropdown handles them. The mobile media query below flips
+   them back on inside the open drawer. */
+.nav-link-mobile-only {
+  display: none;
 }
 
 .header-actions { display: flex; align-items: center; gap: var(--space-2); }
@@ -1305,6 +1396,19 @@ a.stat-card:hover {
     padding: var(--space-3) var(--space-4);
     font-size: 1rem;
     min-height: 44px;
+  }
+  /* In the open drawer: render the admin sub-links inline as
+     flat rows, hide the desktop chevron toggle + popover. */
+  .app-header[data-menu-open="true"] .nav-link-mobile-only {
+    display: inline-flex;
+    padding-left: var(--space-6);
+  }
+  .app-header[data-menu-open="true"] .admin-dropdown-toggle,
+  .app-header[data-menu-open="true"] .admin-dropdown-menu {
+    display: none;
+  }
+  .app-header[data-menu-open="true"] .admin-dropdown {
+    display: contents;
   }
   /* Vertical divider collapses to a horizontal hairline in the
      stacked drawer. */

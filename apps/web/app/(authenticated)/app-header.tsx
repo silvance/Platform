@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import type { PublicUser } from "@ci-train/contracts";
 import type { Theme } from "@/lib/theme";
 import { LogoutButton } from "./logout-button";
@@ -11,12 +11,12 @@ import { ThemeToggle } from "./theme-toggle";
 interface Props {
   user: PublicUser;
   theme: Theme;
- // count of self-registered accounts awaiting admin
-  // approval. Passed from the server layout. Always 0 for
-  // non-admin users (the layout doesn't fetch it).
   pendingApprovalCount: number;
 }
 
+// Top-level nav. Admin sub-pages live in ADMIN_SUB_LINKS below and
+// hang off the "Admin" link as a dropdown so the bar doesn't blow
+// up to ~10 items.
 const NAV_ITEMS: Array<{
   href: string;
   label: string;
@@ -26,22 +26,18 @@ const NAV_ITEMS: Array<{
   { href: "/scenarios", label: "Challenges" },
   { href: "/me/progress", label: "Progress" },
   { href: "/me/security", label: "Security" },
-  // External reference site. Opens in a new tab.
   { href: "https://codeworld.codes", label: "Reference", external: true },
   { href: "/admin", label: "Admin", admin: true },
- // surface Review directly in the nav. Buried as a tile
-  // on /admin in M21b — feedback was that operators couldn't
-  // find it. A top-level link makes the playthrough surface
-  // unmissable.
-  { href: "/admin/review", label: "Review", admin: true },
- // per-scenario / per-question analytics.
-  { href: "/admin/analytics", label: "Analytics", admin: true },
- // recent-completions feed: who finished what, when.
-  { href: "/admin/completions", label: "Completions", admin: true },
- // registration access-code management surface.
-  { href: "/admin/access-codes", label: "Codes", admin: true },
- // user-submitted feedback inbox.
-  { href: "/admin/feedback", label: "Feedback", admin: true },
+];
+
+// Admin sub-pages — shown in a dropdown off "Admin" on desktop and
+// as flat rows under "Admin" inside the mobile drawer.
+const ADMIN_SUB_LINKS: Array<{ href: string; label: string }> = [
+  { href: "/admin/review", label: "Review" },
+  { href: "/admin/analytics", label: "Analytics" },
+  { href: "/admin/completions", label: "Completions" },
+  { href: "/admin/access-codes", label: "Codes" },
+  { href: "/admin/feedback", label: "Feedback" },
 ];
 
 export function AppHeader({ user, theme, pendingApprovalCount }: Props) {
@@ -52,28 +48,43 @@ export function AppHeader({ user, theme, pendingApprovalCount }: Props) {
     (n) => !n.admin || user.role === "admin",
   );
 
-  // Mobile drawer state. Toggled by the hamburger button below the
-  // 768px breakpoint; CSS hides the drawer entirely on wider screens.
   const [menuOpen, setMenuOpen] = useState(false);
+  const [adminMenuOpen, setAdminMenuOpen] = useState(false);
+  const adminDropdownRef = useRef<HTMLDivElement | null>(null);
 
-  // Auto-close the drawer whenever the route changes (the user just
-  // tapped a nav link — no reason to keep the overlay open).
+  // Auto-close both menus on route change.
   useEffect(() => {
     setMenuOpen(false);
+    setAdminMenuOpen(false);
   }, [pathname]);
 
-  // ESC closes the drawer too.
+  // ESC closes the drawer.
   useEffect(() => {
-    if (!menuOpen) return;
+    if (!menuOpen && !adminMenuOpen) return;
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setMenuOpen(false);
+      if (e.key === "Escape") {
+        setMenuOpen(false);
+        setAdminMenuOpen(false);
+      }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [menuOpen]);
+  }, [menuOpen, adminMenuOpen]);
 
-  // Lock background scroll while the drawer is open so a tap-through
-  // doesn't scroll the page underneath. Cleaned up on close.
+  // Click outside closes the admin dropdown. The mobile drawer is
+  // an overlay that already covers the page so it doesn't need this.
+  useEffect(() => {
+    if (!adminMenuOpen) return;
+    function onDown(e: MouseEvent) {
+      if (!adminDropdownRef.current) return;
+      if (!adminDropdownRef.current.contains(e.target as Node)) {
+        setAdminMenuOpen(false);
+      }
+    }
+    window.addEventListener("mousedown", onDown);
+    return () => window.removeEventListener("mousedown", onDown);
+  }, [adminMenuOpen]);
+
   useEffect(() => {
     if (typeof document === "undefined") return;
     const prev = document.body.style.overflow;
@@ -83,32 +94,28 @@ export function AppHeader({ user, theme, pendingApprovalCount }: Props) {
     };
   }, [menuOpen]);
 
+  const isAdmin = user.role === "admin";
+  const adminActive =
+    pathname === "/admin" || pathname.startsWith("/admin/");
+
   return (
     <header className="app-header" data-menu-open={menuOpen ? "true" : "false"}>
       <div className="app-header-inner">
         <Link
-          href={user.role === "admin" ? "/admin" : "/scenarios"}
+          href={isAdmin ? "/admin" : "/scenarios"}
           className="brand"
         >
-          {/* Shield mark (CSS background) + live wordmark. Drop a
-              transparent-bg square PNG at apps/web/public/logo-mark.png
-              and the .brand-mark span picks it up automatically. */}
           <span className="brand-mark" aria-hidden />
           CI Cyber Lab
         </Link>
         <nav className="nav-links" id="primary-nav" aria-label="Primary">
           {visibleNav.map((item, idx) => {
-            // The Admin nav link gets a pending-approval badge
-            // when self-registrations are waiting. /admin/users
-            // is where the admin acts on them.
             const showPendingBadge =
               item.href === "/admin" && pendingApprovalCount > 0;
-            // Drop a thin divider in front of the first admin-only
-            // link to visually separate learner vs operator nav.
             const showDivider =
               item.admin && idx > 0 && !visibleNav[idx - 1]?.admin;
-            // External links bypass next/link and just render an
-            // <a target="_blank"> with a trailing arrow glyph.
+
+            // External links: <a target="_blank"> with trailing arrow.
             if (item.external) {
               return (
                 <Fragment key={item.href}>
@@ -127,34 +134,109 @@ export function AppHeader({ user, theme, pendingApprovalCount }: Props) {
                 </Fragment>
               );
             }
+
+            // Admin link gets a dropdown trigger + sub-link popover.
+            if (item.href === "/admin" && isAdmin) {
+              return (
+                <Fragment key={item.href}>
+                  {showDivider ? <span className="nav-divider" aria-hidden /> : null}
+                  <div
+                    className="admin-dropdown"
+                    ref={adminDropdownRef}
+                    data-open={adminMenuOpen ? "true" : "false"}
+                  >
+                    <Link
+                      href={showPendingBadge ? "/admin/users" : "/admin"}
+                      className="nav-link"
+                      data-active={adminActive}
+                      title={
+                        showPendingBadge
+                          ? `${pendingApprovalCount} self-registration${
+                              pendingApprovalCount === 1 ? "" : "s"
+                            } awaiting approval`
+                          : undefined
+                      }
+                    >
+                      Admin
+                      {showPendingBadge ? (
+                        <span
+                          aria-label={`${pendingApprovalCount} pending`}
+                          className="nav-pending-badge"
+                        >
+                          {pendingApprovalCount}
+                        </span>
+                      ) : null}
+                    </Link>
+                    <button
+                      type="button"
+                      className="admin-dropdown-toggle"
+                      aria-haspopup="menu"
+                      aria-expanded={adminMenuOpen}
+                      aria-label={adminMenuOpen ? "Close admin menu" : "Open admin menu"}
+                      onClick={() => setAdminMenuOpen((v) => !v)}
+                    >
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <polyline points="6 9 12 15 18 9" />
+                      </svg>
+                    </button>
+                    {adminMenuOpen ? (
+                      <div className="admin-dropdown-menu" role="menu">
+                        {ADMIN_SUB_LINKS.map((sub) => (
+                          <Link
+                            key={sub.href}
+                            href={sub.href}
+                            className="admin-dropdown-item"
+                            role="menuitem"
+                            data-active={pathname === sub.href || pathname.startsWith(sub.href + "/")}
+                          >
+                            {sub.label}
+                          </Link>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                </Fragment>
+              );
+            }
+
             return (
               <Fragment key={item.href}>
                 {showDivider ? <span className="nav-divider" aria-hidden /> : null}
                 <Link
-                  href={showPendingBadge ? "/admin/users" : item.href}
+                  href={item.href}
                   className="nav-link"
                   data-active={isActive(pathname, item.href, visibleNav)}
-                  title={
-                    showPendingBadge
-                      ? `${pendingApprovalCount} self-registration${
-                          pendingApprovalCount === 1 ? "" : "s"
-                        } awaiting approval`
-                      : undefined
-                  }
                 >
                   {item.label}
-                  {showPendingBadge ? (
-                    <span
-                      aria-label={`${pendingApprovalCount} pending`}
-                      className="nav-pending-badge"
-                    >
-                      {pendingApprovalCount}
-                    </span>
-                  ) : null}
                 </Link>
               </Fragment>
             );
           })}
+          {/* Mobile drawer also surfaces the admin sub-links as
+              flat rows (one per link). On desktop these are hidden
+              by CSS — the dropdown is the only way in. */}
+          {isAdmin
+            ? ADMIN_SUB_LINKS.map((sub) => (
+                <Link
+                  key={`mobile-${sub.href}`}
+                  href={sub.href}
+                  className="nav-link nav-link-mobile-only"
+                  data-active={pathname === sub.href || pathname.startsWith(sub.href + "/")}
+                >
+                  {sub.label}
+                </Link>
+              ))
+            : null}
         </nav>
         <div className="header-actions">
           <ThemeToggle current={theme} />
@@ -213,15 +295,9 @@ export function AppHeader({ user, theme, pendingApprovalCount }: Props) {
   );
 }
 
-// Active when the pathname matches the href exactly OR when the
-// pathname sits under the link's section. The /admin link should
-// stay highlighted on /admin/challenges, /admin/users, etc.
-// /scenarios should highlight on /scenarios/<slug>.
-//
-// `siblings` lets a link defer to a more-specific sibling: visiting
-// /admin/review should highlight the Review link, NOT also light up
-// the parent /admin link. The rule: a link is NOT active if some
-// other nav link is a strictly deeper match for the same pathname.
+// Active when the pathname matches the href exactly OR sits under
+// the link's section. A link defers to a deeper sibling — so
+// /admin/review highlights "Review", not also "Admin."
 function isActive(
   pathname: string,
   href: string,
