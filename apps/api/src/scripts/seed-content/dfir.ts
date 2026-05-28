@@ -1630,4 +1630,346 @@ spillage happens, both of those are in the loop early.
       },
     ],
   },
+
+  // ─── Removable Media / Spillage capstone ────────────────────
+  {
+    slug: "spillage-handed-in-usb-capstone-001",
+    title: "Spillage Capstone: A USB Just Got Handed In",
+    summary:
+      "A civilian found a USB stick in the smoking area outside the unit building and turned it in. Walk the first-hour workflow, read the carving output, cross-check the device against the unit's USBSTOR data, and write what gets sent up the chain.",
+    skillAreas: ["df_artifacts", "removable_media", "report_writing", "inference_discipline"],
+    difficulty: 3,
+    estimatedMinutes: 50,
+    tags: [
+      "spillage",
+      "removable_media",
+      "df_artifacts",
+      "report_writing",
+      "inference_discipline",
+      "capstone",
+    ],
+    lane: "removable_media_spillage",
+    module: "Capstone",
+    sequence: 1,
+    status: "draft",
+    brief: `
+# Brief
+
+A DA-civilian in the unit picked up a USB stick on the ground in
+the smoking area outside the building this morning, brought it
+straight to the orderly room, and handed it to SSG Owens. SSG
+Owens did not plug it in. She tagged it, opened a 4137, and
+handed the package to you. Power is off; the device hasn't
+touched any unit workstation since it was found.
+
+You have the 4137 extract, a brief intake statement from SSG
+Owens, the USBSTOR-history lookup the helpdesk ran against unit
+endpoints (was this device *ever* mounted on a unit system?),
+and the early results from the offline-bench carving of the
+device. One of the carved files has classification markings.
+
+Walk through what the artifacts support, name what the
+appropriate next steps look like, and pick the wording that
+goes on the ISSM's desk this afternoon.
+`.trim(),
+    artifacts: [
+      {
+        ordinal: 1,
+        displayName: "intake-statement.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "Intake statement — SSG K. Owens (orderly room)",
+            "----------------------------------------------",
+            "",
+            "  Today, ~0815 local, J. Reyes (DA-civ, S3 shop) came in",
+            "  with a Kingston-branded USB stick. He said he found it",
+            "  on the ground in the smoking area outside the south",
+            "  entrance, by the bench. He picked it up to look at the",
+            "  label, saw \"S3-WORKING\" handwritten on it, and brought",
+            "  it directly to the orderly room. He did NOT plug it in",
+            "  anywhere.",
+            "",
+            "  I tagged the device, opened DA Form 4137 #4137-2026-",
+            "  321-A, and placed it in the evidence locker. I have",
+            "  NOT plugged it into anything. I notified the ISSM by",
+            "  phone at 0820. I am holding it pending your read.",
+            "",
+            "  /s/ K. Owens, SSG",
+            "",
+          ].join("\n"),
+        ),
+      },
+      {
+        ordinal: 2,
+        displayName: "da-4137-extract.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "DA Form 4137 #4137-2026-321-A (extract)",
+            "---------------------------------------",
+            "",
+            "  Item description : Kingston DataTraveler 3.0 USB",
+            "                     stick. Handwritten label",
+            "                     \"S3-WORKING\" on outer shell.",
+            "                     Serial visible on connector:",
+            "                     KDT-3-AB-118.",
+            "",
+            "  Released by      : J. Reyes (DA-civ, S3) — signature",
+            "                     and date, 2026-12-04 0817 local",
+            "  Received by      : SSG K. Owens (orderly room) —",
+            "                     signature and date, 2026-12-04",
+            "                     0818 local. Tag affixed at intake.",
+            "",
+            "  Released by      : SSG K. Owens — signature and date,",
+            "                     2026-12-04 0915 local",
+            "  Received by      : SPC D. Halverson (you — DFE) —",
+            "                     signature and date, 2026-12-04",
+            "                     0917 local. Tag intact at receipt.",
+            "",
+            "  Notes            : Device powered off. Not plugged in",
+            "                     to any unit system since recovery.",
+            "                     ISSM notified by phone 2026-12-04",
+            "                     0820 local.",
+            "",
+          ].join("\n"),
+        ),
+      },
+      {
+        ordinal: 3,
+        displayName: "usbstor-history-lookup.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "Unit-wide USBSTOR-history lookup — Kingston DataTraveler",
+            "serial KDT-3-AB-118",
+            "--------------------------------------------------------",
+            "",
+            "  Query                : helpdesk USB-asset inventory",
+            "                         (registry-extract feed from every",
+            "                         unit endpoint, refreshed nightly)",
+            "  Records returned     : 0",
+            "  Note                 : This serial does not match any",
+            "                         currently-known device that has",
+            "                         been mounted on a unit workstation.",
+            "                         A 0-row return is suggestive that",
+            "                         the device is unfamiliar to the",
+            "                         unit asset population, but does NOT",
+            "                         prove the device never touched a",
+            "                         unit endpoint — devices mounted",
+            "                         briefly may not have been captured,",
+            "                         and the registry-feed only began",
+            "                         in 2024-06.",
+            "",
+          ].join("\n"),
+        ),
+      },
+      {
+        ordinal: 4,
+        displayName: "carving-summary.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "Offline-bench carving — Kingston KDT-3-AB-118",
+            "(foremost 1.5.7, write-blocked, source dd image)",
+            "-----------------------------------------------",
+            "",
+            "  Image source        : kdt-3-ab-118.dd",
+            "  Image SHA-256       : 71fa...c022 (verified)",
+            "  Bytes               : 7,750,000,000 (~7.75 GB)",
+            "  File system         : exFAT, no active entries",
+            "                        (volume appears wiped — full",
+            "                         allocation table is empty)",
+            "",
+            "  Carved              : 14 files recovered from",
+            "                        unallocated space",
+            "    - 11 JPEGs (mostly photos of a child's birthday",
+            "      party; one document scan — looks like a school",
+            "      permission slip)",
+            "    - 2 PDFs (one recipe printout, one tax form",
+            "      template)",
+            "    - 1 DOCX (file of interest, see below)",
+            "",
+            "  File of interest    : carved-001.docx",
+            "    SHA-256           : 2a44...18ce",
+            "    Size              : 142,008 bytes",
+            "    First page header : (S//NF)",
+            "    Body              : memo-formatted text",
+            "                        beginning \"OPERATION ...\"",
+            "    No filesystem name : carved from unallocated",
+            "                        space; original filename not",
+            "                        recoverable",
+            "    No timestamps     : carved from unallocated; MAC",
+            "                        times not associable",
+            "    No owning SID     : not from a live filesystem",
+            "                        entry",
+            "",
+          ].join("\n"),
+        ),
+      },
+    ],
+    questions: [
+      {
+        ordinal: 1,
+        type: "multi_choice",
+        weight: 2,
+        promptMd:
+          "From the carving output, which statement is **directly supported** about `carved-001.docx`?",
+        options: [
+          {
+            id: "markings-present",
+            label:
+              "A file with classification markings on its first page (S//NF) was recovered from unallocated space on the device.",
+          },
+          {
+            id: "who-wrote",
+            label:
+              "We can identify who wrote the file from the carving output.",
+          },
+          {
+            id: "when-written",
+            label:
+              "We know when the file was last written to the device.",
+          },
+          {
+            id: "intent-spilled",
+            label:
+              "Someone intentionally moved classified material to the USB and tried to hide it by deleting it.",
+          },
+        ],
+        allowMultiple: false,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["markings-present"],
+          allowMultiple: false,
+        },
+        debriefMd:
+          "Markings present in unallocated space is what the carving output says. Authorship, write-time, and intent are all bigger claims that need things carving doesn't carry — filesystem metadata, an owning SID, a timeline. The markings alone are enough to trigger the spillage workflow; they aren't enough to write a finding about who put them there.",
+      },
+      {
+        ordinal: 2,
+        type: "multi_choice",
+        weight: 1,
+        promptMd:
+          "The unit's USBSTOR-history lookup returned zero rows for this serial. What does that **directly support**?",
+        options: [
+          {
+            id: "unfamiliar-suggestive",
+            label:
+              "The device is unfamiliar to the unit's tracked endpoint population — suggestive, but not proof the device never touched a unit system.",
+          },
+          {
+            id: "never-touched",
+            label:
+              "The device has never been mounted on any unit workstation.",
+          },
+          {
+            id: "from-outside",
+            label:
+              "The device was brought in from outside the unit by an unknown party.",
+          },
+        ],
+        allowMultiple: false,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["unfamiliar-suggestive"],
+          allowMultiple: false,
+        },
+        debriefMd:
+          "Suggestive, not proof. The artifact itself says the feed only began in 2024-06, and devices mounted briefly may not be captured. \"Never touched a unit workstation\" overstates a 0-row result. \"Brought in from outside by an unknown party\" is a different claim altogether — the device could be a unit member's personal stick, or a contractor's, or anyone's.",
+      },
+      {
+        ordinal: 3,
+        type: "multi_choice",
+        weight: 2,
+        promptMd:
+          "What is the **right first-hour action** for the markings-bearing file?",
+        options: [
+          {
+            id: "isolate-and-route",
+            label:
+              "Keep the device powered off, keep the offline-bench host isolated (no network), preserve the carved file in place, and route the find to the ISSM + supporting ACI office for a classification-determination and spillage-investigation referral.",
+          },
+          {
+            id: "open-and-read",
+            label:
+              "Open `carved-001.docx` on a unit workstation to read what it says and see who it was written for.",
+          },
+          {
+            id: "delete-and-move-on",
+            label:
+              "Delete the carved file from the bench host so it doesn't sit unsecured.",
+          },
+          {
+            id: "share-with-team",
+            label:
+              "Share the carved file with the rest of the DFE team for a second opinion via the unit Teams channel.",
+          },
+        ],
+        allowMultiple: false,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["isolate-and-route"],
+          allowMultiple: false,
+        },
+        debriefMd:
+          "Isolate, preserve, route. Opening a markings-bearing file on a unit workstation is itself another spillage event. Deleting destroys the artifact. Sharing on Teams (or any general channel) propagates it. The ACI / ISSM referral is where the classification determination and the formal spillage workflow actually live; the DFE's job is to preserve and hand off.",
+      },
+      {
+        ordinal: 4,
+        type: "text_match",
+        weight: 1,
+        promptMd:
+          "Quote the **serial number** of the recovered USB device, exactly as printed in the 4137.",
+        textMatch: {
+          acceptableAnswers: ["KDT-3-AB-118"],
+          hint: "Look for the `Serial visible on connector:` line in the 4137 extract.",
+          hintAfterTries: 2,
+        },
+        expected: {
+          type: "text_match",
+          acceptableAnswers: ["KDT-3-AB-118"],
+          regex: false,
+        },
+        debriefMd:
+          "`KDT-3-AB-118`. The serial belongs in every downstream writeup; \"a Kingston USB\" is weaker than the specific serial, and the serial is what disambiguates this device from any other Kingston the unit has seen.",
+      },
+      {
+        ordinal: 5,
+        type: "multi_choice",
+        weight: 2,
+        promptMd:
+          "Three drafts of the one-paragraph note that goes on the ISSM's desk this afternoon. Pick the one you'd actually send up.",
+        options: [
+          {
+            id: "overclaim",
+            label:
+              "*A classified document was exfiltrated from the unit on a personal USB drive and dropped in the smoking area. The owner is unknown; recommend criminal referral.*",
+          },
+          {
+            id: "calibrated",
+            label:
+              "*This morning, J. Reyes turned in a Kingston USB stick (serial KDT-3-AB-118) recovered from the smoking area outside the south entrance; device was not plugged in by any unit member between recovery and intake. Offline-bench carving of the device, with the source image hashed to 71fa...c022, recovered 14 files from unallocated space, one of which (`carved-001.docx`, SHA-256 2a44...18ce) bears (S//NF) markings on its first page. The device serial does not match any record in the unit's USBSTOR-history feed, although that feed has known coverage gaps so a unit-mounted history cannot be ruled out from this alone. Custody is unbroken per 4137 #4137-2026-321-A. Routing the find to ACI and to the ISSM for a classification-determination + spillage-investigation referral; the device remains powered off in the evidence locker pending direction.*",
+          },
+          {
+            id: "underclaim",
+            label:
+              "*A USB stick was found outside and turned in. No active files on the device. Nothing of concern; recommend disposing of the device.*",
+          },
+        ],
+        allowMultiple: false,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["calibrated"],
+          allowMultiple: false,
+        },
+        debriefMd:
+          "The middle one. It names every fact the artifacts carry (serial, source image hash, carved file hash, the markings, the custody chain) and explicitly flags the USBSTOR-history null-result as suggestive but not exhaustive. The first jumps to *exfiltrated* without any owner evidence — the device could be lost by anyone with any provenance — and recommends a referral the artifact set doesn't support. The third treats the absence of active filesystem entries as no-concern, which is exactly the read that loses the spillage; carved markings in unallocated space *is* the concern.",
+      },
+    ],
+  },
 ];

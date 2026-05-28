@@ -445,4 +445,324 @@ What malfind doesn't support:
       },
     ],
   },
+
+  // ─── Memory Forensics capstone ──────────────────────────────
+  {
+    slug: "memory-suspect-process-capstone-001",
+    title: "Memory Capstone: One Suspect Process, Three Lenses",
+    summary:
+      "A memory image from a workstation that the SOC flagged. Walk the process tree, the active connections, and the suspicious-memory regions on a single process. Decide what reads as malware vs what reads as merely off.",
+    skillAreas: ["df_artifacts", "report_writing", "inference_discipline"],
+    difficulty: 4,
+    estimatedMinutes: 60,
+    tags: [
+      "memory",
+      "volatility",
+      "report_writing",
+      "inference_discipline",
+      "capstone",
+    ],
+    lane: "memory_forensics",
+    module: "Capstone",
+    sequence: 1,
+    status: "draft",
+    brief: `
+# Brief
+
+A memory image (\`WS-DEV-091.mem\`) was acquired this morning
+after SOC noticed an anomalous outbound connection burst from
+the workstation around 03:14Z. The host runs Windows 11 and
+belongs to \`s.lin\` (DA-civ, software engineering).
+
+You have four Volatility-3 outputs from the image, all
+focused on one process of interest at **PID 4012**
+(\`updater.exe\`):
+
+- \`windows.pstree\` — the process tree
+- \`windows.netscan\` — connection table at capture time
+- \`windows.malfind\` — suspicious memory regions for the process
+- \`windows.cmdline\` — command-line argument for the process
+
+Read the four outputs together. Decide what is supportable on
+the current evidence and what would need a dump-and-analyse to
+land. Then pick the writeup that gets sent to the IR lead this
+afternoon.
+`.trim(),
+    artifacts: [
+      {
+        ordinal: 1,
+        displayName: "vol-pstree.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "$ vol -f WS-DEV-091.mem windows.pstree",
+            "Volatility 3 Framework 2.7.2",
+            "",
+            "PID    PPID   ImageFileName        Offset(V)    Threads  Handles  SessionId  Wow64  CreateTime",
+            "4      0      System               0xfffff80001  118      -        N/A        False  2026-12-04 02:55:14",
+            "  388  4      smss.exe             0xfffffa8001  3        -        N/A        False  2026-12-04 02:55:14",
+            "  400  388    csrss.exe            0xfffffa8002  10       -        0          False  2026-12-04 02:55:17",
+            "  480  388    wininit.exe          0xfffffa8003  3        -        0          False  2026-12-04 02:55:17",
+            "    608  480  services.exe         0xfffffa8004  8        -        0          False  2026-12-04 02:55:17",
+            "      ...",
+            "      2204  608   explorer.exe     0xfffffa800a  44       -        1          False  2026-12-04 03:01:08",
+            "        3144  2204  chrome.exe     0xfffffa800b  62       -        1          False  2026-12-04 03:02:11",
+            "        4012  2204  updater.exe    0xfffffa800c  4        -        1          False  2026-12-04 03:14:01",
+            "",
+            "(Note: PID 4012 updater.exe has explorer.exe (2204) as its parent.",
+            " A signed Windows-update binary would normally appear under",
+            " services.exe (608) via the trustedinstaller / svchost path, not",
+            " under explorer.exe.)",
+            "",
+          ].join("\n"),
+        ),
+      },
+      {
+        ordinal: 2,
+        displayName: "vol-netscan.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "$ vol -f WS-DEV-091.mem windows.netscan",
+            "Volatility 3 Framework 2.7.2",
+            "",
+            "Offset            Proto   LocalAddr        LocalPort  ForeignAddr        ForeignPort  State        PID    Owner",
+            "0xfa8005e02010    TCPv4   10.0.4.91         52344     203.0.113.42        443          ESTABLISHED  4012   updater.exe",
+            "0xfa8005e02080    TCPv4   10.0.4.91         52345     203.0.113.42        443          ESTABLISHED  4012   updater.exe",
+            "0xfa8005e02100    TCPv4   10.0.4.91         52346     203.0.113.42        443          ESTABLISHED  4012   updater.exe",
+            "0xfa8005e02180    TCPv4   10.0.4.91         52111     142.250.190.110     443          ESTABLISHED  3144   chrome.exe",
+            "",
+            "(Three simultaneous established sockets from a single process to a",
+            " single destination IP, all to port 443. Browser sockets above shown",
+            " for context — a single browser tab on www.google.com.)",
+            "",
+          ].join("\n"),
+        ),
+      },
+      {
+        ordinal: 3,
+        displayName: "vol-malfind.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "$ vol -f WS-DEV-091.mem windows.malfind --pid 4012",
+            "Volatility 3 Framework 2.7.2",
+            "",
+            "PID  Process       Start VPN          End VPN            Tag        Protection           CommitCharge  PrivateMemory  File output",
+            "4012 updater.exe   0x000001f8c0000000 0x000001f8c003ffff VadS       PAGE_EXECUTE_READWRITE  64           1              Disabled",
+            "",
+            "Hexdump (first 64 bytes of the RWX region):",
+            "  0x000001f8c0000000  fc 48 83 e4 f0 e8 cc 00 00 00 41 51 41 50 52 51   .H........AQAPRQ",
+            "  0x000001f8c0000010  56 48 31 d2 65 48 8b 52 60 48 8b 52 18 48 8b 52   VH1.eH.R`H.R.H.R",
+            "  0x000001f8c0000020  20 48 8b 72 50 48 0f b7 4a 4a 4d 31 c9 48 31 c0    H.rPH..JJM1.H1.",
+            "  0x000001f8c0000030  ac 3c 61 7c 02 2c 20 41 c1 c9 0d 41 01 c1 e2 ed   .<a|., A...A....",
+            "",
+            "(Heads-up: the first eight bytes — `fc 48 83 e4 f0 e8 cc 00` — are the",
+            " canonical x64 shellcode prologue used by Metasploit / Cobalt Strike",
+            " stagers. The full region is 256 KB and is RWX, which is also unusual",
+            " for a legitimate updater that should be loading PE-backed code into",
+            " W^X regions.)",
+            "",
+          ].join("\n"),
+        ),
+      },
+      {
+        ordinal: 4,
+        displayName: "vol-cmdline.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "$ vol -f WS-DEV-091.mem windows.cmdline --pid 4012",
+            "Volatility 3 Framework 2.7.2",
+            "",
+            "  PID    Process        Args",
+            "  4012   updater.exe    \"C:\\Users\\s.lin\\AppData\\Local\\Temp\\updater.exe\"",
+            "",
+            "(updater.exe was launched from %TEMP% under s.lin's profile. No",
+            " arguments. A signed Microsoft updater binary should not normally",
+            " live in or run from a user's %TEMP% directory.)",
+            "",
+          ].join("\n"),
+        ),
+      },
+    ],
+    questions: [
+      {
+        ordinal: 1,
+        type: "multi_choice",
+        weight: 2,
+        promptMd:
+          "Reading the four outputs together, which observations are **directly visible** in the artifacts?",
+        options: [
+          {
+            id: "parent-explorer",
+            label:
+              "`updater.exe` (PID 4012) was launched as a child of `explorer.exe` (PID 2204), not under the Windows services tree.",
+          },
+          {
+            id: "temp-path",
+            label:
+              "`updater.exe` is running from `C:\\Users\\s.lin\\AppData\\Local\\Temp\\`.",
+          },
+          {
+            id: "three-tcp-sockets",
+            label:
+              "The process holds three simultaneous ESTABLISHED TCP sockets, all to `203.0.113.42:443`.",
+          },
+          {
+            id: "rwx-region",
+            label:
+              "Volatility flagged a 256 KB RWX memory region in the process.",
+          },
+          {
+            id: "metasploit",
+            label:
+              "The process is a confirmed Metasploit stager.",
+          },
+        ],
+        allowMultiple: true,
+        expected: {
+          type: "multi_choice",
+          correctIds: [
+            "parent-explorer",
+            "temp-path",
+            "three-tcp-sockets",
+            "rwx-region",
+          ],
+          allowMultiple: true,
+        },
+        debriefMd:
+          "The first four are what the four outputs literally say. *Confirmed Metasploit stager* is interpretive — the shellcode prologue is **consistent with** the Metasploit / Cobalt Strike pattern, but that's an inference until the region is dumped and confirmed.",
+      },
+      {
+        ordinal: 2,
+        type: "multi_choice",
+        weight: 2,
+        promptMd:
+          "Each of these signals is suspicious; only some are **specifically** suspicious for an injected stager. Which one is the **strongest single signal**?",
+        options: [
+          {
+            id: "rwx-with-prologue",
+            label:
+              "The 256 KB RWX region whose first bytes match a canonical x64 shellcode prologue (`fc 48 83 e4 f0 e8 cc 00`).",
+          },
+          {
+            id: "parent-explorer-only",
+            label:
+              "The parent process being explorer.exe.",
+          },
+          {
+            id: "temp-path-only",
+            label:
+              "The image path being under `%TEMP%`.",
+          },
+          {
+            id: "three-sockets-only",
+            label:
+              "Three simultaneous outbound sockets to one IP.",
+          },
+        ],
+        allowMultiple: false,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["rwx-with-prologue"],
+          allowMultiple: false,
+        },
+        debriefMd:
+          "The RWX-region-with-prologue is the most specific signal: RWX memory regions are themselves common-enough to throw false positives, but RWX + a recognizable shellcode signature is much narrower. The other three signals are unusual for a *legitimate updater* but each one has benign explanations on its own (parent process can be `explorer.exe` for portable apps, `%TEMP%` execution happens with installers, multi-socket fan-out happens with download accelerators). Stack them all together and the case sharpens; pick one and the RWX + prologue is what survives interrogation.",
+      },
+      {
+        ordinal: 3,
+        type: "multi_choice",
+        weight: 1,
+        promptMd:
+          "From the artifact set, what is the **right next step**?",
+        options: [
+          {
+            id: "dump-and-analyse",
+            label:
+              "Dump the RWX region from PID 4012 (`vol windows.vadinfo` / `vol windows.memmap --dump`) and run it through a disassembler / shellcode analyser to characterise the payload. Contain the host in parallel.",
+          },
+          {
+            id: "terminate-and-reimage",
+            label:
+              "Terminate PID 4012 and reimage the workstation immediately.",
+          },
+          {
+            id: "wait-for-more-alerts",
+            label:
+              "Wait for SOC to raise another alert before acting.",
+          },
+          {
+            id: "block-ip-only",
+            label:
+              "Block `203.0.113.42` at the firewall and consider the case closed.",
+          },
+        ],
+        allowMultiple: false,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["dump-and-analyse"],
+          allowMultiple: false,
+        },
+        debriefMd:
+          "Dump + analyse + contain. Terminating the process loses the memory before it's preserved; reimaging without a dump destroys the evidence. Waiting for more alerts is exactly the failure mode of incident response. Blocking the IP is a useful containment step but doesn't answer *what's in the RWX region* — and if the payload has a second-stage callback to a different IP, the block is incomplete.",
+      },
+      {
+        ordinal: 4,
+        type: "text_match",
+        weight: 1,
+        promptMd:
+          "Quote the **PID** of the suspect process.",
+        textMatch: {
+          acceptableAnswers: ["4012", "PID 4012"],
+          hint: "Look at the `windows.cmdline` output or the `windows.malfind` line.",
+          hintAfterTries: 2,
+        },
+        expected: {
+          type: "text_match",
+          acceptableAnswers: ["4012", "PID 4012"],
+          regex: false,
+        },
+        debriefMd:
+          "`4012`. Cite the PID alongside the image name in any downstream writeup so the next analyst can re-derive the artifacts from the same memory image.",
+      },
+      {
+        ordinal: 5,
+        type: "multi_choice",
+        weight: 2,
+        promptMd:
+          "Three drafts to send the IR lead. Pick the one you'd actually send.",
+        options: [
+          {
+            id: "overclaim",
+            label:
+              "*WS-DEV-091 is compromised by a Metasploit stager (PID 4012, updater.exe). The host is in active C2 with 203.0.113.42. Recommend full reimage and credential rotation.*",
+          },
+          {
+            id: "calibrated",
+            label:
+              "*On WS-DEV-091 (user s.lin), Volatility 3 against memory image WS-DEV-091.mem shows process `updater.exe` (PID 4012) running from `C:\\Users\\s.lin\\AppData\\Local\\Temp\\updater.exe`, parented by explorer.exe (PID 2204), holding three simultaneous ESTABLISHED TCP sockets to 203.0.113.42:443. malfind flagged a 256 KB RWX region in the process whose first eight bytes (`fc 48 83 e4 f0 e8 cc 00`) match the canonical x64 stager prologue used by Metasploit and Cobalt Strike. The combination is strongly inconsistent with a legitimate Windows updater. Recommend: (a) contain the host now, (b) dump the RWX region (vol windows.memmap --dump --pid 4012) for shellcode analysis to confirm the payload family, (c) pull the host's process-create events and network telemetry for the trailing 24 h to scope the foothold, and (d) flag s.lin's recent web + email activity for review. Until the dump is analysed, family attribution (\"Metasploit\" / \"Cobalt Strike\" / other) is suggestive and should be stated as \"matches the canonical x64 stager prologue,\" not as a confirmed framework.*",
+          },
+          {
+            id: "underclaim",
+            label:
+              "*A process called updater.exe has RWX memory, which is suspicious. Recommend checking it later when SOC has bandwidth.*",
+          },
+        ],
+        allowMultiple: false,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["calibrated"],
+          allowMultiple: false,
+        },
+        debriefMd:
+          "The middle one. It names every fact the artifacts carry (PID, path, parent, sockets, RWX region size, prologue bytes), names the inference posture (prologue **matches** the stager pattern, family attribution waits on the dump), and recommends the operationally-correct sequence (contain, dump, scope). The first declares Metasploit / C2 / compromise without the dump and recommends a reimage that destroys the evidence first. The third treats a textbook stager prologue as 'suspicious' but pushes it back into the queue — which is how an active foothold gets a multi-hour head start.",
+      },
+    ],
+  },
 ];

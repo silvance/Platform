@@ -1484,4 +1484,306 @@ to verify?"*
       },
     ],
   },
+
+  // ─── Mobile Forensics capstone ──────────────────────────────
+  {
+    slug: "mobile-multi-tool-capstone-001",
+    title: "Mobile Capstone: One Device, Three Tools",
+    summary:
+      "An iPhone lawfully obtained. You have a GrayKey unlock log, a Cellebrite UFED extraction summary, and a Magnet AXIOM analysis. Walk what each tool actually got, where they agree, where they disagree, and write the cover-sheet finding.",
+    skillAreas: ["df_artifacts", "report_writing", "inference_discipline"],
+    difficulty: 3,
+    estimatedMinutes: 55,
+    tags: [
+      "mobile",
+      "cellebrite",
+      "graykey",
+      "axiom",
+      "report_writing",
+      "inference_discipline",
+      "capstone",
+    ],
+    lane: "mobile_forensics",
+    module: "Capstone",
+    sequence: 1,
+    status: "draft",
+    brief: `
+# Brief
+
+An iPhone (Apple A2483, iOS 17.6) was lawfully obtained at intake
+this morning under search-authority \`SA-2026-0204\`. The lab ran
+the device through three tools in sequence:
+
+- GrayKey for unlock + acquisition state confirmation
+- Cellebrite UFED for the full-file-system extraction
+- Magnet AXIOM for the analysis pass
+
+You have a one-page summary from each tool. The three don't tell
+exactly the same story; pick out where each one's read is
+authoritative, where they agree, and where the differences are
+real vs an artifact of how each tool counts. Then pick the
+single-paragraph headline that goes on the case-folder cover
+sheet.
+`.trim(),
+    artifacts: [
+      {
+        ordinal: 1,
+        displayName: "graykey-summary.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "GrayKey acquisition log — Device A2483 (iPhone 13)",
+            "--------------------------------------------------",
+            "",
+            "  Case          : SA-2026-0204",
+            "  Device serial : F2L0N1A7XZ4",
+            "  iOS           : 17.6",
+            "  State at intake : LOCKED, AFU (After First Unlock)",
+            "  Unlock method : Brute-force PIN, 6-digit numeric, completed 04h12m",
+            "  State at extract : UNLOCKED",
+            "  Extraction    : Full-file-system to /cases/SA-2026-0204/gk-extract.tar",
+            "  SHA-256       : 9c1d...8a40 (verified)",
+            "  Extracted UTC : 2026-12-04 11:18:00",
+            "",
+            "(AFU means the device had been unlocked at least once after",
+            " its last boot, so the user keys are in memory and full-file-",
+            " system extraction is possible. A BFU device would have been",
+            " a much more limited extraction.)",
+            "",
+          ].join("\n"),
+        ),
+      },
+      {
+        ordinal: 2,
+        displayName: "cellebrite-ufed-summary.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "Cellebrite UFED extraction summary",
+            "----------------------------------",
+            "",
+            "  Source        : /cases/SA-2026-0204/gk-extract.tar",
+            "  Extraction    : Full File System (ingested from GrayKey image)",
+            "  Tool version  : UFED 7.78",
+            "",
+            "  Per-app counts (active rows):",
+            "    Messages (iMessage + SMS)      : 4,118",
+            "    WhatsApp                       : 2,402",
+            "    Signal                         : 18  (sealed envelopes — only what",
+            "                                          the OS-level cache surfaces)",
+            "    Photos                         : 14,820",
+            "    Browser history (Safari)       : 1,902",
+            "    Maps / Location history        : 84  (last 30 days)",
+            "    Call log                       : 412",
+            "    Contacts                       : 218",
+            "",
+            "  Deleted rows recovered (carved from SQLite WAL/free pages):",
+            "    Messages                       : 88",
+            "    WhatsApp                       : 12",
+            "    Photos                         : 4",
+            "",
+            "  Notes:",
+            "    - Signal counts are floor; on-device DB is encrypted at rest.",
+            "    - Some WhatsApp media references resolve to /var/mobile/Media/...",
+            "      paths but the referenced files were not present in the FFS",
+            "      extract. Possible app-cache eviction.",
+            "",
+          ].join("\n"),
+        ),
+      },
+      {
+        ordinal: 3,
+        displayName: "axiom-summary.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "Magnet AXIOM analysis summary",
+            "-----------------------------",
+            "",
+            "  Source        : /cases/SA-2026-0204/gk-extract.tar",
+            "  Tool version  : AXIOM 8.4.0  (Apple iOS module v17.6-r3)",
+            "",
+            "  Per-app counts (rendered, post-dedup):",
+            "    Messages (iMessage + SMS)      : 4,144",
+            "    WhatsApp                       : 2,410",
+            "    Signal                         : 0",
+            "    Photos                         : 14,820",
+            "    Browser history (Safari)       : 1,902",
+            "    Maps / Location history        : 84",
+            "    Call log                       : 412",
+            "    Contacts                       : 218",
+            "",
+            "  Deleted rows recovered:",
+            "    Messages                       : 0",
+            "    WhatsApp                       : 0",
+            "",
+            "  Notes:",
+            "    - The Apple-iOS module on this AXIOM version parses ONLY",
+            "      live SQLite tables; carving from free pages / WAL is in",
+            "      the Carving module which was NOT enabled for this run.",
+            "    - Signal counts read as 0 because the AXIOM module on this",
+            "      version cannot ingest the encrypted-at-rest DB; the OS-level",
+            "      cache rows the UFED tool surfaced live in a different",
+            "      collection that this AXIOM run did not pick up.",
+            "    - Messages count is 26 higher than UFED's count because",
+            "      AXIOM's de-dup heuristic treats some thread-replay events",
+            "      as separate messages where UFED collapses them.",
+            "",
+          ].join("\n"),
+        ),
+      },
+    ],
+    questions: [
+      {
+        ordinal: 1,
+        type: "multi_choice",
+        weight: 1,
+        promptMd:
+          "Across the three tools, which fact is **most authoritatively established**?",
+        options: [
+          {
+            id: "acquisition-state",
+            label:
+              "The device was in AFU state at intake, unlocked successfully via PIN brute-force, and the full-file-system extract is hash-verified.",
+          },
+          {
+            id: "messages-count-exact",
+            label:
+              "The device contains exactly 4,118 active Messages rows.",
+          },
+          {
+            id: "signal-zero",
+            label:
+              "The user has never used Signal on this device.",
+          },
+        ],
+        allowMultiple: false,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["acquisition-state"],
+          allowMultiple: false,
+        },
+        debriefMd:
+          "Acquisition state, unlock method, and image hash are the tightest facts here — they're set at acquisition time and verified. The Messages count differs between tools (4,118 vs 4,144) so neither is *the* count; both are tool-specific reads. *User has never used Signal* would require ruling out the encrypted-at-rest DB; the 0/18 disagreement just shows the AXIOM module on this version can't ingest the encrypted DB, not that there's nothing there.",
+      },
+      {
+        ordinal: 2,
+        type: "multi_choice",
+        weight: 2,
+        promptMd:
+          "UFED reports 88 deleted Messages recovered; AXIOM reports 0. Which **best explains** the difference?",
+        options: [
+          {
+            id: "axiom-no-carving",
+            label:
+              "AXIOM's Apple-iOS module on this version parses only live SQLite tables; carving from WAL / free pages lives in the Carving module, which was not enabled for this run. UFED carves from free pages by default.",
+          },
+          {
+            id: "user-deleted-after",
+            label:
+              "The user deleted the messages between the UFED parse and the AXIOM parse.",
+          },
+          {
+            id: "axiom-buggy",
+            label:
+              "AXIOM is buggy and miscounts deleted rows.",
+          },
+        ],
+        allowMultiple: false,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["axiom-no-carving"],
+          allowMultiple: false,
+        },
+        debriefMd:
+          "AXIOM's notes say it explicitly — the Carving module wasn't enabled, so AXIOM didn't look in the free pages where UFED found the 88 rows. *Deleted between parses* is incompatible with reading the same `gk-extract.tar` source image — both tools are reading the same bytes. *Buggy* is what a junior writeup says when it doesn't read the tool's own configuration notes. Tool configuration explains the disagreement; report it that way.",
+      },
+      {
+        ordinal: 3,
+        type: "multi_choice",
+        weight: 1,
+        promptMd:
+          "UFED's Signal count is 18; AXIOM's is 0. Which statement is **directly supported**?",
+        options: [
+          {
+            id: "tools-different-corpus",
+            label:
+              "The two tools are reading different corpora for Signal — UFED is surfacing OS-level cache rows; AXIOM's module can't ingest the encrypted-at-rest DB on this version. Neither count answers *what the user actually did in Signal*.",
+          },
+          {
+            id: "user-used-signal-18-times",
+            label:
+              "The user used Signal 18 times.",
+          },
+          {
+            id: "axiom-wrong",
+            label:
+              "AXIOM is wrong; the correct count is 18.",
+          },
+        ],
+        allowMultiple: false,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["tools-different-corpus"],
+          allowMultiple: false,
+        },
+        debriefMd:
+          "Both tools' notes name what they did or didn't ingest. 18 is the OS-cache floor (per UFED's note that the on-device DB is encrypted at rest), not the device's actual Signal usage; 0 is the live-DB count when the module can't decrypt. *18 times* and *AXIOM is wrong* both treat a tool-specific corpus difference as a content claim it isn't.",
+      },
+      {
+        ordinal: 4,
+        type: "text_match",
+        weight: 1,
+        promptMd:
+          "Quote the **SHA-256** of the source extract image, exactly as it appears.",
+        textMatch: {
+          acceptableAnswers: ["9c1d...8a40"],
+          hint: "Look in the GrayKey acquisition-log summary.",
+          hintAfterTries: 2,
+        },
+        expected: {
+          type: "text_match",
+          acceptableAnswers: ["9c1d...8a40"],
+          regex: false,
+        },
+        debriefMd:
+          "`9c1d...8a40`. The image hash belongs in every downstream writeup so a reviewer can re-confirm both tools were reading the same bytes — which is the whole point of the cross-tool comparison.",
+      },
+      {
+        ordinal: 5,
+        type: "multi_choice",
+        weight: 2,
+        promptMd:
+          "Three drafts of the one-paragraph headline for the case-folder cover sheet. Pick the one you'd actually send.",
+        options: [
+          {
+            id: "overclaim",
+            label:
+              "*Full forensic extraction of subject device complete. 4,144 messages, 2,410 WhatsApp threads, 18 Signal messages, and 88 deleted messages recovered. No further work required.*",
+          },
+          {
+            id: "calibrated",
+            label:
+              "*Subject device (Apple A2483, iOS 17.6, serial F2L0N1A7XZ4) was acquired AFU under SA-2026-0204; GrayKey produced a hash-verified full-file-system image (SHA-256 9c1d...8a40). Active-row counts agree between Cellebrite UFED and Magnet AXIOM across most apps; live-SQLite-only counts differ by 26 on Messages and by 8 on WhatsApp due to AXIOM's de-dup heuristic vs UFED's. UFED's 88-Messages/12-WhatsApp deleted-row recoveries do not appear in the AXIOM output because the Carving module was not enabled for the AXIOM run; that does not contradict UFED's count. Signal counts are 18 in UFED (OS-level cache only — the encrypted-at-rest DB is not ingested) and 0 in AXIOM (this module version cannot ingest the encrypted DB); neither figure represents the user's actual Signal usage. Recommend a second-pass AXIOM run with the Carving module enabled to verify UFED's deleted-row counts, and a manual review of the encrypted Signal DB for any further claim about Signal content.*",
+          },
+          {
+            id: "underclaim",
+            label:
+              "*The tools disagree, so the results are unreliable. Recommend re-acquiring the device.*",
+          },
+        ],
+        allowMultiple: false,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["calibrated"],
+          allowMultiple: false,
+        },
+        debriefMd:
+          "The middle one. It names the acquisition state, the hash, where the tools agree, *why* they disagree (config + module-version reasons, not contradictions about the bytes), and the cheap next step (turn on Carving in AXIOM; review the Signal DB by hand). The first reports both tools' numbers as if they were one number and skips the Signal-corpus caveat. The third treats tool-config differences as evidence of *unreliable acquisition* and recommends throwing away a clean image — which is the failure mode that loses the case to a defense expert who actually reads tool documentation.",
+      },
+    ],
+  },
 ];
