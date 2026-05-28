@@ -2326,4 +2326,594 @@ You will read:
       },
     ],
   },
+
+  // ─── Difficulty 5 — Insider Threat capstone, multi-artifact synthesis ──
+  {
+    slug: "insider-leaving-employee-capstone-001",
+    title: "Insider Threat Capstone: Leaving-Employee Cross-Source Synthesis",
+    summary:
+      "A departing R&D engineer, eight days from separation, surfaced through three independent signals (DLP, HR walk-in, after-hours VPN). Read every artifact for what it actually proves, name the missing pieces, and write a finding that holds up to OSJA review.",
+    skillAreas: [
+      "account_compromise",
+      "df_artifacts",
+      "removable_media",
+      "report_writing",
+      "inference_discipline",
+    ],
+    difficulty: 5,
+    estimatedMinutes: 75,
+    tags: [
+      "insider_risk",
+      "account_compromise",
+      "df_artifacts",
+      "removable_media",
+      "report_writing",
+      "inference_discipline",
+      "capstone",
+    ],
+    lane: "insider_risk",
+    module: "Capstone",
+    sequence: 1,
+    status: "draft",
+    brief: `
+# Brief (DRAFT)
+
+\`m.alvarez\` — DA-civilian software engineer in a sensitive R&D
+unit — gave two weeks' notice **12 days ago**. Friday is his last
+day. His LinkedIn announcement names a defense-adjacent commercial
+firm; the public job description mentions "transition of vendor
+relationships" in a project area adjacent to the unit's current
+work.
+
+Three independent escalations reached the supporting ACI office in
+the last 48 hours:
+
+1. **DLP** fired one alert ~36 hours ago for an attempted upload
+   to a personal cloud-storage service. The upload was **blocked**
+   at the egress proxy; the file's name and the bytes are recorded
+   in the DLP row.
+2. **HR walk-in** from a teammate. Verbatim from the intake form:
+   *"He's been staying late and asking weird questions about who
+   owns what after he leaves."*
+3. **VPN logs** show two after-hours sessions from an IP outside
+   his usual ISP range during the trailing 10 days.
+
+The local OSJA / supporting trial counsel has authorized a
+**non-intrusive** host + account review. You are NOT cleared to
+image the laptop yet; that authorization is being staged in
+parallel and will land Friday morning if and only if this review
+articulates a defensible inference. Your tasking is:
+
+1. Read the artifacts. Separate fact from inference.
+2. Name what the artifacts **prove** about opportunity vs action.
+3. Identify the **single missing artifact** that would most
+   directly close the open question.
+4. Pick the **calibrated** writeup from three drafts so counsel
+   has the right thing on her desk Friday at 0700.
+
+The supporting ACI SAC will use your writeup, the artifacts, and
+the missing-evidence list to brief counsel; an over-claim here
+poisons the deposition six months from now, and an under-claim
+costs the unit the chance to scope the next-step authorization.
+
+## Artifacts
+
+- **hr-timeline.json** — separation timeline + role context.
+- **dlp-alert.json** — the blocked-upload row, with the file name,
+  size, classification banner, and the policy that fired.
+- **dms-access-audit.csv** — document-management view/download
+  events for the trailing 14 days, scoped to documents touched by
+  this account.
+- **vpn-sessions.csv** — VPN session starts + ends for the
+  trailing 14 days.
+- **usb-mount-history.csv** — USBSTOR + EDR mount/dismount events
+  on the workstation for the trailing 14 days.
+- **edr-file-write-coverage.json** — host-side EDR coverage map
+  (which event classes are enabled / disabled on this host) plus
+  the file-write events that WERE captured during the relevant
+  windows.
+- **email-of-interest.eml.txt** — text view of one outgoing email
+  flagged by the manager during her exit-process walkthrough.
+- **witness-statement.txt** — sworn statement excerpt from the
+  teammate who walked into HR.
+
+## A note on terminology
+
+This case references **EDR** (Endpoint Detection and Response —
+host-side security telemetry like CrowdStrike Falcon, Microsoft
+Defender for Endpoint, or Sysmon) and **DLP** (Data Loss
+Prevention — egress-side content inspection that blocks or alerts
+on outbound transfers matching a policy). You don't need to know
+the internals — only that EDR is a host-side source and DLP is an
+egress-side source, and they observe different parts of the same
+"file moved" lifecycle.
+`.trim(),
+    artifacts: [
+      {
+        ordinal: 1,
+        displayName: "hr-timeline.json",
+        kind: "json",
+        mimeType: "application/json; charset=utf-8",
+        bytes: utf8(
+          JSON.stringify(
+            {
+              employee: {
+                user: "m.alvarez",
+                role: "Senior Software Engineer (DA-civilian, GS-13)",
+                unit: "R&D Cell 4 — emerging-tech adjacency",
+                clearance: "TS//SCI",
+                start_date: "2021-07-12",
+                separation_date: "2026-12-18",
+                separation_type: "voluntary — accepted external offer",
+                notice_submitted_utc: "2026-12-04T14:08:00Z",
+              },
+              new_role: {
+                employer: "Vector Apex Solutions",
+                title: "Principal Engineer, Government Systems",
+                public_jd_summary:
+                  "Lead vendor transition for an emerging-technology product line adjacent to current DoD R&D work.",
+                start_date_public: "2026-12-29",
+              },
+              recent_actions_documented: [
+                {
+                  date_utc: "2026-12-09T16:00:00Z",
+                  action: "Submitted exit-process form. Returned CAC, badge, gym fob.",
+                },
+                {
+                  date_utc: "2026-12-12T13:00:00Z",
+                  action: "Conducted code handoff with backup engineer per manager's checklist.",
+                },
+                {
+                  date_utc: "2026-12-15T17:30:00Z",
+                  action: "Manager noted in handoff log: 'tying up loose ends, asked about who owns what after he leaves.'",
+                },
+              ],
+              not_yet_returned: [
+                "Encrypted USB key (issue date 2024-05-02, last seen on workstation 2026-12-15).",
+                "Personal hard-copy notebook — voluntary collection requested 2026-12-15, pending.",
+              ],
+            },
+            null,
+            2,
+          ) + "\n",
+        ),
+      },
+      {
+        ordinal: 2,
+        displayName: "dlp-alert.json",
+        kind: "json",
+        mimeType: "application/json; charset=utf-8",
+        bytes: utf8(
+          JSON.stringify(
+            {
+              alert_id: "DLP-2026-44518",
+              event_utc: "2026-12-15T22:14:33Z",
+              host: "WS-RD-082",
+              user_subject: "m.alvarez",
+              src_ip: "10.42.18.82",
+              destination_host: "personal-drive.example",
+              transfer_method: "HTTPS POST (browser-initiated)",
+              file_name: "Q3-roadmap-internal.pdf",
+              file_size_bytes: 482111,
+              file_classification: "UNCLASSIFIED//FOUO",
+              classification_banner_detected: "UNCLASSIFIED//FOUO",
+              policy_matched:
+                "policy_id=46 — FOUO content blocked to non-corporate cloud destinations",
+              action: "blocked",
+              notes:
+                "User received a generic 'transfer blocked by IT policy' page. No retry observed in the next 60 minutes. Single attempt.",
+            },
+            null,
+            2,
+          ) + "\n",
+        ),
+      },
+      {
+        ordinal: 3,
+        displayName: "dms-access-audit.csv",
+        kind: "csv",
+        mimeType: "text/csv; charset=utf-8",
+        bytes: utf8(
+          [
+            "timestamp_utc,document_id,document_title,project_scope,action,document_classification",
+            // Normal-pattern rows for project he owns
+            "2026-12-02T13:14:08Z,DOC-PRJ-A-0048,Cell 4 sprint planning notes,project-a-owned,view,UNCLASSIFIED",
+            "2026-12-04T18:01:55Z,DOC-PRJ-A-0214,Cell 4 vendor evaluation memo,project-a-owned,download,UNCLASSIFIED//FOUO",
+            "2026-12-09T14:30:11Z,DOC-PRJ-A-0049,Cell 4 sprint planning notes (rev2),project-a-owned,view,UNCLASSIFIED",
+            // Anomaly: views OUTSIDE his project scope, accelerating in the last 5 days
+            "2026-12-11T20:55:08Z,DOC-PRJ-B-0102,Project B vendor list (current),project-b-other,view,UNCLASSIFIED//FOUO",
+            "2026-12-12T19:42:22Z,DOC-PRJ-B-0091,Project B integration architecture brief,project-b-other,view,UNCLASSIFIED//FOUO",
+            "2026-12-13T21:10:01Z,DOC-PRJ-C-0033,Project C statement of work,project-c-other,view,UNCLASSIFIED//FOUO",
+            "2026-12-14T22:01:45Z,DOC-PRJ-C-0044,Project C delivery schedule,project-c-other,view,UNCLASSIFIED//FOUO",
+            "2026-12-15T21:50:18Z,DOC-PRJ-A-0214,Cell 4 vendor evaluation memo,project-a-owned,download,UNCLASSIFIED//FOUO",
+            "2026-12-15T22:03:11Z,DOC-PRJ-A-0214,Cell 4 vendor evaluation memo,project-a-owned,view,UNCLASSIFIED//FOUO",
+            // Q3 roadmap viewed shortly before the DLP block
+            "2026-12-15T22:11:42Z,DOC-PRJ-A-0301,Q3-roadmap-internal,project-a-owned,view,UNCLASSIFIED//FOUO",
+            "2026-12-15T22:12:18Z,DOC-PRJ-A-0301,Q3-roadmap-internal,project-a-owned,download,UNCLASSIFIED//FOUO",
+          ].join("\n") + "\n",
+        ),
+      },
+      {
+        ordinal: 4,
+        displayName: "vpn-sessions.csv",
+        kind: "csv",
+        mimeType: "text/csv; charset=utf-8",
+        bytes: utf8(
+          [
+            "session_start_utc,session_end_utc,user,src_ip,asn_org,session_type",
+            // Normal pattern weeks 1-2: weekday daytime, home ISP
+            "2026-12-02T13:00:11Z,2026-12-02T22:14:08Z,m.alvarez,71.182.40.12,COMCAST-CABLE,workstation",
+            "2026-12-03T13:02:55Z,2026-12-03T21:55:11Z,m.alvarez,71.182.40.12,COMCAST-CABLE,workstation",
+            "2026-12-04T13:08:22Z,2026-12-04T22:01:55Z,m.alvarez,71.182.40.12,COMCAST-CABLE,workstation",
+            // Mid-period: still normal
+            "2026-12-09T13:10:44Z,2026-12-09T21:42:18Z,m.alvarez,71.182.40.12,COMCAST-CABLE,workstation",
+            "2026-12-10T13:06:18Z,2026-12-10T22:08:33Z,m.alvarez,71.182.40.12,COMCAST-CABLE,workstation",
+            // Late-period anomaly: two after-hours sessions, IP outside usual ASN
+            "2026-12-13T22:18:42Z,2026-12-14T01:55:11Z,m.alvarez,104.221.30.55,DIGITAL-OCEAN,workstation",
+            "2026-12-14T22:42:08Z,2026-12-15T02:18:33Z,m.alvarez,104.221.30.55,DIGITAL-OCEAN,workstation",
+            // The day of the DLP block: normal-hours session from home
+            "2026-12-15T13:18:08Z,2026-12-15T23:14:33Z,m.alvarez,71.182.40.12,COMCAST-CABLE,workstation",
+          ].join("\n") + "\n",
+        ),
+      },
+      {
+        ordinal: 5,
+        displayName: "usb-mount-history.csv",
+        kind: "csv",
+        mimeType: "text/csv; charset=utf-8",
+        bytes: utf8(
+          [
+            "mount_utc,dismount_utc,device_vendor_product,serial,asset_register_match,user_subject",
+            // Issued unit-encrypted USB, listed in HR timeline as not-yet-returned
+            "2026-12-02T14:08:22Z,2026-12-02T16:14:55Z,Apricorn Aegis Secure Key 3z,UNIT-USB-1814,YES (issued 2024-05-02 to m.alvarez),m.alvarez",
+            "2026-12-09T18:42:18Z,2026-12-09T19:55:11Z,Apricorn Aegis Secure Key 3z,UNIT-USB-1814,YES (issued 2024-05-02 to m.alvarez),m.alvarez",
+            "2026-12-15T17:14:08Z,2026-12-15T18:30:55Z,Apricorn Aegis Secure Key 3z,UNIT-USB-1814,YES (issued 2024-05-02 to m.alvarez),m.alvarez",
+            // Anomaly: an unknown device (not on asset register) on 2026-12-14
+            "2026-12-14T23:08:11Z,2026-12-15T01:42:33Z,Kingston DataTraveler 100 G3,KD-PR-2026,NO (not on unit register),m.alvarez",
+          ].join("\n") + "\n",
+        ),
+      },
+      {
+        ordinal: 6,
+        displayName: "edr-file-write-coverage.json",
+        kind: "json",
+        mimeType: "application/json; charset=utf-8",
+        bytes: utf8(
+          JSON.stringify(
+            {
+              host: "WS-RD-082",
+              edr_product: "Microsoft Defender for Endpoint",
+              coverage_at_acquisition_utc: "2026-12-16T13:00:00Z",
+              process_create_enabled: true,
+              network_telemetry_enabled: false,
+              file_write_telemetry_enabled: "partial",
+              file_write_telemetry_note:
+                "FileCreate / FileWrite events are captured for fixed disks and SMB shares but NOT for removable-media volumes on this host — a unit-wide MDE policy choice from 2025-06 to reduce noise. Coverage gap means any write to a USB volume is invisible to MDE.",
+              file_writes_captured_in_window: [
+                {
+                  utc: "2026-12-15T22:12:21Z",
+                  process: "C:\\Users\\m.alvarez\\AppData\\Local\\Microsoft\\Edge\\Application\\msedge.exe",
+                  target_path: "C:\\Users\\m.alvarez\\Downloads\\Q3-roadmap-internal.pdf",
+                  sha256: "9c4b...e811",
+                  size_bytes: 482111,
+                  note: "Browser save-as from DMS download; this is the file that DLP later blocked at the egress proxy.",
+                },
+              ],
+              file_writes_captured_for_removable_volume: null,
+            },
+            null,
+            2,
+          ) + "\n",
+        ),
+      },
+      {
+        ordinal: 7,
+        displayName: "email-of-interest.eml.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "From: m.alvarez@unit.example",
+            "To: m.alvarez.personal@example.com",
+            "Date: Sun, 14 Dec 2026 21:42:08 +0000",
+            "Subject: notes",
+            "X-Originating-IP: 71.182.40.12",
+            "Message-ID: <a1b2-44518@unit-mail.example>",
+            "Content-Type: multipart/mixed; boundary=\"sep-1\"",
+            "",
+            "--sep-1",
+            "Content-Type: text/plain; charset=utf-8",
+            "",
+            "vendor names and the SOW versions I need to refresh on. nothing classified.",
+            "",
+            "--sep-1",
+            "Content-Type: text/plain; charset=utf-8; name=\"vendor-names-and-sow-refs.txt\"",
+            "Content-Disposition: attachment; filename=\"vendor-names-and-sow-refs.txt\"",
+            "",
+            "(attachment body: 78 lines, 4.1 KB. Lines appear to be vendor names",
+            " followed by SOW reference numbers. No classified markings detected by",
+            " the FOUO/CUI scanner on the egress side. Sample below:)",
+            "",
+            "  Vector Apex Solutions / SOW-2024-118 (rev2)",
+            "  Northstar Integrators / SOW-2025-044",
+            "  TrellisWorks LLC / SOW-2024-093",
+            "  ...",
+            "",
+            "--sep-1--",
+          ].join("\n") + "\n",
+        ),
+      },
+      {
+        ordinal: 8,
+        displayName: "witness-statement.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "WITNESS STATEMENT — EXCERPT",
+            "Intake: 2026-12-16 09:11 local, HR walk-in",
+            "Witness: J. Park (Senior Software Engineer, R&D Cell 4)",
+            "",
+            "Verbatim, edited for length only:",
+            "",
+            "  \"Marco's been staying late this past week. I'm in the next pod",
+            "   over. Two nights this week — Saturday and Sunday I think — he",
+            "   was on a personal cell, voice down. I heard 'before Friday'",
+            "   more than once. Wednesday in the kitchenette he asked me 'who",
+            "   owns the vendor list after I'm gone' which is a weird thing",
+            "   to ask, because the vendor list isn't even on his project.",
+            "   I figured he was tying things up but it stuck with me.\"",
+            "",
+            "  \"I never saw him copy anything. I'm not saying he did. I'm",
+            "   saying it felt off enough that I wanted somebody to look.\"",
+            "",
+            "Statement collected on DD Form 2823 (paper original retained by",
+            "HR; this is a typed excerpt for the case folder).",
+          ].join("\n") + "\n",
+        ),
+      },
+    ],
+    questions: [
+      {
+        ordinal: 1,
+        type: "multi_choice",
+        weight: 2,
+        promptMd:
+          "Across the artifact set, which statements are **directly supported by an artifact row** (fact, not inference)?",
+        options: [
+          {
+            id: "dms-cross-project",
+            label:
+              "m.alvarez viewed documents scoped to Project B and Project C, neither of which is his assigned project.",
+          },
+          {
+            id: "vpn-asn-shift",
+            label:
+              "Two of m.alvarez's VPN sessions in the trailing 4 days originated from a Digital Ocean ASN rather than his usual home-ISP ASN.",
+          },
+          {
+            id: "dlp-blocked",
+            label:
+              "An attempted upload of `Q3-roadmap-internal.pdf` to a personal cloud destination was blocked by DLP at 2026-12-15T22:14:33Z.",
+          },
+          {
+            id: "non-asset-usb-mounted",
+            label:
+              "A non-asset-register USB (Kingston KD-PR-2026) was mounted on WS-RD-082 by m.alvarez during the trailing 4 days.",
+          },
+          {
+            id: "files-copied-to-usb",
+            label:
+              "Files were copied from WS-RD-082 to the non-asset-register USB.",
+          },
+          {
+            id: "intent-to-exfil",
+            label:
+              "m.alvarez intended to exfiltrate documents to his new employer.",
+          },
+        ],
+        allowMultiple: true,
+        expected: {
+          type: "multi_choice",
+          correctIds: [
+            "dms-cross-project",
+            "vpn-asn-shift",
+            "dlp-blocked",
+            "non-asset-usb-mounted",
+          ],
+          allowMultiple: true,
+        },
+        debriefMd:
+          "Each of the first four statements is one artifact row read literally. *Files were copied to the USB* is **not** supported — EDR file-write telemetry for removable-media volumes is explicitly disabled on this host (see `edr-file-write-coverage.json`), so the mount is opportunity, not action. *Intent to exfil* is the inference the artifacts together motivate, not something any single row demonstrates.",
+      },
+      {
+        ordinal: 2,
+        type: "multi_choice",
+        weight: 2,
+        promptMd:
+          "Which artifact rows establish **opportunity** (a means to move data off the workstation), independent of whether the action actually happened?",
+        options: [
+          {
+            id: "opp-non-asset-usb",
+            label:
+              "The non-asset-register Kingston USB mount on 2026-12-14 (no file-write telemetry to disprove a copy).",
+          },
+          {
+            id: "opp-dlp-block",
+            label:
+              "The DLP block on 2026-12-15. The block itself is opportunity that *did not succeed* via that channel.",
+          },
+          {
+            id: "opp-vpn-shift",
+            label:
+              "The two after-hours VPN sessions from the Digital Ocean ASN.",
+          },
+          {
+            id: "opp-personal-email",
+            label:
+              "The 2026-12-14 email to a personal address carrying a vendor list, sent from inside the unit's email system.",
+          },
+          {
+            id: "opp-dms-views",
+            label:
+              "The 2026-12-11 through 2026-12-15 views of Project B / Project C documents.",
+          },
+        ],
+        allowMultiple: true,
+        expected: {
+          type: "multi_choice",
+          correctIds: [
+            "opp-non-asset-usb",
+            "opp-dlp-block",
+            "opp-personal-email",
+          ],
+          allowMultiple: true,
+        },
+        debriefMd:
+          "Three rows establish opportunity. The Kingston mount + the EDR file-write coverage gap mean *a copy could have happened invisibly*. The DLP block is itself a record of an attempted egress that did not succeed via that channel but is unambiguous evidence of intent-to-transfer. The personal email is a successful egress vehicle (the data left the workstation, even though the attached vendor list reads as unclassified at first glance). The VPN ASN shift is a behavioral anomaly worth investigating but is not itself a means to move data. The DMS cross-project views are a **knowledge-gathering** signal, not a data-movement signal.",
+      },
+      {
+        ordinal: 3,
+        type: "multi_choice",
+        weight: 2,
+        promptMd:
+          "Which artifact rows establish **action** (data actually leaving the workstation as a result of m.alvarez's activity)?",
+        options: [
+          {
+            id: "act-personal-email-sent",
+            label:
+              "The 2026-12-14 personal-address email with the vendor-list attachment — the message reached the egress system and the attachment was sent.",
+          },
+          {
+            id: "act-dlp-blocked-q3",
+            label:
+              "The DLP-blocked Q3 roadmap upload — the file reached the egress proxy.",
+          },
+          {
+            id: "act-usb-copy",
+            label:
+              "The Kingston USB mount + the DMS download of the Q3 roadmap shortly before.",
+          },
+          {
+            id: "act-vpn-anomaly",
+            label:
+              "The Digital Ocean VPN sessions.",
+          },
+        ],
+        allowMultiple: true,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["act-personal-email-sent"],
+          allowMultiple: true,
+        },
+        debriefMd:
+          "Only the personal-address email is **completed action** — bytes left the unit's email system. The DLP-blocked upload is *intent-to-act*, not action: the file reached the proxy but did not reach the destination. The USB mount is opportunity; without removable-media file-write telemetry, no row in this artifact set shows that the Q3 roadmap (or anything else) was actually written to the Kingston device. The VPN ASN shift is behavioral context, not action. **Note for the writeup**: the unclassified-on-its-face vendor list still merits review — vendor lists can become sensitive when combined with SOW numbers and project-affiliation data, and the recipient (personal address) is the relevant policy concern, not the markings.",
+      },
+      {
+        ordinal: 4,
+        type: "text_match",
+        weight: 1,
+        promptMd:
+          "Cite the **single artifact field** that, on its own, would convert *opportunity-to-copy-via-USB* into *the Q3 roadmap was written to the USB*. If no artifact in the current set would do this, type `none`.",
+        textMatch: {
+          acceptableAnswers: [
+            "none",
+            "None",
+            "NONE",
+          ],
+          hint: "EDR file-write telemetry is the usual answer. Reread `edr-file-write-coverage.json` carefully before answering.",
+          hintAfterTries: 1,
+        },
+        expected: {
+          type: "text_match",
+          acceptableAnswers: ["none", "None", "NONE"],
+          regex: false,
+        },
+        debriefMd:
+          "**None.** The coverage map says file-write telemetry for removable-media volumes is disabled by unit-wide MDE policy. There is no row in the current artifact set that records bytes being written to the Kingston USB. The defensible move in the writeup is to **name the gap explicitly** and flag it as the single missing artifact that would close the question — which feeds the next question.",
+      },
+      {
+        ordinal: 5,
+        type: "multi_choice",
+        weight: 1,
+        promptMd:
+          "Of the following next steps, which is the **highest-leverage single ask** to put on the supporting ACI SAC's brief tomorrow morning?",
+        options: [
+          {
+            id: "image-the-laptop",
+            label:
+              "Authorize the staged laptop image acquisition so the USN journal, $LogFile, and shellbags can be examined for evidence of writes to the Kingston volume.",
+          },
+          {
+            id: "interview-witness-again",
+            label:
+              "Re-interview the teammate (J. Park) on the record to lock down the exact dates and overheard phrases.",
+          },
+          {
+            id: "pull-perimeter-netflow",
+            label:
+              "Pull perimeter NetFlow for the workstation's outbound traffic during the Digital Ocean VPN sessions.",
+          },
+          {
+            id: "subpoena-do-droplet",
+            label:
+              "Open a legal-process action against Digital Ocean to identify the customer behind the Digital Ocean IP.",
+          },
+        ],
+        allowMultiple: false,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["image-the-laptop"],
+          allowMultiple: false,
+        },
+        debriefMd:
+          "**Image the laptop.** The single biggest gap is whether the Q3 roadmap (or any other file) actually reached the Kingston volume; the USN journal and `$LogFile` survive even when EDR didn't capture writes, and shellbags / jumplists may show interaction with the removable-volume path. The witness re-interview hardens the colorable-cause story but doesn't move the *did data leave* question forward. NetFlow on the workstation's outbound traffic is useful corroboration but layered behind the host-side review and harder to scope. Legal process against Digital Ocean is premature — the after-hours VPN sessions are *anomalous*, not *attributable* yet; an early subpoena weakens the eventual filing if the answer turns out to be a personal travel VPN.",
+      },
+      {
+        ordinal: 6,
+        type: "confidence",
+        weight: 1,
+        promptMd: [
+          "Confidence (1–5) that the following sentence is defensible **as the headline finding** of the writeup counsel will see tomorrow:",
+          "",
+          "> *m.alvarez exfiltrated unit data to a personal account on 2026-12-14 and attempted further exfil on 2026-12-15 before separation.*",
+        ].join("\n"),
+        expected: { type: "confidence", expectedRange: [1, 2] },
+        debriefMd:
+          "**1 or 2.** The sentence collapses two separate things into one claim: (a) an unclassified vendor list left the unit via personal email — that *is* policy-relevant action but is not, on its face, *exfiltration of unit data* in the sense counsel will read; (b) the Q3 roadmap upload was blocked, so *attempted* is accurate, but *further exfil* implies a course of conduct the artifact set cannot establish yet. The defensible headline names each event for what it is — a successful policy-relevant transfer of one vendor-list document, plus one blocked-by-DLP attempt — and reserves *exfil* for what the laptop image is going to either confirm or rule out about the USB.",
+      },
+      {
+        ordinal: 7,
+        type: "multi_choice",
+        weight: 2,
+        promptMd:
+          "Pick the **calibrated** headline for counsel. The other two over-claim or under-claim what the artifacts actually establish.",
+        options: [
+          {
+            id: "overclaim",
+            label:
+              "*m.alvarez exfiltrated unit roadmap and vendor documents to his new employer in the final week of his separation. Recommend criminal referral.*",
+          },
+          {
+            id: "calibrated",
+            label:
+              "*During the trailing 7 days of m.alvarez's separation: (a) one outgoing email to a personal address (2026-12-14) carried a vendor list with SOW references but no classified markings; (b) one DLP-policy block (2026-12-15) prevented an attempted upload of an FOUO roadmap document to a personal cloud destination; (c) a non-asset-register USB was mounted on 2026-12-14 within a window where host EDR was not configured to capture removable-media file writes, so a copy to the USB cannot be confirmed or ruled out from current evidence. Cross-project DMS views and an after-hours VPN ASN shift in the same window are corroborating behavioral anomalies. Recommend the staged laptop-image authorization proceed Friday so the USN journal can be examined for writes to the Kingston volume.*",
+          },
+          {
+            id: "underclaim",
+            label:
+              "*No exfiltration occurred. DLP blocked the only attempted unauthorized transfer. Case closed pending standard separation processing.*",
+          },
+        ],
+        allowMultiple: false,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["calibrated"],
+          allowMultiple: false,
+        },
+        debriefMd:
+          "**The calibrated headline.** It (a) names each event at the resolution the artifacts support, (b) explicitly flags the EDR coverage gap as the reason the USB question is open, (c) recommends the *next* artifact pull (the laptop image) rather than skipping straight to a verdict, and (d) carries the corroborating-but-not-attributable signals (cross-project DMS, VPN ASN) honestly. The over-claim asserts *exfiltrated* without USB-write evidence and recommends a referral counsel cannot defend on the current record. The under-claim ignores the personal-email transfer (which IS a completed transfer to an unauthorized destination, regardless of classification) and treats the EDR coverage gap as if it were evidence of *no copy* rather than *no observation*.",
+      },
+    ],
+  },
 ];
