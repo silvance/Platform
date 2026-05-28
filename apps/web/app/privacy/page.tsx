@@ -61,11 +61,11 @@ export default function PrivacyPage() {
 
         <h2 style={{ marginTop: "1.5rem" }}>What users should not enter</h2>
         <p>
-          Do not enter classified, sensitive, operational, personally
-          identifying, or real investigative information into CI Cyber Lab —
-          including in question free-text fields, admin notes, or
-          authored-scenario content. Treat the platform as an unclassified
-          training environment.
+          Don't put classified, sensitive, operational, personally
+          identifying, or real investigative information into free-text
+          fields, admin notes, or authored-scenario content. Treat this
+          as a public training site: anything you type should be safe to
+          be there.
         </p>
 
         <h2 style={{ marginTop: "1.5rem" }}>Contributions</h2>
@@ -78,9 +78,9 @@ export default function PrivacyPage() {
 
         <h2 style={{ marginTop: "1.5rem" }}>Scope</h2>
         <p>
-          CI Cyber Lab is an independent, unclassified training project
-          maintained in my personal capacity. It is not a substitute for
-          accredited training, agency tooling, or any official record system.
+          CI Cyber Lab is an independent training project I maintain in
+          my personal capacity. It is not a substitute for accredited
+          training, agency tooling, or any official record system.
         </p>
 
         <h2 style={{ marginTop: "1.5rem" }}>Contact</h2>
