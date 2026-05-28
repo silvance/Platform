@@ -3,22 +3,18 @@ import { SiteFooter } from "@/components/site-footer";
 
 export const dynamic = "force-dynamic";
 
-// Front-loads the "this is a training / educational resource"
-// signal because URL-categorization reviewers (Symantec/Broadcom
-// WebPulse, Zscaler ZIA, Forcepoint, Talos) read this page first
-// when deciding whether a domain belongs in "Education" vs "Personal
-// Page" / "Uncategorized". Several enterprise filters (notably DoD
-// proxies) drop uncategorized .codes / Vercel-hosted sites into a
-// read-only / no-posting policy by default; clear ownership +
-// purpose copy + schema markup is the cheapest fix.
+// Page is still doing its URL-categorization job (mentions
+// "training", "Education", "not commercial", etc.) but written in
+// the maintainer's voice instead of the obviously-SEO-bait register
+// from M21j.
 export const metadata = {
   title: "About — CI Cyber Lab",
   description:
-    "CI Cyber Lab is an unclassified, non-commercial training platform for counterintelligence and digital-forensics analysts. Fictional, sanitized scenarios only.",
+    "CI Cyber Lab is a training platform for counterintelligence and digital-forensics analysts. Unclassified, non-commercial, run in my personal capacity.",
   openGraph: {
     title: "About CI Cyber Lab",
     description:
-      "Unclassified educational training platform for counterintelligence and digital-forensics analysts.",
+      "Training platform for counterintelligence and digital-forensics analysts. Unclassified, non-commercial.",
     type: "website",
   },
 };
@@ -26,11 +22,6 @@ export const metadata = {
 const SUPPORT_URL = process.env.SUPPORT_URL?.trim() || null;
 const CONTACT_URL = "https://github.com/silvance/Platform/issues";
 
-// schema.org JSON-LD identifying the site as an educational
-// resource. Categorization crawlers + content classifiers (e.g.
-// Cisco Talos, Symantec WebPulse) ingest this structured data and
-// weight it heavily when assigning a category. Server-rendered into
-// the document so it ships in the initial HTML, no client bundle.
 const SCHEMA_JSONLD = {
   "@context": "https://schema.org",
   "@type": "EducationalOrganization",
@@ -67,101 +58,69 @@ export default function AboutPage() {
             ← CI Cyber Lab
           </Link>
         </div>
-        <h1 style={{ marginBottom: ".5rem" }}>About CI Cyber Lab</h1>
-        <p className="lead" style={{ fontSize: "1.05rem", color: "var(--muted-strong)" }}>
-          CI Cyber Lab is an <strong>unclassified, non-commercial training
-          platform</strong> for counterintelligence and digital-forensics
-          analysts. Every scenario uses fictional, sanitized example artifacts
-          designed to teach analytic reading skills.
+        <h1 style={{ marginBottom: ".5rem" }}>About</h1>
+
+        <p>
+          CI Cyber Lab is a training platform for analysts working in
+          counterintelligence and digital forensics. It's unclassified,
+          non-commercial, and I run it in my personal capacity. Every
+          scenario is fabricated &mdash; fabricated artifacts, fabricated
+          names, fabricated cases. No real incident is reproduced here.
         </p>
 
-        <h2>Purpose</h2>
         <p>
-          I built CI Cyber Lab to train new CI Digital Threat Investigators
-          (CDTIs). The ramp into the work is steep — you have to learn to read
-          forensic artifacts, write findings that survive cross-examination, and
-          stay calibrated about what the evidence does and doesn&rsquo;t
-          establish. The trainers I had were scattered across textbooks,
-          official courses, and trial-by-fire. This is the trainer I wish
-          existed when I started.
-        </p>
-        <p>
-          Each challenge is built around a single reading skill: examine an
-          artifact, decide what is supportable, write the finding. Debriefs
-          separate fact from inference and name the over-claims that an
-          experienced reviewer (or opposing counsel) will pick on.
+          I built it for CI Digital Threat Investigators (CDTIs) coming
+          out of formal coursework. The ramp into the work is steep, the
+          available material is scattered across textbooks and trial-by-fire,
+          and most of what an analyst eventually needs they pick up from
+          working real cases under a senior reviewer. This is the trainer I
+          wish existed when I started &mdash; a place to practice reading
+          artifacts and writing findings without anyone's actual incident on
+          the line.
         </p>
 
-        <h2>Audience</h2>
         <p>
-          Counterintelligence Digital Threat Investigators, military and
-          civilian intelligence and forensics analysts, and learners working
-          through introductory DF/CI material. Use is voluntary; there is no
-          enrollment, no track, and no certificate.
+          Each scenario walks one reading skill: look at the evidence,
+          decide what is supportable, write it down. The debriefs separate
+          fact from inference and call out the over-claims a reviewer
+          (or opposing counsel) will pick on.
         </p>
-
-        <h2>Content and data</h2>
-        <ul>
-          <li>
-            <strong>Unclassified.</strong> No real cases, no real names, no
-            live indicators, no operational data.
-          </li>
-          <li>
-            <strong>Fictional and sanitized.</strong> Every artifact (logs,
-            emails, registry exports, extraction reports, etc.) is constructed
-            for instruction. Resemblance to a real incident is coincidental.
-          </li>
-          <li>
-            <strong>Author-curated.</strong> Scenarios are written by the site
-            maintainer. The platform is not a user-generated-content site,
-            a discussion forum, or a file-sharing service.
-          </li>
-          <li>
-            <strong>No personal data trafficking.</strong> Account email and
-            display name are the only PII collected, used solely for sign-in
-            and progress tracking. No analytics tracking of identifiable
-            users; no advertising; no third-party sale.
-          </li>
-        </ul>
 
         <h2>What this isn&rsquo;t</h2>
-        <ul>
-          <li>
-            Not a substitute for unit training, accredited courses, or the
-            supervision of credentialed agents and examiners.
-          </li>
-          <li>
-            Not a credential. Completing a challenge does not certify anyone
-            for anything.
-          </li>
-          <li>
-            Not an official Department of Defense, U.S. Army, or U.S.
-            Government site. The platform is maintained in the author&rsquo;s
-            personal capacity and is not affiliated with, endorsed by, or
-            sponsored by any government agency.
-          </li>
-          <li>
-            Not a commercial product. No subscriptions, no pay-walled content,
-            no advertising.
-          </li>
-        </ul>
+        <p>
+          This is not a substitute for unit training or for the supervision
+          of credentialed examiners. Completing a scenario doesn't certify
+          anyone for anything. It's not affiliated with the Department of
+          Defense, the U.S. Army, or any other government agency &mdash; I
+          maintain it in my personal capacity. And it's not a commercial
+          product: no subscriptions, no paywalls, no ads.
+        </p>
+
+        <h2>Data and privacy</h2>
+        <p>
+          Account email and display name are the only personal data the site
+          collects, and the only thing they're used for is sign-in and the
+          per-user progress page. No analytics tracking of identifiable users;
+          no advertising; no third-party sharing.
+        </p>
+
+        <h2>For IT administrators</h2>
+        <p>
+          If you're evaluating whether to allow this site on a managed
+          network: the appropriate URL category is{" "}
+          <strong>Education</strong> or <strong>Training / Tools</strong>.
+          The site serves educational content; there's no user-to-user
+          messaging, no public posting, and no learner file upload.
+        </p>
 
         <h2>Contact</h2>
         <p>
-          Questions, miscategorizations, or content concerns:{" "}
+          Questions, miscategorizations, or content concerns are best raised
+          at{" "}
           <a href={CONTACT_URL} target="_blank" rel="noopener noreferrer">
             github.com/silvance/Platform/issues
           </a>
           .
-        </p>
-
-        <h2>Network filters and URL categorization</h2>
-        <p>
-          If you are an IT administrator evaluating whether to allow this site
-          on a managed network, the appropriate URL category is{" "}
-          <strong>Education</strong> or <strong>Training / Tools</strong>. The
-          site serves educational content only; there is no user-to-user
-          messaging, no public posting, and no file upload by learners.
         </p>
 
         <section
@@ -177,11 +136,11 @@ export default function AboutPage() {
             Support hosting costs
           </h2>
           <p style={{ color: "var(--muted)", margin: 0 }}>
-            CI Cyber Lab is an independent, unclassified training project
-            maintained in my personal capacity. Optional contributions help
-            offset domain, hosting, and infrastructure costs. Contributions
-            do not provide access, influence challenge content, or create any
-            official relationship.
+            The site is independent and runs on my dime. If you want to
+            chip in to offset the domain, hosting, and infrastructure costs,
+            the link below goes to a tipping page. Contributions don't get
+            you access, don't influence challenge content, and don't create
+            any official relationship.
           </p>
           {SUPPORT_URL ? (
             <p style={{ marginTop: "1rem", marginBottom: 0 }}>
