@@ -1382,4 +1382,343 @@ parallel.
       },
     ],
   },
+
+  // ─── Network & Logs capstone ────────────────────────────────
+  {
+    slug: "network-beacon-multi-source-capstone-001",
+    title: "Network Capstone: Beacon, Flows, and DNS",
+    summary:
+      "EDR raised a low-confidence outbound-TLS alert. Pull the flow records, the DNS log, the proxy log, and a short Zeek excerpt. Decide what the signals together support and what they don't.",
+    skillAreas: ["network_logs", "report_writing", "inference_discipline"],
+    difficulty: 4,
+    estimatedMinutes: 65,
+    tags: [
+      "network",
+      "beacon",
+      "dns",
+      "netflow",
+      "proxy",
+      "report_writing",
+      "inference_discipline",
+      "capstone",
+    ],
+    lane: "network_logs",
+    module: "Capstone",
+    sequence: 1,
+    status: "draft",
+    brief: `
+# Brief
+
+EDR on \`WS-RD-082\` raised an "uncategorised outbound TLS"
+alert at 09:14Z this morning — low-confidence, the kind of
+alert a tier-1 analyst would normally close after a glance.
+The host is owned by \`j.parker\` (DA-civ, R&D Cell 4); the
+account has no prior alerts.
+
+Network team pulled four artifacts from their telemetry stack
+covering the trailing 24 hours on this host:
+
+- NetFlow records for the host's outbound traffic
+- DNS queries (resolver-side log)
+- Proxy log (TLS connections with SNI + user attribution)
+- A short Zeek conn.log excerpt that captures the EDR alert's
+  window
+
+You also have the alert payload itself. Read everything for
+what it *together* supports: is this beacon-like, what's the
+destination story, and what would have to be true for a
+defensible "C2 traffic on this host" claim vs a "weird third-
+party app phone-home" one.
+`.trim(),
+    artifacts: [
+      {
+        ordinal: 1,
+        displayName: "edr-alert.json",
+        kind: "json",
+        mimeType: "application/json; charset=utf-8",
+        bytes: utf8(
+          JSON.stringify(
+            {
+              alert_id: "EDR-2026-12-04-09141-WS-RD-082",
+              host: "WS-RD-082",
+              user: "j.parker",
+              event_utc: "2026-12-04T09:14:08Z",
+              category: "uncategorised_outbound_tls",
+              confidence: "low",
+              process: "C:\\Program Files (x86)\\Vendr\\vendr-helper.exe",
+              process_signed: true,
+              process_signer: "Vendr Holdings LLC",
+              destination_host: "(SNI not captured by EDR at trigger)",
+              destination_ip: "198.51.100.220",
+              destination_port: 443,
+              note:
+                "EDR fired on first observation of vendr-helper.exe egress; baseline window was 21 days. Process is signed and not on any IOC list.",
+            },
+            null,
+            2,
+          ) + "\n",
+        ),
+      },
+      {
+        ordinal: 2,
+        displayName: "netflow.csv",
+        kind: "csv",
+        mimeType: "text/csv; charset=utf-8",
+        bytes: utf8(
+          [
+            "start_utc,end_utc,src_ip,src_port,dst_ip,dst_port,proto,packets,bytes",
+            // 24h of repeated periodic egress from the host to one IP, plus a baseline of normal browsing.
+            "2026-12-04T05:14:08Z,2026-12-04T05:14:11Z,10.42.18.82,52144,198.51.100.220,443,TCP,8,2218",
+            "2026-12-04T06:14:08Z,2026-12-04T06:14:11Z,10.42.18.82,52211,198.51.100.220,443,TCP,8,2204",
+            "2026-12-04T07:14:08Z,2026-12-04T07:14:11Z,10.42.18.82,52308,198.51.100.220,443,TCP,8,2188",
+            "2026-12-04T08:14:08Z,2026-12-04T08:14:11Z,10.42.18.82,52401,198.51.100.220,443,TCP,8,2240",
+            "2026-12-04T09:14:08Z,2026-12-04T09:14:11Z,10.42.18.82,52522,198.51.100.220,443,TCP,8,2196",
+            // Normal browsing in the same window for context (variable size, variable timing).
+            "2026-12-04T08:51:18Z,2026-12-04T08:51:42Z,10.42.18.82,52488,142.250.190.110,443,TCP,148,402118",
+            "2026-12-04T09:02:22Z,2026-12-04T09:02:55Z,10.42.18.82,52502,52.114.158.91,443,TCP,402,1102218",
+            "2026-12-04T09:08:14Z,2026-12-04T09:08:18Z,10.42.18.82,52517,140.82.121.4,443,TCP,68,148022",
+          ].join("\n") + "\n",
+        ),
+      },
+      {
+        ordinal: 3,
+        displayName: "dns-queries.csv",
+        kind: "csv",
+        mimeType: "text/csv; charset=utf-8",
+        bytes: utf8(
+          [
+            "ts_utc,client_ip,qname,qtype,rcode,answer_ip",
+            "2026-12-04T05:14:07Z,10.42.18.82,api.vendr-app.io,A,NOERROR,198.51.100.220",
+            "2026-12-04T06:14:07Z,10.42.18.82,api.vendr-app.io,A,NOERROR,198.51.100.220",
+            "2026-12-04T07:14:07Z,10.42.18.82,api.vendr-app.io,A,NOERROR,198.51.100.220",
+            "2026-12-04T08:14:07Z,10.42.18.82,api.vendr-app.io,A,NOERROR,198.51.100.220",
+            "2026-12-04T09:14:07Z,10.42.18.82,api.vendr-app.io,A,NOERROR,198.51.100.220",
+            "2026-12-04T08:51:17Z,10.42.18.82,www.google.com,A,NOERROR,142.250.190.110",
+            "2026-12-04T09:02:21Z,10.42.18.82,outlook.office365.com,A,NOERROR,52.114.158.91",
+            "2026-12-04T09:08:13Z,10.42.18.82,github.com,A,NOERROR,140.82.121.4",
+          ].join("\n") + "\n",
+        ),
+      },
+      {
+        ordinal: 4,
+        displayName: "proxy.log",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "Proxy log (TLS connections, last 4h)",
+            "------------------------------------",
+            "",
+            "  ts_utc                   src               user        sni                       dst_ip          bytes_in  bytes_out  category",
+            "  2026-12-04T05:14:08Z     10.42.18.82       j.parker    api.vendr-app.io          198.51.100.220  812       1406       business_software",
+            "  2026-12-04T06:14:08Z     10.42.18.82       j.parker    api.vendr-app.io          198.51.100.220  802       1402       business_software",
+            "  2026-12-04T07:14:08Z     10.42.18.82       j.parker    api.vendr-app.io          198.51.100.220  788       1400       business_software",
+            "  2026-12-04T08:14:08Z     10.42.18.82       j.parker    api.vendr-app.io          198.51.100.220  840       1400       business_software",
+            "  2026-12-04T09:14:08Z     10.42.18.82       j.parker    api.vendr-app.io          198.51.100.220  796       1400       business_software",
+            "  2026-12-04T08:51:18Z     10.42.18.82       j.parker    www.google.com            142.250.190.110 401200    902        web_search",
+            "  2026-12-04T09:02:22Z     10.42.18.82       j.parker    outlook.office365.com     52.114.158.91   1100100   2118       webmail",
+            "",
+            "(Proxy 'business_software' category = vendor-published SaaS app. The destination",
+            " api.vendr-app.io is registered to Vendr Holdings LLC per WHOIS.)",
+            "",
+          ].join("\n"),
+        ),
+      },
+      {
+        ordinal: 5,
+        displayName: "zeek-conn-excerpt.log",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "Zeek conn.log (excerpt — 09:13-09:15 window)",
+            "--------------------------------------------",
+            "",
+            "  uid       ts                 id.orig_h     id.orig_p  id.resp_h         id.resp_p  proto  service  duration  orig_bytes  resp_bytes  conn_state",
+            "  CzMI8a    2026-12-04T09:14:08.118Z  10.42.18.82   52522      198.51.100.220   443        tcp    ssl      3.014     1406        802         SF",
+            "  CzMI8b    2026-12-04T09:14:08.402Z  10.42.18.82   52523      52.114.158.91    443        tcp    ssl      28.118    2118        1102218     SF",
+            "  CzMI8c    2026-12-04T09:14:11.998Z  10.42.18.82   52524      140.82.121.4     443        tcp    ssl      4.418     148022      68018       SF",
+            "",
+            "(SF = Normal SYN→FIN connection establishment and tear-down.",
+            " orig_bytes/resp_bytes are the TCP payload bytes, not the wire bytes.)",
+            "",
+          ].join("\n"),
+        ),
+      },
+    ],
+    questions: [
+      {
+        ordinal: 1,
+        type: "multi_choice",
+        weight: 2,
+        promptMd:
+          "Reading the NetFlow + DNS + proxy log together, which features of the traffic to `198.51.100.220` are **directly visible** in the artifacts (not inferred)?",
+        options: [
+          {
+            id: "regular-interval",
+            label:
+              "The host contacted `198.51.100.220` at almost exactly the top of every hour for at least five consecutive hours.",
+          },
+          {
+            id: "small-uniform-size",
+            label:
+              "Each connection moved a small, near-uniform payload (~2 KB total, both directions combined).",
+          },
+          {
+            id: "dns-resolved",
+            label:
+              "Each contact was preceded by a successful DNS lookup of `api.vendr-app.io`, which resolves to that same IP.",
+          },
+          {
+            id: "proxy-attribution",
+            label:
+              "The proxy log attributes every connection to the `j.parker` account at that source IP.",
+          },
+          {
+            id: "stealth",
+            label:
+              "The traffic was specifically engineered to evade detection.",
+          },
+        ],
+        allowMultiple: true,
+        expected: {
+          type: "multi_choice",
+          correctIds: [
+            "regular-interval",
+            "small-uniform-size",
+            "dns-resolved",
+            "proxy-attribution",
+          ],
+          allowMultiple: true,
+        },
+        debriefMd:
+          "The first four are what the artifacts plainly say. Hourly cadence + small uniform payload + the same DNS-then-IP every time + user attribution — these are the four facts a writeup would lead with. *Engineered to evade detection* is interpretive and not in any row.",
+      },
+      {
+        ordinal: 2,
+        type: "multi_choice",
+        weight: 2,
+        promptMd:
+          "The pattern (regular interval, small uniform size, repeated destination) is the textbook shape of a beacon. From this artifact set, what is **the most cautious read** about what the beacon is doing?",
+        options: [
+          {
+            id: "c2-confirmed",
+            label:
+              "This is C2 traffic to an adversary-controlled server. Open an active-compromise incident.",
+          },
+          {
+            id: "beacon-shape-unknown-intent",
+            label:
+              "The traffic has the **shape** of a beacon, but the destination (`api.vendr-app.io`) is a vendor-software SaaS endpoint and the originating process is signed by that vendor. SaaS apps routinely heartbeat. Investigate before declaring C2.",
+          },
+          {
+            id: "benign-vendor",
+            label:
+              "The destination is registered to a real software vendor and the process is signed; close the alert as a benign vendor heartbeat with no further action.",
+          },
+          {
+            id: "exfil-confirmed",
+            label:
+              "Bytes are leaving the host on a regular cadence, so this is exfiltration.",
+          },
+        ],
+        allowMultiple: false,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["beacon-shape-unknown-intent"],
+          allowMultiple: false,
+        },
+        debriefMd:
+          "Beacon-shape is necessary for C2; it's not sufficient. The destination, on its face, is a published vendor SaaS endpoint, and the process is a code-signed vendor binary — both consistent with a legitimate vendor's app heartbeat. The right next step is to verify the vendor (WHOIS, certificate transparency, the unit's software-asset register) and the process (signature chain, hash against the vendor's published hash) before either closing as benign or escalating to C2. Declaring C2 from shape alone is the canonical over-claim; declaring benign from vendor branding alone is the canonical under-claim. *Exfiltration* would require larger outbound bytes than ~1.4 KB per beat.",
+      },
+      {
+        ordinal: 3,
+        type: "multi_choice",
+        weight: 1,
+        promptMd:
+          "From the artifacts available, which **single additional check** would most directly resolve the *legitimate vendor heartbeat* vs *C2 lookalike* question?",
+        options: [
+          {
+            id: "tls-fingerprint",
+            label:
+              "Compare the certificate chain on `api.vendr-app.io` against the vendor's published certificate(s); pair with a fresh WHOIS and certificate-transparency lookup for the domain.",
+          },
+          {
+            id: "more-netflow",
+            label:
+              "Pull another 48 hours of NetFlow to see whether the cadence drifts.",
+          },
+          {
+            id: "rebuild-host",
+            label:
+              "Reimage the workstation.",
+          },
+          {
+            id: "block-ip",
+            label:
+              "Block the destination IP at the firewall and see what breaks.",
+          },
+        ],
+        allowMultiple: false,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["tls-fingerprint"],
+          allowMultiple: false,
+        },
+        debriefMd:
+          "The certificate chain + WHOIS + CT lookup is the cheapest read that distinguishes a real vendor endpoint from a lookalike. A real vendor heartbeat uses the vendor's CA-issued cert; a lookalike domain registered last month would show in CT and in WHOIS recency. Pulling more flow data confirms the cadence shape we already see and doesn't speak to *who* the destination is. Reimaging is premature without an actual finding. Blocking the IP to see what breaks is operationally hostile (it might be a real business app) and isn't an investigation.",
+      },
+      {
+        ordinal: 4,
+        type: "text_match",
+        weight: 1,
+        promptMd:
+          "Quote the **destination IP** the beacon traffic goes to, exactly as it appears in the artifacts.",
+        textMatch: {
+          acceptableAnswers: ["198.51.100.220"],
+          hint: "Look at the NetFlow `dst_ip` column or the EDR alert `destination_ip` field.",
+          hintAfterTries: 2,
+        },
+        expected: {
+          type: "text_match",
+          acceptableAnswers: ["198.51.100.220"],
+          regex: false,
+        },
+        debriefMd:
+          "`198.51.100.220`. A specific IP belongs in the writeup; *a Vendr server* is weaker than *198.51.100.220 (resolved from api.vendr-app.io)* and the latter is what disambiguates the call-out from any other Vendr infrastructure.",
+      },
+      {
+        ordinal: 5,
+        type: "multi_choice",
+        weight: 2,
+        promptMd:
+          "Three drafts of the writeup that gets shared back with the network team. Pick the one you'd actually send.",
+        options: [
+          {
+            id: "overclaim",
+            label:
+              "*WS-RD-082 is beaconing to a C2 server at 198.51.100.220. Recommend isolating the host and opening an active-compromise incident.*",
+          },
+          {
+            id: "calibrated",
+            label:
+              "*Telemetry from WS-RD-082 (user j.parker) shows a recurring hourly connection to 198.51.100.220 (api.vendr-app.io) from 05:14Z through 09:14Z on 2026-12-04, each connection roughly 1.4 KB outbound / 0.8 KB inbound. The cadence and small uniform payload match the textbook shape of a beacon. The destination is published vendor SaaS infrastructure on its face — WHOIS attributes it to Vendr Holdings LLC and the originating process (`vendr-helper.exe`) is code-signed by the same publisher — but vendor-published infrastructure can be lookalike-impersonated, and the EDR alert is the first observation of this process egressing in a 21-day baseline. Recommend a TLS fingerprint check against the vendor's known certificate, a fresh WHOIS + certificate-transparency lookup on api.vendr-app.io, and a hash match of vendr-helper.exe against the vendor's published binary before deciding whether this is benign or escalate-worthy. No exfiltration consistent with the observed byte volumes.*",
+          },
+          {
+            id: "underclaim",
+            label:
+              "*Closing the EDR alert. Destination is a vendor SaaS endpoint and the process is signed. Nothing to do here.*",
+          },
+        ],
+        allowMultiple: false,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["calibrated"],
+          allowMultiple: false,
+        },
+        debriefMd:
+          "The middle one. It names the shape facts (cadence, payload sizes, destination, attribution), names what the artifacts *don't* yet resolve (vendor authenticity), and recommends the cheap next step (TLS + WHOIS + binary hash). The first calls it C2 from shape alone and recommends isolating a host without verifying that the vendor branding is fake. The third treats vendor branding + a signed binary as a conclusion when both are spoofable signals; an attacker registering a lookalike domain with valid certs and a code-signed dropper is the textbook reason \"signed + branded\" isn't a close-the-alert short-circuit.",
+      },
+    ],
+  },
 ];

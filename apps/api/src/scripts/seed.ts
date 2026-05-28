@@ -286,12 +286,23 @@ async function upsertScenario(
     });
   }
 
-  // Replace any prior questions (cascades to AnswerKey rows) AND any
-  // prior indicator sets (cascades through the questions FK). Order
-  // matters: questions hold an FK to indicator_sets with ON DELETE
-  // RESTRICT, so we delete questions first.
-  await prisma.question.deleteMany({ where: { scenarioId: scenario.id } });
-  await prisma.indicatorSet.deleteMany({ where: { scenarioId: scenario.id } });
+  // Upsert questions by (scenarioId, ordinal) rather than delete-and-
+  // recreate. The old implementation deleted every Question on each
+  // re-seed, which cascaded through QuestionResponse.questionId
+  // (onDelete: Cascade) and wiped every user's per-question history —
+  // attempt counts and first-try-correct timestamps included. The
+  // /admin/completions feed then showed 0 / N for every row because no
+  // QuestionResponse rows existed pinned to the now-recreated Question
+  // ids.
+  //
+  // Upserting on (scenarioId, ordinal) keeps question ids stable across
+  // re-seeds so QuestionResponse rows stay pointing at the right row.
+  // Stale questions (an ordinal no longer present in the seed file) are
+  // pruned at the end of this block; their responses cascade with them,
+  // which is the right behaviour — the question they referred to is
+  // gone.
+  //
+  // Same treatment for IndicatorSet, keyed on (scenarioId, slug).
 
   // Resolve artifact display names → ids once for indicator-set sourcing.
   const artifactByName = new Map(
@@ -301,14 +312,24 @@ async function upsertScenario(
     })).map((a) => [a.displayName, a.id]),
   );
 
-  // Create indicator sets first so questions can reference them by id.
+  // Upsert indicator sets first so questions can reference them by id.
   const indicatorSetIdBySlug = new Map<string, string>();
+  const seedIndicatorSlugs = new Set<string>();
   for (const set of s.indicatorSets ?? []) {
+    seedIndicatorSlugs.add(set.slug);
     const sourceArtifactId = set.sourceArtifactDisplayName
       ? artifactByName.get(set.sourceArtifactDisplayName) ?? null
       : null;
-    const row = await prisma.indicatorSet.create({
-      data: {
+    const row = await prisma.indicatorSet.upsert({
+      where: {
+        scenarioId_slug: { scenarioId: scenario.id, slug: set.slug },
+      },
+      update: {
+        displayName: set.displayName,
+        sourceArtifactId,
+        itemsJson: set.items as never,
+      },
+      create: {
         scenarioId: scenario.id,
         slug: set.slug,
         displayName: set.displayName,
@@ -322,7 +343,10 @@ async function upsertScenario(
     indicatorSetIdBySlug.set(set.slug, row.id);
   }
 
+  // Upsert questions + answer keys.
+  const seedOrdinals = new Set<number>();
   for (const q of s.questions) {
+    seedOrdinals.add(q.ordinal);
     let optionsJson: unknown = null;
     if (q.type === "multi_choice") {
       optionsJson = {
@@ -361,8 +385,25 @@ async function upsertScenario(
       }
       indicatorSetId = id;
     }
-    const question = await prisma.question.create({
-      data: {
+    const question = await prisma.question.upsert({
+      where: {
+        scenarioId_ordinal: { scenarioId: scenario.id, ordinal: q.ordinal },
+      },
+      update: {
+        // Note: `type` IS updated. If a maintainer changes a question
+        // type (e.g. multi_choice → text_match) the existing
+        // QuestionResponse rows will retain stale response_json
+        // payloads that no longer parse for the new type — but the
+        // grading service handles unknown shapes gracefully and the
+        // user can resubmit. The other choice is to refuse re-seed
+        // on type-change, which is worse for the maintainer.
+        type: q.type,
+        promptMd: q.promptMd,
+        weight: q.weight,
+        optionsJson: optionsJson as never,
+        indicatorSetId,
+      },
+      create: {
         scenarioId: scenario.id,
         ordinal: q.ordinal,
         type: q.type,
@@ -372,13 +413,44 @@ async function upsertScenario(
         indicatorSetId,
       },
     });
-    await prisma.answerKey.create({
-      data: {
+    await prisma.answerKey.upsert({
+      where: { questionId: question.id },
+      update: {
+        expectedJson: q.expected as never,
+        debriefMd: q.debriefMd,
+      },
+      create: {
         questionId: question.id,
         // Store the discriminated shape so AttemptsService can read it
         // without re-deriving type from the question row.
         expectedJson: q.expected as never,
         debriefMd: q.debriefMd,
+      },
+    });
+  }
+
+  // Prune questions whose ordinals are no longer in the seed file.
+  // Their QuestionResponse rows cascade with them — right behaviour
+  // since the question they referred to no longer exists.
+  await prisma.question.deleteMany({
+    where: {
+      scenarioId: scenario.id,
+      ordinal: { notIn: Array.from(seedOrdinals) },
+    },
+  });
+
+  // Same for indicator sets whose slugs are no longer in the seed.
+  // Need an array-form NOT IN; an empty set means "no sets in this
+  // scenario survive."
+  if (seedIndicatorSlugs.size === 0) {
+    await prisma.indicatorSet.deleteMany({
+      where: { scenarioId: scenario.id },
+    });
+  } else {
+    await prisma.indicatorSet.deleteMany({
+      where: {
+        scenarioId: scenario.id,
+        slug: { notIn: Array.from(seedIndicatorSlugs) },
       },
     });
   }
