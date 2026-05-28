@@ -1716,12 +1716,12 @@ sheet.
           {
             id: "user-used-signal-18-times",
             label:
-              "The user used Signal 18 times.",
+              "The user used Signal exactly 18 times during the period of interest, per UFED's count of OS-level cache rows. AXIOM missing them is a parser bug that doesn't change the underlying activity count, so 18 is the authoritative number for the writeup.",
           },
           {
             id: "axiom-wrong",
             label:
-              "AXIOM is wrong; the correct count is 18.",
+              "AXIOM is producing demonstrably wrong output for Signal on this device — its 0 count contradicts UFED's 18, and UFED is the older, more battle-tested tool on iOS. Recommend pulling the AXIOM logs for diagnostic review, replacing the Apple-iOS module on this AXIOM install, and re-running the analysis once the parser is patched.",
           },
         ],
         allowMultiple: false,

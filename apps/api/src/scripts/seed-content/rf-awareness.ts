@@ -264,8 +264,8 @@ language should say and what the operational next step is.
         weight: 1,
         promptMd: "Which sentence is the right finding for the field report?",
         options: [
-          { id: "definitive-bug", label: "A surveillance device was operating during the event." },
-          { id: "definitive-not-bug", label: "No anomaly observed." },
+          { id: "definitive-bug", label: "A clandestine surveillance device was operating during the event. The narrowband emitter on an unregistered frequency, persistent through the sensitive portion, and unmatched to any event transmitter is sufficient to identify the signal as hostile RF collection targeting the event." },
+          { id: "definitive-not-bug", label: "No anomaly observed. The single narrowband emitter could be any number of mundane RF sources in the venue's broader spectrum (an unrelated commercial transmitter, a building HVAC controller, a nearby cellular small-cell), and absent confirmation by a TSCM team the observation is not strong enough to enter the field report at all." },
           { id: "calibrated-finding", label: "A persistent narrowband signal was observed that does not correspond to the published event infrastructure. The observation does not identify the signal's source. Recommend escalation to qualified TSCM personnel for assessment." },
         ],
         allowMultiple: false,
@@ -488,17 +488,17 @@ The goal isn't to dramatise; it isn't to dismiss; it's to be
           {
             id: "wording-overclaim",
             label:
-              "\"Government-issued devices were imaged by foreign customs during entry screening.\"",
+              "\"During entry to a foreign country, customs officials took the traveller's government-issued laptop and cell phone out of sight for approximately 25 minutes; the devices were imaged for intelligence collection during that period. On return the laptop's power indicator was blinking, consistent with the imaging operation having completed shortly before the devices were handed back.\"",
           },
           {
             id: "wording-vague",
             label:
-              "\"Something happened with the laptop at the border.\"",
+              "\"Something happened with the laptop at the border — the traveller was separated from it for a while during customs and afterward noticed it acting oddly, but the specifics weren't clear at the time and weren't documented in the moment.\"",
           },
           {
             id: "wording-minimising",
             label:
-              "\"Routine customs handling occurred; no concerns.\"",
+              "\"Routine customs handling occurred; no concerns. The traveller's devices were briefly handled by foreign customs as part of normal entry-inspection procedures and were returned in working order with no observable changes worth reporting.\"",
           },
         ],
         allowMultiple: false,

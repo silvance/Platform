@@ -1906,12 +1906,12 @@ yet.
           {
             id: "rclone-explained-by-handoff",
             label:
-              "Already explained by the 12-02 handoff email and OneDrive activity.",
+              "Already explained by the 12-02 handoff email and OneDrive activity — the rclone execution is just a developer using their preferred tool to repeat the same handoff in case OneDrive sync had latency, and the ~114 MiB egress matches the size of the archive she'd already announced to ops-team. No additional concern beyond what the 12-02 sequence already established.",
           },
           {
             id: "rclone-low-signal",
             label:
-              "Low signal — rclone is widely used legitimately by developers.",
+              "Low signal — rclone is widely used legitimately by developers as a backup-to-cloud utility, a S3 transfer client for build artifacts, and a sync tool for personal data on developer workstations. A single execution with ~114 MiB transferred is well within the noise floor of routine developer use of cloud-storage tooling.",
           },
           {
             id: "rclone-destination-unknown",
@@ -1941,12 +1941,12 @@ yet.
           {
             id: "usb-policy-violation",
             label:
-              "It is a removable-media policy concern on its own (non-asset-register device on a corporate host).",
+              "It is a removable-media policy concern on its own (non-asset-register device on a corporate host) and finishes the analysis. The mount during the OneDrive upload window is direct evidence that d.becker used the unauthorised device to copy the sanctioned-handoff files to a personal drive in parallel with the corporate channel — a clear AR 25-2 violation that warrants immediate escalation to the unit ISSM regardless of any other artifact in the case.",
           },
           {
             id: "usb-proves-data-copied",
             label:
-              "It proves data was copied to the USB.",
+              "It proves data was copied from the workstation to the USB. The USB was inserted, files were available on the system during the window, and the USB was then removed; the only thing that explains why someone plugs in a USB during a file-handling window is to copy data onto it.",
           },
           {
             id: "usb-narrows-window",
@@ -1956,7 +1956,7 @@ yet.
           {
             id: "usb-cleared",
             label:
-              "Irrelevant — devices get plugged in routinely.",
+              "Irrelevant — devices get plugged in routinely on developer workstations for phone charging, hardware-testing peripherals, USB-serial debuggers, and yubikey enrolment, and the mere fact of a mount during a window when other activity was happening is coincidental at best.",
           },
         ],
         allowMultiple: true,

@@ -613,12 +613,12 @@ without independent confirmation.
           {
             id: "exploit-succeeded",
             label:
-              "The 200 response proves the SQLi payload was successfully executed.",
+              "The 200 response proves the SQLi payload was successfully executed against the backend database. HTTP 200 means the application processed the request to completion, and an application that processes a SLEEP-injected query without erroring out is one that built and executed the resulting SQL statement; the matching content length confirms the page rendered normally after the injection ran.",
           },
           {
             id: "exploit-failed",
             label:
-              "The 200 response proves the app rejected the SQLi payload.",
+              "The 200 response proves the app rejected the SQLi payload. A working WAF or parameterized-query layer would intercept the metacharacters and return a sanitised response with the original 4218-byte content size; the matching length here is itself the evidence that the malicious portion of the payload was stripped before the database ever saw it.",
           },
           {
             id: "no-probe",

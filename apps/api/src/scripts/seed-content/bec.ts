@@ -758,7 +758,7 @@ actually take this afternoon.
           {
             id: "phone-changed",
             label:
-              "The phone number changed.",
+              "The vendor's primary phone number on the PDF is different from the verified number on the master record, which is itself a textbook impersonation signal — attackers swap the contact channel so a finance-side verification call lands at attacker-controlled infrastructure rather than the real vendor.",
           },
         ],
         allowMultiple: true,

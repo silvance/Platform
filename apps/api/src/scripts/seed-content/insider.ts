@@ -1562,7 +1562,7 @@ accounts.
           {
             id: "lock-and-walk-away",
             label:
-              "Disable the account and consider the matter closed.",
+              "Disable the account immediately, leave the account in a locked state until the next IT review cycle, and consider the matter closed once the attacker can no longer authenticate as m.santos. The active session being severed removes the immediate threat and the matter can be handled administratively from there without further investigation steps.",
           },
         ],
         allowMultiple: true,

@@ -123,7 +123,7 @@ One process in the slice below sits where it shouldn't.
           {
             id: "proves-malware",
             label:
-              "It proves PID 4012 is malware.",
+              "It proves PID 4012 is malware. Legitimate svchost.exe always lives in System32 under services.exe; any process with that name running from a different path under a different parent is by definition a masquerading binary, and a masquerading binary is a malicious one. The pstree output is sufficient evidence to declare the process as malicious code.",
           },
           {
             id: "is-finding-not-proof",
@@ -133,7 +133,7 @@ One process in the slice below sits where it shouldn't.
           {
             id: "proves-user-clicked-it",
             label:
-              "It proves the user `m.wong` deliberately launched the process.",
+              "It proves the user m.wong deliberately launched the process. The image path is under their user profile (`C:\\Users\\m.wong\\AppData\\Local\\Temp\\`), which means the binary was written there by something running as m.wong, and explorer.exe — m.wong's shell — is the parent process. Both signals are consistent only with the user double-clicking the binary themselves.",
           },
         ],
         allowMultiple: false,
@@ -416,12 +416,12 @@ What malfind doesn't support:
           {
             id: "yes-rwx-is-conclusive",
             label:
-              "Yes. RWX memory is always malicious.",
+              "Yes. RWX memory regions are forbidden by every modern compiler's hardening flags (W^X policy, DEP, etc.); seeing one in a process is conclusive proof of injected or reflectively-loaded malicious code, and the shellcode prologue is just confirmation of what RWX alone already establishes.",
           },
           {
             id: "yes-malfind-doesnt-false-positive",
             label:
-              "Yes. malfind doesn't false-positive on legitimate software.",
+              "Yes. malfind's heuristic specifically filters out the legitimate JIT and anti-cheat patterns that used to noise its output in older versions; the plugin has been tuned over multiple releases to only fire when the region looks injection-shaped, so a malfind hit in current Volatility 3 is a confirmed finding rather than a triage lead.",
           },
         ],
         allowMultiple: false,
