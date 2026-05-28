@@ -1285,25 +1285,21 @@ the document.
     brief: `
 # Brief
 
-Every prior scenario in this lane drilled one foundation: hashes,
-magic bytes, MAC times, recycle bin, browser history, access
-logs, hex dumps, chain of custody. This capstone bundles them.
+A small case folder, one file at the centre of it:
+\`vendor-list-Q3.pdf\`. Work through it:
 
-A small case folder has been handed to you. One file is at the
-centre of it — \`vendor-list-Q3.pdf\`. Your tasking:
+- Confirm what the file actually is. Hash check first, then the
+  hex magic bytes.
+- Place the events around it on a timeline using the MAC times,
+  the browser-download row, and the portal access log.
+- Decide what the Recycle Bin metadata adds.
+- Read the 4137 carefully — there's one concern worth flagging.
+- Then pick the finding that matches what the evidence carries.
 
-1. Confirm what the file actually is (hash and magic-byte
-   verification).
-2. Place the events around it on a timeline (MAC times +
-   browser history + access log).
-3. Decide what the Recycle Bin metadata adds.
-4. Flag any chain-of-custody concern.
-5. Pick the calibrated finding from three drafts.
-
-Nothing here is harder than the warmup scenarios — you've seen
-each artifact type before. The new skill is the synthesis: which
-foundation answers which sub-question, and not letting one
-artifact's evidence carry weight for a different claim.
+Every artifact type in this case has appeared in the warmup
+scenarios. The work is in deciding which artifact answers which
+question and keeping each artifact's evidence inside its own
+claim.
 `.trim(),
     artifacts: [
       {
@@ -1360,9 +1356,6 @@ artifact's evidence carry weight for a different claim.
             "",
             "  Offset    Hex                                  ASCII",
             "  0x00000   25 50 44 46 2D 31 2E 37 0A 25 E2 E3 CF D3 0A 0A   %PDF-1.7.%.....",
-            "",
-            "(Reminder from the magic-bytes scenario: %PDF-1.x is the",
-            " standard signature for a PDF document.)",
             "",
           ].join("\n"),
         ),
@@ -1434,10 +1427,6 @@ artifact's evidence carry weight for a different claim.
             "  Original path   : C:\\Users\\j.cole\\Downloads\\vendor-list-Q3.pdf",
             "  Original size   : 318,442 bytes",
             "  Deleted (UTC)   : 2026-11-14 15:30:08",
-            "",
-            "(Reminder from the recycle-bin scenario: the SID on the $I file is",
-            " the account that *deleted* the file, not necessarily the account",
-            " that authored it.)",
             "",
           ].join("\n"),
         ),
@@ -1618,7 +1607,7 @@ artifact's evidence carry weight for a different claim.
           allowMultiple: true,
         },
         debriefMd:
-          "**`j.cole` did the deleting; the `$R` is intact.** The SID on the `$I` resolves to `j.cole` — that's the account that performed the delete (per the warmup scenario). *Authorship* is a separate question — the published file came from the unit portal; `j.cole` downloaded it from there. The `$R` file's presence in the Recycle Bin folder means an undelete is feasible from the image.",
+          "**`j.cole` did the deleting; the `$R` is intact.** The SID on the `$I` resolves to `j.cole`, which means `j.cole` is the account that performed the delete (not necessarily the account that authored the file). The published file came from the unit portal; `j.cole` downloaded it from there. The `$R` file's presence in the Recycle Bin folder means an undelete is feasible from the image.",
       },
       {
         ordinal: 6,
@@ -1657,7 +1646,7 @@ artifact's evidence carry weight for a different claim.
         type: "multi_choice",
         weight: 2,
         promptMd: [
-          "Pick the **calibrated** finding rewrite. The other two over-claim or under-claim.",
+          "Of these three rewrites, which one says what the evidence actually carries?",
           "",
           "Junior analyst's draft:",
           "",
@@ -1687,7 +1676,7 @@ artifact's evidence carry weight for a different claim.
           allowMultiple: false,
         },
         debriefMd:
-          "**The calibrated rewrite.** It states what each artifact actually carries (hash match, download time + path, delete time + actor account, second account's independent fetch, custody gap), names the missing piece (no artifact in this set establishes *intent to conceal*), and recommends the cheap MFR to close the custody gap before the image is cited downstream. The over-claim asserts *to conceal* on no supporting artifact and recommends a referral counsel cannot defend. The under-claim dismisses every signal — the deletion, the custody gap, the cross-account access — by treating routine appearance as evidence of routine activity.",
+          "The middle one. It reports each artifact at the resolution it actually supports — hash match, download time and path, delete time and actor account, the second account's independent fetch, the custody gap — and leaves *intent to conceal* off because nothing in the set establishes it. The first rewrite imports *to conceal* on no supporting evidence and recommends a referral counsel can't defend. The third dismisses the deletion, the custody gap, and the cross-account access by treating routine appearance as evidence of routine activity.",
       },
     ],
   },

@@ -2322,7 +2322,7 @@ You will read:
           "Confidence (1–5) that this row can be safely closed as **hygiene-only** without raising the credential-access incident track.",
         expected: { type: "confidence", expectedRange: [1, 2] },
         debriefMd:
-          "**1 or 2.** Hygiene is necessary but not sufficient here. Closing the row as a tidy-up loses the credential-access signal and the chance to identify the actor while the failed-logon source is still live. The defensible posture is: open the AR 25-2 hygiene finding and the AR 25-2 credential-access incident as two separate, parallel work items, with the ACI referral held pending facts from the WS-DEV-217 investigation.",
+          "**1 or 2.** Hygiene is necessary but not sufficient here. Closing the row as a tidy-up loses the credential-access signal and the chance to identify the actor while the failed-logon source is still live. Open the AR 25-2 hygiene finding and the AR 25-2 credential-access incident as two parallel work items, and hold the ACI referral pending facts from the WS-DEV-217 investigation.",
       },
     ],
   },
@@ -2358,75 +2358,65 @@ You will read:
     brief: `
 # Brief (DRAFT)
 
-\`m.alvarez\` — DA-civilian software engineer in a sensitive R&D
-unit — gave two weeks' notice **12 days ago**. Friday is his last
-day. His LinkedIn announcement names a defense-adjacent commercial
-firm; the public job description mentions "transition of vendor
-relationships" in a project area adjacent to the unit's current
-work.
+\`m.alvarez\` is a DA-civilian software engineer in a sensitive R&D
+unit. He gave two weeks' notice 12 days ago. Friday is his last day.
+His LinkedIn announcement names a defense-adjacent commercial firm
+and the public job description mentions "transition of vendor
+relationships" in an area adjacent to the unit's current work.
 
-Three independent escalations reached the supporting ACI office in
-the last 48 hours:
+Three things hit the supporting ACI office in the last 48 hours:
 
-1. **DLP** fired one alert ~36 hours ago for an attempted upload
-   to a personal cloud-storage service. The upload was **blocked**
-   at the egress proxy; the file's name and the bytes are recorded
-   in the DLP row.
-2. **HR walk-in** from a teammate. Verbatim from the intake form:
-   *"He's been staying late and asking weird questions about who
-   owns what after he leaves."*
-3. **VPN logs** show two after-hours sessions from an IP outside
-   his usual ISP range during the trailing 10 days.
+- A DLP alert about 36 hours ago for an attempted upload to a
+  personal cloud-storage service. The upload was blocked at the
+  egress proxy; the file name, size, and bytes are recorded in the
+  DLP row.
+- A teammate walked into HR. From the intake form, verbatim:
+  *"He's been staying late and asking weird questions about who
+  owns what after he leaves."*
+- VPN logs show two after-hours sessions from an IP outside his
+  usual ISP range in the trailing 10 days.
 
-The local OSJA / supporting trial counsel has authorized a
-**non-intrusive** host + account review. You are NOT cleared to
-image the laptop yet; that authorization is being staged in
-parallel and will land Friday morning if and only if this review
-articulates a defensible inference. Your tasking is:
+OSJA has authorized a non-intrusive host + account review. You are
+not cleared to image the laptop yet; that authorization is staged in
+parallel and lands Friday morning if (and only if) this review
+articulates something counsel can act on. The tasking, in order:
 
-1. Read the artifacts. Separate fact from inference.
-2. Name what the artifacts **prove** about opportunity vs action.
-3. Identify the **single missing artifact** that would most
-   directly close the open question.
-4. Pick the **calibrated** writeup from three drafts so counsel
-   has the right thing on her desk Friday at 0700.
+- Read the artifacts. Separate what they prove from what they
+  suggest.
+- Decide what the evidence says about opportunity and what it says
+  about action.
+- Name the single artifact that would most directly close the open
+  question.
+- Pick the writeup that matches what the evidence actually carries.
 
-The supporting ACI SAC will use your writeup, the artifacts, and
-the missing-evidence list to brief counsel; an over-claim here
-poisons the deposition six months from now, and an under-claim
-costs the unit the chance to scope the next-step authorization.
+The supporting ACI SAC will use what you write, plus the artifacts
+and the missing-evidence list, to brief counsel.
 
 ## Artifacts
 
-- **hr-timeline.json** — separation timeline + role context.
-- **dlp-alert.json** — the blocked-upload row, with the file name,
-  size, classification banner, and the policy that fired.
-- **dms-access-audit.csv** — document-management view/download
-  events for the trailing 14 days, scoped to documents touched by
-  this account.
-- **vpn-sessions.csv** — VPN session starts + ends for the
+- \`hr-timeline.json\` — separation timeline and role context.
+- \`dlp-alert.json\` — the blocked-upload row: file name, size,
+  classification banner, and the policy that fired.
+- \`dms-access-audit.csv\` — document-management view/download
+  events for the trailing 14 days, scoped to documents this account
+  touched.
+- \`vpn-sessions.csv\` — VPN session starts and ends for the
   trailing 14 days.
-- **usb-mount-history.csv** — USBSTOR + EDR mount/dismount events
+- \`usb-mount-history.csv\` — USBSTOR plus EDR mount/dismount events
   on the workstation for the trailing 14 days.
-- **edr-file-write-coverage.json** — host-side EDR coverage map
-  (which event classes are enabled / disabled on this host) plus
-  the file-write events that WERE captured during the relevant
-  windows.
-- **email-of-interest.eml.txt** — text view of one outgoing email
-  flagged by the manager during her exit-process walkthrough.
-- **witness-statement.txt** — sworn statement excerpt from the
+- \`edr-file-write-coverage.json\` — host-side EDR coverage map
+  (which event classes are enabled / disabled on this host) and the
+  file-write events that were captured during the relevant windows.
+- \`email-of-interest.eml.txt\` — text view of one outgoing email
+  that the manager flagged during her exit-process walkthrough.
+- \`witness-statement.txt\` — sworn statement excerpt from the
   teammate who walked into HR.
 
-## A note on terminology
-
-This case references **EDR** (Endpoint Detection and Response —
-host-side security telemetry like CrowdStrike Falcon, Microsoft
-Defender for Endpoint, or Sysmon) and **DLP** (Data Loss
-Prevention — egress-side content inspection that blocks or alerts
-on outbound transfers matching a policy). You don't need to know
-the internals — only that EDR is a host-side source and DLP is an
-egress-side source, and they observe different parts of the same
-"file moved" lifecycle.
+EDR (Endpoint Detection and Response) is the enterprise security
+agent class — Falcon, Defender for Endpoint, Sysmon. DLP (Data Loss
+Prevention) is egress-side content inspection that blocks or alerts
+on outbound transfers matching a policy. EDR sees the workstation;
+DLP sees what tries to leave it.
 `.trim(),
     artifacts: [
       {
@@ -2830,7 +2820,7 @@ egress-side source, and they observe different parts of the same
           regex: false,
         },
         debriefMd:
-          "**None.** The coverage map says file-write telemetry for removable-media volumes is disabled by unit-wide MDE policy. There is no row in the current artifact set that records bytes being written to the Kingston USB. The defensible move in the writeup is to **name the gap explicitly** and flag it as the single missing artifact that would close the question — which feeds the next question.",
+          "**None.** The coverage map says file-write telemetry for removable-media volumes is disabled by unit-wide MDE policy. No row in this artifact set records bytes being written to the Kingston USB. The writeup needs to say that — that the question is open, not answered in either direction.",
       },
       {
         ordinal: 5,
@@ -2887,7 +2877,7 @@ egress-side source, and they observe different parts of the same
         type: "multi_choice",
         weight: 2,
         promptMd:
-          "Pick the **calibrated** headline for counsel. The other two over-claim or under-claim what the artifacts actually establish.",
+          "Which of these is the headline you'd actually put in front of counsel?",
         options: [
           {
             id: "overclaim",
@@ -2912,7 +2902,7 @@ egress-side source, and they observe different parts of the same
           allowMultiple: false,
         },
         debriefMd:
-          "**The calibrated headline.** It (a) names each event at the resolution the artifacts support, (b) explicitly flags the EDR coverage gap as the reason the USB question is open, (c) recommends the *next* artifact pull (the laptop image) rather than skipping straight to a verdict, and (d) carries the corroborating-but-not-attributable signals (cross-project DMS, VPN ASN) honestly. The over-claim asserts *exfiltrated* without USB-write evidence and recommends a referral counsel cannot defend on the current record. The under-claim ignores the personal-email transfer (which IS a completed transfer to an unauthorized destination, regardless of classification) and treats the EDR coverage gap as if it were evidence of *no copy* rather than *no observation*.",
+          "The middle headline names each event at the resolution the artifacts support, flags the EDR coverage gap as the reason the USB question is open, recommends pulling the laptop image next instead of jumping to a verdict, and carries the corroborating-but-not-attributable signals (the cross-project DMS views, the VPN ASN shift) honestly. The first asserts *exfiltrated* without USB-write evidence and recommends a referral counsel can't defend on this record. The third dismisses the personal-email transfer — a completed transfer to an unauthorized destination, classification markings or not — and treats the EDR coverage gap as evidence of *no copy* rather than *no observation*.",
       },
     ],
   },
