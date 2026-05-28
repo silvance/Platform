@@ -1656,7 +1656,7 @@ claim.
           {
             id: "overclaim",
             label:
-              "*On 2026-11-12 j.cole downloaded the unit Q3 vendor list and on 2026-11-14 deleted it to conceal possession; corroborated by Recycle Bin metadata under the same account. Recommend criminal referral.*",
+              "*On 2026-11-12 the account j.cole pulled the unit's Q3 vendor list (`vendor-list-Q3.pdf`, hash 4f1c...8d2e) from the internal portal at 19:42 UTC, then on 2026-11-14 at 15:30 UTC deleted the file from the workstation in an attempt to conceal possession of unit-sensitive material. The Recycle Bin `$I` metadata under j.cole's SID directly attributes the deletion to that account. A second account (other.a) was used to pull the same file on 11-13 from a different host on the same subnet, suggesting either a coordinated effort or that j.cole's credentials were also being used on a second device. The custody-log gap on the 4137 is suspicious in this context. Recommend immediate referral to the supporting ACI office for credential-compromise and insider-threat investigation, and a hold on j.cole's account access pending interview.*",
           },
           {
             id: "calibrated",
@@ -1666,7 +1666,7 @@ claim.
           {
             id: "underclaim",
             label:
-              "*No wrongdoing observed. The user downloaded a document and later deleted it, which is routine.*",
+              "*Review of WS-OPS-058 found that j.cole accessed `vendor-list-Q3.pdf` from the unit's internal SharePoint portal on 2026-11-12 (the same document j.cole's project work routinely references), saved it to the local Downloads folder, and later moved it to the Recycle Bin on 2026-11-14. The Recycle Bin metadata shows the file is intact at `$RHJK3D.pdf` and can be restored at any time, which is inconsistent with a deliberate concealment. A second account fetched the same document the next day, indicating the file circulates in the normal course of unit business. The chain-of-custody log shows two attested handoffs and matching SHA-256 hashes, so the workstation image is sound. No wrongdoing observed. Recommend closing the case; routine cleanup of an old downloaded document.*",
           },
         ],
         allowMultiple: false,

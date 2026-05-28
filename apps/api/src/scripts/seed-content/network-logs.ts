@@ -1697,7 +1697,7 @@ party app phone-home" one.
           {
             id: "overclaim",
             label:
-              "*WS-RD-082 is beaconing to a C2 server at 198.51.100.220. Recommend isolating the host and opening an active-compromise incident.*",
+              "*WS-RD-082 (user j.parker) is actively beaconing to an external C2 server at 198.51.100.220. Telemetry shows a recurring hourly cadence with uniform ~2 KB payloads — the textbook shape of an established implant in active C2. The destination api.vendr-app.io is a spoofed vendor-lookalike domain stood up as cover for the implant's traffic; the matching certificate signature is part of the cover. The originating process vendr-helper.exe is the implant binary masquerading as a signed vendor utility. Recommend immediate host isolation, opening an active-compromise incident, scoping the foothold across all unit endpoints for the same beacon shape, submitting 198.51.100.220 + api.vendr-app.io to the unit blocklist and the upstream threat-intel sharing channel, and rotating any credentials cached on the workstation.*",
           },
           {
             id: "calibrated",
@@ -1707,7 +1707,7 @@ party app phone-home" one.
           {
             id: "underclaim",
             label:
-              "*Closing the EDR alert. Destination is a vendor SaaS endpoint and the process is signed. Nothing to do here.*",
+              "*EDR raised a low-confidence \"uncategorised outbound TLS\" alert on WS-RD-082 (user j.parker). Investigation shows the destination api.vendr-app.io is registered to Vendr Holdings LLC — a real commercial software vendor — and the originating process vendr-helper.exe is code-signed by the same publisher. The destination IP is published vendor SaaS infrastructure. The \"regular interval, small payload\" shape is exactly what any SaaS application's normal background heartbeat produces; SaaS apps routinely check in for licensing, configuration, and update polls at fixed intervals. Closing the alert as a benign vendor heartbeat. No further investigation needed; recommend adding api.vendr-app.io to the EDR allowlist so future heartbeats don't trigger.*",
           },
         ],
         allowMultiple: false,

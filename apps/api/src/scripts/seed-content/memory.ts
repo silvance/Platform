@@ -741,7 +741,7 @@ afternoon.
           {
             id: "overclaim",
             label:
-              "*WS-DEV-091 is compromised by a Metasploit stager (PID 4012, updater.exe). The host is in active C2 with 203.0.113.42. Recommend full reimage and credential rotation.*",
+              "*WS-DEV-091 (user s.lin) is fully compromised by an active Metasploit stager. Memory analysis confirms PID 4012 (updater.exe) is running reflected-loaded shellcode from a 256 KB RWX region; the first eight bytes are the canonical Metasploit x64 stager prologue. The process is parented by explorer.exe rather than services.exe and runs from %TEMP%, consistent with user-initiated execution of a malicious dropper, and three simultaneous TCP sockets to 203.0.113.42:443 are the live C2 channel. Recommend immediate isolation of the host, full reimage from known-good media, rotation of all credentials cached on the workstation (domain, VPN, browser-saved), and an SOC sweep across the unit for the same shellcode pattern and the same C2 IP.*",
           },
           {
             id: "calibrated",
@@ -751,7 +751,7 @@ afternoon.
           {
             id: "underclaim",
             label:
-              "*A process called updater.exe has RWX memory, which is suspicious. Recommend checking it later when SOC has bandwidth.*",
+              "*A process named updater.exe (PID 4012) was observed in memory on WS-DEV-091 with a 256 KB RWX memory region. RWX memory regions occur in legitimate software for JIT compilation, plugin loading, and code-page rewrites; the process tree shows it was launched as a child of explorer.exe, meaning the user initiated execution voluntarily rather than via a remote-exploit pathway. The connections to 203.0.113.42 are to port 443 with ESTABLISHED state, consistent with normal HTTPS traffic that any signed updater might generate during a check-for-updates run. Recommend logging the observation in the SOC queue and revisiting when bandwidth allows; no immediate containment action required.*",
           },
         ],
         allowMultiple: false,

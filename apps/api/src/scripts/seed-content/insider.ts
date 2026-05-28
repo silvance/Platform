@@ -2882,7 +2882,7 @@ DLP sees what tries to leave it.
           {
             id: "overclaim",
             label:
-              "*m.alvarez exfiltrated unit roadmap and vendor documents to his new employer in the final week of his separation. Recommend criminal referral.*",
+              "*m.alvarez systematically exfiltrated unit roadmap and vendor documentation to his new employer over the final 7 days of his separation. DLP captured one of the upload attempts on 2026-12-15; the Q3 roadmap was queued for transfer to a personal cloud destination tied to the recipient firm. The 2026-12-14 personal email carrying the unit's SOW-vendor list confirms a completed transfer of unit-sensitive intellectual property; the cross-project DMS views on 2026-12-11 through 2026-12-15 confirm the breadth of his collection effort. The after-hours VPN sessions from a Digital Ocean ASN are characteristic of attacker-managed staging infrastructure. Recommend immediate criminal referral, an asset hold on the laptop, civil-recovery action against the new employer, and ACI counter-intelligence coordination on the broader threat picture.*",
           },
           {
             id: "calibrated",
@@ -2892,7 +2892,7 @@ DLP sees what tries to leave it.
           {
             id: "underclaim",
             label:
-              "*No exfiltration occurred. DLP blocked the only attempted unauthorized transfer. Case closed pending standard separation processing.*",
+              "*Review of m.alvarez's separation period found two notable events: a personal-address email on 2026-12-14 carrying a list of vendor names and SOW reference numbers (no classified or FOUO markings on the file), and a DLP-policy alert on 2026-12-15 in which an attempted upload of a roadmap PDF was blocked by the egress proxy before any data left the unit network. The blocked upload means DLP performed as designed. The personal email carried only unclassified business data of the type that routinely circulates between vendors and employees during normal contract-handoff work. The cross-project DMS views and the after-hours VPN sessions are within ordinary range for an engineer wrapping up a multi-project portfolio before separation. No exfiltration occurred. Recommend closing the case pending standard separation processing.*",
           },
         ],
         allowMultiple: false,
