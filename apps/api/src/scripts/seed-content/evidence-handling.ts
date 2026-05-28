@@ -112,17 +112,17 @@ Two principles to keep in mind:
           {
             id: "no-collection-record",
             label:
-              "The collection event is missing from the narrative.",
+              "The collection event is missing from the narrative entirely — the narrative jumps straight to Transfer 1, with no documentation of who collected the items at the scene, when, or under what authority. Without a collection record the chain cannot be reconstructed from intake forward.",
           },
           {
             id: "intake-skipped-inventory",
             label:
-              "Lab intake deferred per-item inventory — this is a fatal break in custody.",
+              "Lab intake deferred per-item inventory to examination time — this is a fatal break in custody because a deferred inventory means the receiving examiner cannot certify on the 4137 that the contents matched what was released, and any later examination cannot be tied back to a documented intake state.",
           },
           {
             id: "seal-broken-fatal",
             label:
-              "The outer seal was cut at re-inspection — this fact alone breaks the custody chain.",
+              "The outer seal was cut at re-inspection — this fact alone breaks the custody chain because once a seal is broken the contents are no longer demonstrably the same as what was sealed in, regardless of any subsequent reseal or attestation, and downstream examination cannot be tied to the original collection state.",
           },
         ],
         allowMultiple: true,
@@ -164,12 +164,12 @@ Two principles to keep in mind:
           {
             id: "destroy-restart",
             label:
-              "Destroy the original bag and start the chain over from collection.",
+              "Destroy the original evidence bag, brief the unit on the procedural failures, and restart the chain of custody from the collection point with a fresh seal, fresh tags, and a new 4137 — preserving the broken chain only encourages a defense expert to use it as the centerpiece of their cross-examination of every other piece of evidence in the case.",
           },
           {
             id: "retro-sign-original",
             label:
-              "Have M. CALDWELL retroactively initial each item inside the bag.",
+              "Have M. CALDWELL retroactively initial each item inside the bag with the original collection date so the per-item identification matches the rest of the records — the deficiency is cosmetic at this point and the back-dating brings the paperwork into line with what should have been recorded at the original collection event.",
           },
         ],
         allowMultiple: true,
@@ -362,17 +362,17 @@ without minimising the gap.
           {
             id: "summary-minimising",
             label:
-              "\"There was a small administrative gap overnight, which is normal procedure for items held in evidence storage; no action required.\"",
+              "\"There was a small administrative gap overnight in custodial documentation, which is consistent with normal procedure for items held in evidence storage and the secured-locker controls; no action required and no further documentation needed beyond noting the pickup time at intake.\"",
           },
           {
             id: "summary-speculative",
             label:
-              "\"It is suspected that the item was undisturbed overnight; no one would have had a motive to access the locker.\"",
+              "\"It is suspected that the item was undisturbed overnight; no individual in the building during the overnight period would have had a motive to access the shared locker and the seal was confirmed intact on visual inspection at intake the following morning, so the gap can be treated as closed.\"",
           },
           {
             id: "summary-vague",
             label:
-              "\"Item placed in locker. Door log attached. Chain intact.\"",
+              "\"Item OBJ-2026-104-A was placed in the locker overnight per standard procedure. Door access log for the evidence room across the overnight period is attached. Chain remains intact and the item is ready for the next examination step.\"",
           },
         ],
         allowMultiple: false,

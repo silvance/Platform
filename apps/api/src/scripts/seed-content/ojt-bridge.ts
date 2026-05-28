@@ -120,12 +120,12 @@ The two are not the same thing.
           {
             id: "yes-zero-means-zero",
             label:
-              "Yes. A zero count means zero records existed.",
+              "Yes. A zero count from a forensic parser means zero records existed in the source corpus. The parser walks the SMS store comprehensively and reports what it finds; a zero result is therefore a complete statement of the underlying data and not an artifact of the parser's coverage.",
           },
           {
             id: "yes-tool-is-complete",
             label:
-              "Yes. Forensic parsers are designed to find every message, so a zero is reliable.",
+              "Yes. Forensic parsers are validated to surface every message in their target format, so a zero count is a reliable statement of the device's actual SMS history. The validation step the tool went through to be certified for forensic use is exactly what underwrites the completeness claim.",
           },
         ],
         allowMultiple: false,
@@ -509,12 +509,12 @@ including writes to a USB volume.
           {
             id: "more-usbstor",
             label:
-              "More USBSTOR records for other devices.",
+              "More USBSTOR records from other workstations in the unit to confirm whether this specific device serial has been mounted elsewhere; a cross-host hit shows the device's history of contact with unit systems and is the strongest evidence that files moved through it.",
           },
           {
             id: "device-photograph",
             label:
-              "A photograph of the device after it was seized.",
+              "A photograph of the recovered device after it was seized, with the storage capacity and any visible labels documented; the photograph paired with the USBSTOR record physically ties the device to the host and is what a reviewer or counsel will need to follow the evidence trail.",
           },
         ],
         allowMultiple: false,
@@ -1088,12 +1088,12 @@ supports — no more, no less.
           {
             id: "downloaded-and-copied",
             label:
-              "`sow-2025-118.pdf` was downloaded from an internal portal and then copied to the SanDisk USB.",
+              "`sow-2025-118.pdf` was downloaded from the internal portal at 19:42 UTC and then copied to the SanDisk USB during the connection window; the Prefetch entry for ROBOCOPY.EXE at 21:14 UTC is the copy operation, executed against the document while the removable device was present on the workstation.",
           },
           {
             id: "exfil-occurred",
             label:
-              "An exfiltration event occurred on 2026-11-03.",
+              "An exfiltration event occurred on 2026-11-03: the combination of an internal-portal download, a personal USB connected for nearly two hours, a copy utility running mid-window, and no evidence of an internal authorized sharing destination together establishes that the document left the workstation onto removable media.",
           },
         ],
         allowMultiple: false,

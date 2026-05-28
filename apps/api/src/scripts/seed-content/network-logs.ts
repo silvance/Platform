@@ -850,12 +850,12 @@ host-side process attribution and destination identification.
           {
             id: "destination-known",
             label:
-              "The host-resolved hostname for 198.51.100.77 can be read from the PCAP.",
+              "The host-resolved hostname for 198.51.100.77 can be read from the PCAP — the SNI extension in the TLS ClientHello includes the destination's intended hostname, so any beaconing process that uses TLS leaves its destination name in the packet stream regardless of whether DNS was consulted.",
           },
           {
             id: "user-attribution",
             label:
-              "The PCAP names the local process / user that owned the beacon socket.",
+              "The PCAP includes the local process and user that owned the beacon socket. Modern OS-level packet capture writes the originating process id and the username into the per-packet metadata, so user attribution is one of the fields a triage analyst can read off directly without needing host-side correlation.",
           },
           {
             id: "encrypted-content",
@@ -1646,17 +1646,17 @@ party app phone-home" one.
           {
             id: "more-netflow",
             label:
-              "Pull another 48 hours of NetFlow to see whether the cadence drifts.",
+              "Pull another 48 hours of NetFlow to see whether the cadence drifts. A real C2 beacon will jitter its cadence over time to evade detection, while a legitimate SaaS heartbeat will stay locked to its programmed interval; a longer NetFlow window distinguishes the two on shape alone, without needing certificate or vendor checks.",
           },
           {
             id: "rebuild-host",
             label:
-              "Reimage the workstation.",
+              "Reimage the workstation from known-good media. A reimage resolves the question by removing whatever was generating the alert in the first place — if the alert stops after the reimage, the original process was the implant; if it returns, the implant is being introduced by a fresh user action that can then be traced.",
           },
           {
             id: "block-ip",
             label:
-              "Block the destination IP at the firewall and see what breaks.",
+              "Block `198.51.100.220` at the firewall and observe what breaks on the host. If the user reports that a vendor application stops working, the destination was legitimate; if nothing breaks, the destination was extraneous and the alert was correct to flag it. The block is reversible if needed.",
           },
         ],
         allowMultiple: false,

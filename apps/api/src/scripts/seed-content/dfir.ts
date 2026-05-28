@@ -1412,7 +1412,7 @@ subkey carrying:
           {
             id: "block-all-usb",
             label:
-              "Disable USB ports on this kiosk immediately.",
+              "Disable USB ports on this kiosk immediately by policy push, and add the same lock-out to every other shared kiosk in the building so the same opportunity-pattern can't repeat elsewhere during the investigation window; the lock-out can be lifted once the investigation closes.",
           },
         ],
         allowMultiple: true,
@@ -1596,17 +1596,17 @@ spillage happens, both of those are in the loop early.
           {
             id: "self-classify",
             label:
-              "\"The document is classified SECRET and an unauthorised disclosure has occurred.\"",
+              "\"The document is classified SECRET and an unauthorised disclosure has occurred on this workstation. We are activating the spillage response and will notify the supporting ACI office and the unit ISSM immediately to begin the formal investigation track.\"",
           },
           {
             id: "minimise",
             label:
-              "\"It's probably a draft watermark; not really a problem.\"",
+              "\"It's probably a draft watermark or a template marking — markings on internal documents often appear as headers without representing actual classification — and the workstation usage looks routine, so we'll log it for review but it's not really a problem worth escalating right now.\"",
           },
           {
             id: "refuse-comment",
             label:
-              "\"I cannot discuss anything about this incident.\"",
+              "\"I cannot discuss anything about this incident — the investigation is closed-hold and any comment on the marker, the document, or the workstation could compromise the chain of custody and the supporting agencies' equities, so the matter is sealed pending direction from ACI.\"",
           },
         ],
         allowMultiple: false,
@@ -1897,17 +1897,17 @@ goes on the ISSM's desk this afternoon.
           {
             id: "open-and-read",
             label:
-              "Open `carved-001.docx` on a unit workstation to read what it says and see who it was written for.",
+              "Open `carved-001.docx` on a unit workstation to read what it says, identify who the document was written for, and capture screenshots of the markings page for the case folder; reading the document confirms the markings are genuine and establishes the unit's awareness of the content for the spillage investigation.",
           },
           {
             id: "delete-and-move-on",
             label:
-              "Delete the carved file from the bench host so it doesn't sit unsecured.",
+              "Delete the carved file from the bench host so it doesn't sit unsecured on an offline workstation; the device itself is already preserved in evidence, the carving output has been logged, and the deletion clears the bench for the next case without leaving the markings-bearing file lingering on disk.",
           },
           {
             id: "share-with-team",
             label:
-              "Share the carved file with the rest of the DFE team for a second opinion via the unit Teams channel.",
+              "Share the carved file with the rest of the DFE team via the unit Teams channel for a second opinion on whether the markings are operationally significant; a quick second read from a colleague before the formal referral can save the ISSM from chasing a false-positive carving artifact.",
           },
         ],
         allowMultiple: false,

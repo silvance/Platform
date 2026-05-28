@@ -358,9 +358,9 @@ Rewrite the sentence.
         weight: 1,
         promptMd: "Which rewrite is the right one?",
         options: [
-          { id: "still-asserts", label: "util-x.exe was downloaded and most likely executed on WS-118." },
+          { id: "still-asserts", label: "util-x.exe was downloaded to WS-118 at 14:08:23Z and most likely executed shortly after, based on the typical pattern of downloads in this user's profile and the proximity of the download to the start of the user's active session window. Recommend the host be quarantined pending an interview." },
           { id: "calibrated", label: "util-x.exe was downloaded to WS-118 at 14:08:23Z. No execution-artifact evidence (Prefetch, Sysmon ProcessCreate) was observed in the available window. User has not been interviewed." },
-          { id: "denial", label: "util-x.exe was downloaded but NOT executed on WS-118." },
+          { id: "denial", label: "util-x.exe was downloaded to WS-118 at 14:08:23Z but NOT executed on the host; the absence of a Prefetch entry, no Sysmon ProcessCreate, and no Amcache row in the 24-hour window together rule out execution, and the case can proceed without further interview based on those negative findings." },
         ],
         allowMultiple: false,
         expected: { type: "multi_choice", correctIds: ["calibrated"], allowMultiple: false },

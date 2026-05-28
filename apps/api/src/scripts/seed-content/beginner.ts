@@ -1100,12 +1100,12 @@ the document.
           {
             id: "fully-intact",
             label:
-              "The chain is fully intact and the document is ready to support lab examination as-is.",
+              "The chain is fully intact and the document is ready to support lab examination as-is. Every transfer is documented, the tag was affixed at the scene, and the receiving party at the lab signed in; the locker-period note is administratively complete because the locker is a controlled space and the entry properly identifies the storage location for the period in question.",
           },
           {
             id: "seal-broken",
             label:
-              "The seal on evidence bag #B-441 was broken at some point during the chain.",
+              "The seal on evidence bag #B-441 was broken at some point during the chain — the document records a transfer to an overnight locker without an accompanying re-seal or seal-integrity check, and overnight storage with no break-and-reseal record implies the seal was broken during that period to permit storage.",
           },
           {
             id: "tag-affixed",
@@ -1115,7 +1115,7 @@ the document.
           {
             id: "missing-collection",
             label:
-              "The collection event itself is missing from the document.",
+              "The collection event itself is missing from the document entirely; the narrative starts at the first transfer and gives no account of when, where, or by whom the items were originally collected, and that collection-side gap precedes everything else on the form.",
           },
         ],
         allowMultiple: true,
@@ -1153,17 +1153,17 @@ the document.
           {
             id: "retro-signature",
             label:
-              "Have SSG J. PARK retroactively sign as \"Received by\" on Transfer 2 with the locker as the location.",
+              "Have SSG J. PARK retroactively sign as \"Received by\" on Transfer 2 with the locker noted as the storage location and the date adjusted to reflect the actual handoff time; once the form has a name in the Received-by field the chain is administratively complete and the downstream reviewer has no reason to question the locker period.",
           },
           {
             id: "evidence-photo",
             label:
-              "Take a photograph of the sealed bag now and attach it to the document.",
+              "Take a photograph of the sealed bag now and attach it to the document. The photograph establishes the current condition of the seal as a known-good baseline; combined with the existing transfer records that's enough to close the gap with current observational evidence.",
           },
           {
             id: "lab-supervisor-stmt",
             label:
-              "Have the lab supervisor write a statement that the seal looked intact on receipt.",
+              "Have the lab supervisor write a statement that the seal looked intact on receipt the next morning, with their signature and date affixed; an attestation from a senior examiner at the receiving end carries enough authority to bridge the locker period for the downstream review.",
           },
         ],
         allowMultiple: false,
@@ -1227,17 +1227,17 @@ the document.
           {
             id: "what-is-on-the-usb",
             label:
-              "What files or content are on the USB drive.",
+              "What files or content are present on the USB drive — the chain-of-custody document records the device's contents at the time of seizure as part of the description-of-articles field, so a reviewer can rely on the document to identify the on-device material without separately requesting the examiner's report.",
           },
           {
             id: "who-put-files-on-it",
             label:
-              "Who placed files on the USB drive, and when.",
+              "Who placed files on the USB drive, and when — the chain document carries the suspect's name and the workspace context for the seizure, and that combination identifies the responsible party for the content on the device along with the relevant period during which the files were written.",
           },
           {
             id: "user-intent",
             label:
-              "That the user intended to use the device to remove material from the workspace.",
+              "That the user intended to use the device to remove material from the workspace — the description-of-articles wording on the original document captures the operator's intent at seizure, and intent recorded on a custody form at the point of collection is itself an evidentiary record of that intent.",
           },
         ],
         allowMultiple: false,
@@ -1624,12 +1624,12 @@ claim.
           {
             id: "wrong-hash",
             label:
-              "The SHA-256 of the image doesn't verify.",
+              "The SHA-256 of the image doesn't verify — the source hash listed on the acquisition log does not match the post-write hash, which means the image is corrupted and the rest of the chain is built on an unverified artifact that no examination should reference downstream.",
           },
           {
             id: "wrong-acquirer",
             label:
-              "The acquiring DFE wasn't authorised to image the workstation.",
+              "The acquiring DFE wasn't authorised to image the workstation — the 4137 receiving-DFE signature is from someone outside the unit's certified examiner list, and an unauthorised acquirer at the start of the chain invalidates every subsequent transfer regardless of how cleanly they're documented.",
           },
         ],
         allowMultiple: false,
