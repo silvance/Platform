@@ -62,10 +62,10 @@ export default function AboutPage() {
 
         <p>
           CI Cyber Lab is a training platform for analysts working in
-          counterintelligence and digital forensics. It's unclassified,
-          non-commercial, and I run it in my personal capacity. Every
-          scenario is fabricated &mdash; fabricated artifacts, fabricated
-          names, fabricated cases. No real incident is reproduced here.
+          counterintelligence and digital forensics. I run it in my
+          personal capacity. Every scenario is fabricated &mdash;
+          fabricated artifacts, fabricated names, fabricated cases. No
+          real incident is reproduced here.
         </p>
 
         <p>
