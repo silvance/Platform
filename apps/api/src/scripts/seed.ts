@@ -206,6 +206,16 @@ async function upsertScenario(
   // signed-in user). Tier-2 drafts opt in to status="draft" so only
   // admins see them in the listing — same status field, different
   // visibility, no schema change.
+  //
+  // status is set on first CREATE only. On re-seed we DO NOT touch
+  // status — admins flip draft → published (and archive retired
+  // content) via /admin/challenges/<slug>/edit, and overwriting
+  // those flips on every deploy is exactly the bug the user hit
+  // ("every PR reverts my published challenges back to draft").
+  // If you need to change a scenario's lifecycle across all
+  // installations, do it via the admin UI in each environment or
+  // ship a one-off migration; the seed file shouldn't carry
+  // admin-managed lifecycle state.
   const status = s.status ?? "published";
   const scenario = await prisma.scenario.upsert({
     where: { slug: s.slug },
@@ -216,7 +226,7 @@ async function upsertScenario(
       difficulty: s.difficulty,
       estimatedMinutes: s.estimatedMinutes,
       tags: s.tags,
-      status,
+      // status intentionally OMITTED — see comment above.
       source: "authored",
       authorUserId: authorId,
       lane: s.lane,
