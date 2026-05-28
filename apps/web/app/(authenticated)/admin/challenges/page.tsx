@@ -126,7 +126,7 @@ export default async function AdminChallengesPage({ searchParams }: Props) {
             <tbody>
               {scenarios.map((s) => (
                 <tr key={s.id}>
-                  <td>
+                  <td data-label="Title">
                     <Link
                       href={`/scenarios/${encodeURIComponent(s.slug)}`}
                       style={{ fontWeight: 600, color: "var(--fg)" }}
@@ -139,7 +139,7 @@ export default async function AdminChallengesPage({ searchParams }: Props) {
                       </code>
                     </div>
                   </td>
-                  <td style={{ fontSize: ".85rem" }}>
+                  <td style={{ fontSize: ".85rem" }} data-label="Lane / module">
                     {LANE_LABELS[s.lane]}
                     {s.module ? (
                       <div style={{ color: "var(--muted)", fontSize: ".8rem" }}>
@@ -151,17 +151,17 @@ export default async function AdminChallengesPage({ searchParams }: Props) {
                       </div>
                     )}
                   </td>
-                  <td>
+                  <td data-label="Status">
                     <span className={`admin-status-${s.status}`}>{s.status}</span>
                   </td>
-                  <td>Level {s.difficulty}</td>
-                  <td>{s.questionCount}</td>
-                  <td style={{ fontSize: ".82rem" }}>
+                  <td data-label="Difficulty">Level {s.difficulty}</td>
+                  <td data-label="Questions">{s.questionCount}</td>
+                  <td style={{ fontSize: ".82rem" }} data-label="Review">
                     <span className={chipClassFor(s.reviewStatus)}>
                       {REVIEW_STATUS_LABELS[s.reviewStatus]}
                     </span>
                   </td>
-                  <td style={{ color: "var(--muted)", fontSize: ".8rem" }}>
+                  <td style={{ color: "var(--muted)", fontSize: ".8rem" }} data-label="Updated">
                     {new Date(s.updatedAt).toLocaleDateString()}
                   </td>
                   <td>

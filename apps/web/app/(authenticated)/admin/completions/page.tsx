@@ -59,7 +59,7 @@ export default async function CompletionsPage() {
                   completed.getTime() - started.getTime();
                 return (
                   <tr key={`${c.userId}:${c.scenarioId}`}>
-                    <td>
+                    <td data-label="Completed">
                       <time
                         dateTime={c.completedAt}
                         title={completed.toISOString()}
@@ -67,7 +67,7 @@ export default async function CompletionsPage() {
                         {completed.toLocaleString()}
                       </time>
                     </td>
-                    <td>
+                    <td data-label="User">
                       <div style={{ display: "flex", flexDirection: "column" }}>
                         <span>{c.userDisplayName}</span>
                         <span
@@ -80,7 +80,7 @@ export default async function CompletionsPage() {
                         </span>
                       </div>
                     </td>
-                    <td>
+                    <td data-label="Challenge">
                       <Link
                         href={`/scenarios/${encodeURIComponent(c.scenarioSlug)}`}
                         style={{ color: "var(--accent)" }}
@@ -88,13 +88,13 @@ export default async function CompletionsPage() {
                         {c.scenarioTitle}
                       </Link>
                     </td>
-                    <td>
+                    <td data-label="First-try / total">
                       {c.firstTryCount}
                       {" / "}
                       {c.totalQuestions}
                     </td>
-                    <td>{c.totalAttempts}</td>
-                    <td title={formatDurationVerbose(durationMs)}>
+                    <td data-label="Submissions">{c.totalAttempts}</td>
+                    <td data-label="Time on task" title={formatDurationVerbose(durationMs)}>
                       {formatDurationShort(durationMs)}
                     </td>
                   </tr>

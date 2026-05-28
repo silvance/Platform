@@ -20,7 +20,7 @@ export default async function UsersAdminPage() {
       <CreateUserForm />
 
       <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <table className="admin-table" style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ background: "var(--bg-sunken)", textAlign: "left" }}>
               <th style={headerStyle}>User</th>
