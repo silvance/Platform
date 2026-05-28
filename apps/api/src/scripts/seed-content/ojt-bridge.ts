@@ -744,7 +744,7 @@ evidence supports some of those claims and not others.
           {
             id: "assertive-same",
             label:
-              "\"The subject knowingly removed Q3 targets from the office on a personal Kingston USB drive.\"",
+              "\"On 2026-09-18 the subject knowingly removed the Q3 targets spreadsheet from the office by copying `q3-targets.xlsx` to a personal Kingston USB drive (serial AA-LT-001) connected to WS-LT-018 between 14:22 and 15:08 UTC. The act was deliberate and unauthorised; the absence of EDR file-write events reflects the subject's effort to avoid detection rather than the absence of the transfer.\"",
           },
           {
             id: "calibrated",
@@ -754,7 +754,7 @@ evidence supports some of those claims and not others.
           {
             id: "denial",
             label:
-              "\"No copy of Q3 targets was made onto a USB device.\"",
+              "\"Review of WS-LT-018 found that a USB device was connected during business hours and the Q3 targets spreadsheet was opened during the connection window. Host-monitoring telemetry shows no file-write events to the USB volume during the period; in the absence of any captured write event, no copy of `q3-targets.xlsx` was made onto a USB device. The connection and file-open events are part of routine workstation use.\"",
           },
         ],
         allowMultiple: false,
@@ -1120,7 +1120,7 @@ supports — no more, no less.
           {
             id: "overclaim",
             label:
-              "*j.cole downloaded SOW-2025-118 from the unit internal portal at 19:42 UTC and exfiltrated it to a personal SanDisk USB using robocopy.exe.*",
+              "*On 2026-11-03 the account j.cole downloaded SOW-2025-118 from the unit internal portal at 19:42 UTC and then exfiltrated the document to a personal SanDisk Cruzer Glide USB (serial SD-CG-2208) using robocopy.exe at 21:14 UTC. The device was attached to WS-OPS-058 from 20:55 to 22:42 UTC; the connection window cleanly covers the download, the robocopy execution, and the file transfer to the device. The deliberate use of robocopy (rather than a standard copy / paste) is consistent with an intent to move large amounts of data while evading the user-shell logging that explorer.exe would generate. Recommend criminal referral and asset hold on the SanDisk device.*",
           },
           {
             id: "calibrated",
@@ -1130,7 +1130,7 @@ supports — no more, no less.
           {
             id: "underclaim",
             label:
-              "*No exfiltration occurred. A SanDisk USB was connected but no file-write events were observed.*",
+              "*Review of WS-OPS-058 found that on 2026-11-03 the account j.cole pulled `sow-2025-118.pdf` from the unit internal portal during business operations, that a SanDisk Cruzer Glide USB was connected to the workstation between 20:55 and 22:42 UTC, and that Prefetch records show ROBOCOPY.EXE ran on the host at 21:14 UTC. No EDR file-write events to the USB volume were captured in the available evidence set. Because no write event was observed, no exfiltration occurred. The case can be closed; the user accessed an unclassified internal document during normal hours and connected a personal USB device, none of which is itself a finding.*",
           },
         ],
         allowMultiple: false,

@@ -855,7 +855,7 @@ actually take this afternoon.
           {
             id: "overclaim",
             label:
-              "*This is a confirmed BEC against your office. The vendor has been compromised and their domain is in attacker control. Do not pay. We are opening an incident and contacting law enforcement.*",
+              "*This is a confirmed Business Email Compromise targeting your office. The legitimate vendor Northstar Integrators has been compromised — their domain is in attacker control, their mailbox is being read by the attacker (which is why the \"correction\" thread looks contextually accurate), and the attached payment-update PDF was generated using their internal templates. Do not pay against either routing until further notice. We are opening an active-incident response, contacting law enforcement, and recommending that the vendor be added to the unit blocklist for outgoing wires until the compromise is fully scoped on their side and ours.*",
           },
           {
             id: "calibrated",
@@ -865,7 +865,7 @@ actually take this afternoon.
           {
             id: "underclaim",
             label:
-              "*Probably fine to pay. The vendor name and project context all check out and SPF passes on the new message. Recommend remitting against the updated routing and confirming with the vendor by replying to the thread.*",
+              "*Spot review of the thread: the original invoice (Msg 01) is from the vendor's authenticated domain and matches the on-file routing. The \"correction\" (Msg 02) names the same invoice number, references the same contract period, and uses banking-change language consistent with the vendor-consolidation events that happen routinely in commercial-software contracts. SPF passes on Msg 02 (the envelope is authenticated by the sending relay) and the message references the right invoice. Recommend remitting against the updated routing per the attached PDF and confirming receipt by replying to the existing thread; if there's a problem the vendor will respond on the same thread.*",
           },
         ],
         allowMultiple: false,

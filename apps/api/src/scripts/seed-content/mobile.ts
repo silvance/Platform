@@ -1762,7 +1762,7 @@ sheet.
           {
             id: "overclaim",
             label:
-              "*Full forensic extraction of subject device complete. 4,144 messages, 2,410 WhatsApp threads, 18 Signal messages, and 88 deleted messages recovered. No further work required.*",
+              "*Subject device (Apple A2483, iOS 17.6, serial F2L0N1A7XZ4) acquired and fully forensicated under SA-2026-0204. Cellebrite UFED recovered 4,118 active Messages, 2,402 WhatsApp threads, 18 Signal messages, 14,820 photos, 1,902 Safari history records, 412 calls, and 218 contacts, plus 88 deleted Messages, 12 deleted WhatsApp threads, and 4 deleted photos through SQLite carving. Magnet AXIOM independently confirmed the active-row corpus at 4,144 Messages and 2,410 WhatsApp threads. All recovered records ingested into the case file and tagged for review. No remaining work required on the device side. Signing the case-folder cover sheet and routing the artifact package to the case agent for analytic review.*",
           },
           {
             id: "calibrated",
@@ -1772,7 +1772,7 @@ sheet.
           {
             id: "underclaim",
             label:
-              "*The tools disagree, so the results are unreliable. Recommend re-acquiring the device.*",
+              "*Examination of the subject device produced contradictory results across the three tools. Cellebrite UFED reports 18 Signal messages while Magnet AXIOM reports 0; UFED recovers 88 deleted Messages while AXIOM recovers none; Messages counts differ between the two tools (4,118 vs 4,144). These disagreements suggest the source extract image may have been corrupted during the GrayKey-to-UFED hand-off, or that one of the tool installations is producing unreliable output. The defensible course of action is to discard the current artifact set, re-acquire the device with a single tool to eliminate cross-tool variance, and re-run a clean pass with the case-folder cover sheet held pending. Signing on the current artifact set risks attaching a defective extraction to the case file.*",
           },
         ],
         allowMultiple: false,

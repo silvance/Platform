@@ -1948,7 +1948,7 @@ goes on the ISSM's desk this afternoon.
           {
             id: "overclaim",
             label:
-              "*A classified document was exfiltrated from the unit on a personal USB drive and dropped in the smoking area. The owner is unknown; recommend criminal referral.*",
+              "*A USB stick (Kingston DataTraveler, serial KDT-3-AB-118) recovered from the smoking area outside the south entrance was found to contain a classified document carved from unallocated space. The (S//NF) classification markings on `carved-001.docx` are unambiguous; the file was deliberately deleted from the device, indicating attempted concealment. The device's serial is not in the unit USBSTOR-history feed, confirming it is a non-asset-register personal USB used to exfiltrate classified material from a unit workstation before being abandoned outside the building. Recommend immediate criminal referral to the supporting ACI office and CID, an asset hold on every workstation in the building's south wing pending USBSTOR-mounting matches, and an unrestricted access-review across the unit's classified networks.*",
           },
           {
             id: "calibrated",
@@ -1958,7 +1958,7 @@ goes on the ISSM's desk this afternoon.
           {
             id: "underclaim",
             label:
-              "*A USB stick was found outside and turned in. No active files on the device. Nothing of concern; recommend disposing of the device.*",
+              "*A Kingston DataTraveler USB stick (serial KDT-3-AB-118) was recovered from the smoking area by a DA-civilian and turned in to the orderly room. Offline-bench carving of the device found 14 files in unallocated space, including a recipe printout, a tax form template, photos of a child's birthday party, and a single file with classification markings. The device's filesystem was completely wiped (empty allocation table) before being dropped, which suggests the owner cleared the device for personal use or resale and the markings-bearing file is leftover content not visible to the owner since deletion. The unit USBSTOR-history feed shows no record of this serial, so the device was never connected to a unit workstation. Recommend logging the finding for inventory and disposing of the device through routine media-destruction channels; no spillage workflow needed.*",
           },
         ],
         allowMultiple: false,
