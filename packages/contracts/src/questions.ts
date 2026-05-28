@@ -23,9 +23,12 @@ export const MAX_MC_OPTIONS = 20;
 // Multi-choice option labels often need to spell out the
 // difference between near-identical wordings; 200 chars wasn't
 // enough for some scenarios and silently dropped options at parse
-// time. 500 covers every realistic case while still capping
-// authoring-side abuse.
-export const MAX_MC_OPTION_LABEL_CHARS = 500;
+// time. Bumped from 500 → 2000 because capstone-style "compare
+// these three drafts of a finding" questions present each draft
+// as a multi-paragraph option, and 500 chars cut off the
+// pedagogically-load-bearing options. Authoring-side abuse is
+// still capped — 2000 chars is roughly a paragraph and a half.
+export const MAX_MC_OPTION_LABEL_CHARS = 2000;
 export const MAX_QUESTIONS_PER_SCENARIO = 50;
 // Indicator sets — M6.
 export const MAX_INDICATOR_ITEMS = 40;
