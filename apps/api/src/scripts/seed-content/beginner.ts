@@ -1261,4 +1261,434 @@ the document.
       },
     ],
   },
+
+  // ─── Capstone — combine every Foundations skill on one mini-case ──
+  {
+    slug: "foundations-mini-case-capstone-001",
+    title: "Foundations Capstone: One File, Six Lenses",
+    summary:
+      "One file from a small case folder. Confirm what it is (hash + magic bytes), place it on a timeline (MAC times + browser history + access log), decide what was deleted, flag a custody concern, and write a calibrated finding.",
+    skillAreas: ["df_artifacts", "inference_discipline", "report_writing"],
+    difficulty: 2,
+    estimatedMinutes: 35,
+    tags: [
+      "foundations",
+      "df_artifacts",
+      "inference_discipline",
+      "report_writing",
+      "capstone",
+    ],
+    lane: "foundations",
+    module: "Capstone",
+    sequence: 1,
+    status: "draft",
+    brief: `
+# Brief
+
+Every prior scenario in this lane drilled one foundation: hashes,
+magic bytes, MAC times, recycle bin, browser history, access
+logs, hex dumps, chain of custody. This capstone bundles them.
+
+A small case folder has been handed to you. One file is at the
+centre of it — \`vendor-list-Q3.pdf\`. Your tasking:
+
+1. Confirm what the file actually is (hash and magic-byte
+   verification).
+2. Place the events around it on a timeline (MAC times +
+   browser history + access log).
+3. Decide what the Recycle Bin metadata adds.
+4. Flag any chain-of-custody concern.
+5. Pick the calibrated finding from three drafts.
+
+Nothing here is harder than the warmup scenarios — you've seen
+each artifact type before. The new skill is the synthesis: which
+foundation answers which sub-question, and not letting one
+artifact's evidence carry weight for a different claim.
+`.trim(),
+    artifacts: [
+      {
+        ordinal: 1,
+        displayName: "case-summary.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "Case summary",
+            "------------",
+            "",
+            "  Case ID            : C-2026-0118",
+            "  Subject account    : j.cole (DA-civilian, unit R&D)",
+            "  Host of interest   : WS-RD-014",
+            "  File of interest   : vendor-list-Q3.pdf",
+            "  Published SHA-256  : 4f1c...8d2e   (from unit-portal record)",
+            "",
+            "Open question: did the subject pull, modify, and then delete the unit's",
+            "Q3 vendor list during the trailing 7 days?",
+            "",
+          ].join("\n"),
+        ),
+      },
+      {
+        ordinal: 2,
+        displayName: "hash-check.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "Hash check — vendor-list-Q3.pdf",
+            "-------------------------------",
+            "",
+            "  Source path            : C:\\Users\\j.cole\\Downloads\\vendor-list-Q3.pdf",
+            "  Local SHA-256          : 4f1c...8d2e",
+            "  Published SHA-256      : 4f1c...8d2e   (from unit-portal record)",
+            "  Result                 : MATCH",
+            "",
+            "  Computed (UTC)         : 2026-11-14 16:08:11",
+            "",
+          ].join("\n"),
+        ),
+      },
+      {
+        ordinal: 3,
+        displayName: "hex-first-16.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "First 16 bytes of vendor-list-Q3.pdf",
+            "------------------------------------",
+            "",
+            "  Offset    Hex                                  ASCII",
+            "  0x00000   25 50 44 46 2D 31 2E 37 0A 25 E2 E3 CF D3 0A 0A   %PDF-1.7.%.....",
+            "",
+            "(Reminder from the magic-bytes scenario: %PDF-1.x is the",
+            " standard signature for a PDF document.)",
+            "",
+          ].join("\n"),
+        ),
+      },
+      {
+        ordinal: 4,
+        displayName: "mac-times.csv",
+        kind: "csv",
+        mimeType: "text/csv; charset=utf-8",
+        bytes: utf8(
+          [
+            "path,modified_utc,accessed_utc,changed_utc,birth_utc",
+            "C:\\Users\\j.cole\\Downloads\\vendor-list-Q3.pdf,2026-11-12T14:14:22Z,2026-11-13T09:00:55Z,2026-11-12T14:14:22Z,2026-11-12T14:14:22Z",
+            "C:\\Users\\j.cole\\Documents\\notes.txt,2026-11-13T09:42:18Z,2026-11-13T09:42:18Z,2026-11-13T09:42:18Z,2026-11-08T08:14:55Z",
+            "C:\\$Recycle.Bin\\S-1-5-21-...-1107\\$RHJK3D.pdf,2026-11-14T15:30:11Z,2026-11-14T15:30:11Z,2026-11-14T15:30:11Z,2026-11-12T14:14:22Z",
+          ].join("\n") + "\n",
+        ),
+      },
+      {
+        ordinal: 5,
+        displayName: "browser-download.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "Browser download history — single row of interest",
+            "-------------------------------------------------",
+            "",
+            "  URL              : https://unit-portal.example/docs/vendor-list-Q3.pdf",
+            "  Downloaded as    : C:\\Users\\j.cole\\Downloads\\vendor-list-Q3.pdf",
+            "  Started (UTC)    : 2026-11-12 14:14:18",
+            "  Finished (UTC)   : 2026-11-12 14:14:22",
+            "  Size             : 318,442 bytes",
+            "  Profile          : j.cole (signed-in)",
+            "",
+          ].join("\n"),
+        ),
+      },
+      {
+        ordinal: 6,
+        displayName: "access.log",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "Unit portal access log — selected rows (vendor-list-Q3.pdf only)",
+            "----------------------------------------------------------------",
+            "",
+            "  2026-11-12 14:14:18  GET  /docs/vendor-list-Q3.pdf  200  318442  user=j.cole  src=10.42.14.7",
+            "  2026-11-13 09:01:08  GET  /docs/vendor-list-Q3.pdf  200  318442  user=j.cole  src=10.42.14.7",
+            "  2026-11-13 14:08:55  GET  /docs/vendor-list-Q3.pdf  200  318442  user=other.a  src=10.42.14.91",
+            "",
+          ].join("\n"),
+        ),
+      },
+      {
+        ordinal: 7,
+        displayName: "recycle-bin-meta.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "Recycle Bin metadata — $I file pair for vendor-list-Q3.pdf",
+            "-----------------------------------------------------------",
+            "",
+            "  $I filename     : $IHJK3D.pdf  (under per-user SID folder)",
+            "  $R filename     : $RHJK3D.pdf  (same folder)",
+            "  Owning SID      : S-1-5-21-...-1107  (resolves to: j.cole)",
+            "  Original path   : C:\\Users\\j.cole\\Downloads\\vendor-list-Q3.pdf",
+            "  Original size   : 318,442 bytes",
+            "  Deleted (UTC)   : 2026-11-14 15:30:08",
+            "",
+            "(Reminder from the recycle-bin scenario: the SID on the $I file is",
+            " the account that *deleted* the file, not necessarily the account",
+            " that authored it.)",
+            "",
+          ].join("\n"),
+        ),
+      },
+      {
+        ordinal: 8,
+        displayName: "custody-log.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "Chain of custody — DA Form 4137 #4137-2026-318-A (extract)",
+            "----------------------------------------------------------",
+            "",
+            "  Item description : Workstation image — WS-RD-014.E01",
+            "                     (logical L0 acquisition; SHA-256 verified)",
+            "",
+            "  Released by      : SSG K. Owens (unit security manager)",
+            "                     2026-11-14 19:42 local — signature present",
+            "  Received by      : SPC J. Park (DFE — printed name + sig)",
+            "                     2026-11-14 19:55 local",
+            "  Released by      : SPC J. Park",
+            "                     2026-11-15 08:00 local — signature present",
+            "  Received by      : (no entry on continuation page —",
+            "                     image was on the desk in the DFE work area",
+            "                     overnight, between 19:55 on 11-14 and 08:00",
+            "                     on 11-15)",
+            "  Received by      : SPC J. Park (re-receipt at 08:00)",
+            "",
+          ].join("\n"),
+        ),
+      },
+    ],
+    questions: [
+      {
+        ordinal: 1,
+        type: "multi_choice",
+        weight: 1,
+        promptMd:
+          "From the hash check, what is **directly supported**?",
+        options: [
+          {
+            id: "hash-match",
+            label:
+              "The bytes of `vendor-list-Q3.pdf` on the workstation match the bytes the unit portal published with that hash.",
+          },
+          {
+            id: "file-safe",
+            label:
+              "The file is safe — a matching hash means the file has been certified clean.",
+          },
+          {
+            id: "file-not-modified",
+            label:
+              "The user has not modified the file in any way that matters.",
+          },
+        ],
+        allowMultiple: false,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["hash-match"],
+          allowMultiple: false,
+        },
+        debriefMd:
+          "**Bytes match published bytes.** A hash answers identity, not safety and not the analyst's wider question. If the published file *were* sensitive, a matching hash would be how you confirm you have *that file*, not a clean bill of health.",
+      },
+      {
+        ordinal: 2,
+        type: "multi_choice",
+        weight: 1,
+        promptMd:
+          "From the hex dump (first 16 bytes), what file format is `vendor-list-Q3.pdf`?",
+        options: [
+          { id: "pdf", label: "A PDF document. The `%PDF-1.7` signature is at the start of the file." },
+          { id: "renamed-pe", label: "A Windows PE executable renamed to look like a PDF." },
+          { id: "encrypted", label: "Encrypted — the magic bytes are unrecognisable." },
+        ],
+        allowMultiple: false,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["pdf"],
+          allowMultiple: false,
+        },
+        debriefMd:
+          "**A PDF.** The first four bytes (`%PDF`) are the canonical magic-byte signature; the `-1.7` is the spec version. A PE binary would start with `MZ` (0x4D 0x5A); encrypted bytes look high-entropy without recognisable structure. Magic bytes verify what the extension claims.",
+      },
+      {
+        ordinal: 3,
+        type: "multi_choice",
+        weight: 2,
+        promptMd:
+          "Reading the MAC times, browser-download row, and access log together — what is the **earliest event** for `vendor-list-Q3.pdf` on this workstation?",
+        options: [
+          {
+            id: "download-1112",
+            label:
+              "The browser download finished at 2026-11-12 14:14:22 UTC; that's also when the file landed on disk (birth = modified = changed).",
+          },
+          {
+            id: "second-access-1113",
+            label:
+              "The second portal access at 2026-11-13 09:00:55 UTC — that's the earliest event in the access log.",
+          },
+          {
+            id: "delete-1114",
+            label:
+              "The Recycle Bin entry on 2026-11-14 — the file's MAC times all reflect that event.",
+          },
+        ],
+        allowMultiple: false,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["download-1112"],
+          allowMultiple: false,
+        },
+        debriefMd:
+          "**The download on 2026-11-12 14:14:22 UTC.** The file's birth / modified / changed timestamps all match the browser-download finish time, and the access log corroborates with a GET at 14:14:18. The second access on 11-13 is a re-fetch (the modified time didn't update, so no new write happened from the portal). The Recycle Bin entry is the *deletion* event two days later, not the file's first appearance.",
+      },
+      {
+        ordinal: 4,
+        type: "multi_choice",
+        weight: 1,
+        promptMd:
+          "From the access log, which statement is **directly supported**?",
+        options: [
+          {
+            id: "two-users",
+            label:
+              "Two distinct accounts (`j.cole` and `other.a`) each separately fetched `vendor-list-Q3.pdf` from the portal in the trailing days.",
+          },
+          {
+            id: "cole-shared",
+            label:
+              "`j.cole` shared the file with `other.a` after downloading it.",
+          },
+          {
+            id: "same-machine",
+            label:
+              "Both account fetches were from the same source IP, so they were from the same workstation.",
+          },
+        ],
+        allowMultiple: false,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["two-users"],
+          allowMultiple: false,
+        },
+        debriefMd:
+          "**Two accounts each separately fetched the file.** The log shows two distinct usernames; the rows are independent portal fetches. *Sharing* is an inference not in the log (no share-link event is recorded here). The source IPs are NOT the same — `j.cole` is on `10.42.14.7`; `other.a` is on `10.42.14.91`, a different host on the same subnet.",
+      },
+      {
+        ordinal: 5,
+        type: "multi_choice",
+        weight: 1,
+        promptMd:
+          "Read the Recycle Bin metadata. Which statement is **directly supported**?",
+        options: [
+          {
+            id: "cole-deleted",
+            label:
+              "The account `j.cole` moved `vendor-list-Q3.pdf` to the Recycle Bin on 2026-11-14 at 15:30:08 UTC.",
+          },
+          {
+            id: "cole-authored",
+            label:
+              "The account `j.cole` is the author of `vendor-list-Q3.pdf`.",
+          },
+          {
+            id: "file-still-there",
+            label:
+              "The file is still recoverable — the `$R` file is intact in the Recycle Bin folder.",
+          },
+        ],
+        allowMultiple: true,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["cole-deleted", "file-still-there"],
+          allowMultiple: true,
+        },
+        debriefMd:
+          "**`j.cole` did the deleting; the `$R` is intact.** The SID on the `$I` resolves to `j.cole` — that's the account that performed the delete (per the warmup scenario). *Authorship* is a separate question — the published file came from the unit portal; `j.cole` downloaded it from there. The `$R` file's presence in the Recycle Bin folder means an undelete is feasible from the image.",
+      },
+      {
+        ordinal: 6,
+        type: "multi_choice",
+        weight: 2,
+        promptMd:
+          "Read the chain-of-custody log. What is the **real concern** the writeup should flag?",
+        options: [
+          {
+            id: "overnight-gap",
+            label:
+              "There is an unattested overnight storage period (~12 hours) between SPC Park releasing the image at 19:55 on 11-14 and re-receipting it at 08:00 on 11-15. The log explicitly names the gap.",
+          },
+          {
+            id: "wrong-hash",
+            label:
+              "The SHA-256 of the image doesn't verify.",
+          },
+          {
+            id: "wrong-acquirer",
+            label:
+              "The acquiring DFE wasn't authorised to image the workstation.",
+          },
+        ],
+        allowMultiple: false,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["overnight-gap"],
+          allowMultiple: false,
+        },
+        debriefMd:
+          "**The overnight gap.** The 4137 has an explicit note that the image was on the DFE's desk overnight between handoffs — that's an unattested custody window counsel will ask about. The hash *does* verify (\"SHA-256 verified\" is on the item-description line); there is no indication the acquirer wasn't authorised. The defensible posture is to MFR the gap before the image is referenced downstream — it's cheap to fix and worth doing now.",
+      },
+      {
+        ordinal: 7,
+        type: "multi_choice",
+        weight: 2,
+        promptMd: [
+          "Pick the **calibrated** finding rewrite. The other two over-claim or under-claim.",
+          "",
+          "Junior analyst's draft:",
+          "",
+          "> *j.cole downloaded the unit's vendor list and deleted it to cover up the activity.*",
+        ].join("\n"),
+        options: [
+          {
+            id: "overclaim",
+            label:
+              "*On 2026-11-12 j.cole downloaded the unit Q3 vendor list and on 2026-11-14 deleted it to conceal possession; corroborated by Recycle Bin metadata under the same account. Recommend criminal referral.*",
+          },
+          {
+            id: "calibrated",
+            label:
+              "*Between 2026-11-12 and 2026-11-14 the account `j.cole` (a) downloaded `vendor-list-Q3.pdf` (SHA-256 4f1c...8d2e, hash matches the unit-portal published copy) to `C:\\Users\\j.cole\\Downloads\\` from the unit portal, and (b) moved it to the Recycle Bin at 15:30:08 UTC on 11-14. The file is recoverable from the `$R` entry. A second account (`other.a`) fetched the same document from the portal on 11-13 from a different host on the same subnet, independent of `j.cole`'s session. The custody log for the workstation image shows an unattested overnight gap between 11-14 19:55 and 11-15 08:00 — MFR the gap before the image is cited downstream. The artifacts do not establish concealment intent; that is an inference outside what this evidence set supports.*",
+          },
+          {
+            id: "underclaim",
+            label:
+              "*No wrongdoing observed. The user downloaded a document and later deleted it, which is routine.*",
+          },
+        ],
+        allowMultiple: false,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["calibrated"],
+          allowMultiple: false,
+        },
+        debriefMd:
+          "**The calibrated rewrite.** It states what each artifact actually carries (hash match, download time + path, delete time + actor account, second account's independent fetch, custody gap), names the missing piece (no artifact in this set establishes *intent to conceal*), and recommends the cheap MFR to close the custody gap before the image is cited downstream. The over-claim asserts *to conceal* on no supporting artifact and recommends a referral counsel cannot defend. The under-claim dismisses every signal — the deletion, the custody gap, the cross-account access — by treating routine appearance as evidence of routine activity.",
+      },
+    ],
+  },
 ];
