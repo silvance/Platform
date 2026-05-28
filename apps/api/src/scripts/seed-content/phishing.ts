@@ -607,10 +607,10 @@ the mismatch proves and what it doesn't.
         promptMd:
           "Which statement most accurately describes what the auth-pass + Reply-To mismatch combination proves?",
         options: [
-          { id: "spoofed", label: "The From header is spoofed." },
-          { id: "compromised", label: "Pat's account is compromised." },
+          { id: "spoofed", label: "The From header is spoofed using a domain that happens to authenticate cleanly because the attacker is operating on infrastructure that shares an SPF range with the real partner.example mail relays." },
+          { id: "compromised", label: "Pat's mailbox at partner.example has been compromised; the attacker is using Pat's account to send the request, which is why the auth checks all pass cleanly on the wire." },
           { id: "rule-via-reply-to", label: "Someone with mailbox access (legitimately or otherwise) is steering replies to an external address." },
-          { id: "phish-impossible", label: "Auth passed, so phishing is ruled out." },
+          { id: "phish-impossible", label: "Auth passed cleanly across all three checks, so phishing as a category is ruled out for this message; the headers establish provenance and the Reply-To is a separate organisational choice that doesn't change the wire-level finding." },
         ],
         allowMultiple: false,
         expected: {

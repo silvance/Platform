@@ -242,7 +242,7 @@ and execution-of-tool sit in different reporting buckets.
           {
             id: "never-ran",
             label:
-              "BAM proves `bitsadmin.exe` has never executed on this host.",
+              "BAM proves `bitsadmin.exe` has never executed on this host. BAM walks the registry's per-user UserSettings keys and lists every binary that has been run; if a row isn't there, the binary hasn't been launched as a foreground program by any tracked user during the host's recorded lifetime.",
           },
           {
             id: "no-foreground-bam",
@@ -252,12 +252,12 @@ and execution-of-tool sit in different reporting buckets.
           {
             id: "ran-as-background",
             label:
-              "BAM proves `bitsadmin.exe` ran only as a background service.",
+              "BAM proves `bitsadmin.exe` ran only as a background service. Since BAM specifically captures foreground execution and ignores background services and scheduled tasks, an explicit absence is the canonical fingerprint of background-only execution and that's how the writeup should characterise it.",
           },
           {
             id: "bam-broken",
             label:
-              "The absence implies the BAM service is broken on this host.",
+              "The absence implies the BAM service is broken on this host. A healthy BAM should have a row for any common system binary like `bitsadmin.exe`; the empty result here points to a service-state issue (the bam_service_state in the host-context artifact notwithstanding) and the rest of the BAM evidence on this host should be treated as unreliable.",
           },
         ],
         allowMultiple: false,
@@ -1461,7 +1461,7 @@ virtual switch and appears on the wire as the host's IP.
           {
             id: "vmcompute-fake",
             label:
-              "Attribution to `vmcompute.exe` is a forensic artifact of the EDR and doesn't mean a real process owned the socket.",
+              "Attribution to `vmcompute.exe` is a forensic artifact of how the EDR serialises Hyper-V telemetry rather than an actual process-to-socket binding; the kernel does not maintain per-process ownership for Hyper-V utility-VM traffic, so the named process is essentially a placeholder and the flow could be owned by any number of things behind the Hyper-V scheduler.",
           },
           {
             id: "no-other-hyperv-on-this-host",

@@ -354,8 +354,8 @@ team is in the final two weeks of a release. Triage.
         weight: 1,
         promptMd: "Which statement most accurately describes the right next step?",
         options: [
-          { id: "open-investigation", label: "Open a formal insider-risk investigation." },
-          { id: "explained-by-context", label: "Pattern is fully explained by the documented push-mode hours; no further action." },
+          { id: "open-investigation", label: "Open a formal insider-risk investigation. The 14-day off-hours pattern combined with the cross-team document access is exactly the shape that pre-departure exfiltration takes, and the documented push-mode hours culture is a convenient cover story that any prepared exfiltrator would point at after the fact; the investigation will resolve which it is." },
+          { id: "explained-by-context", label: "Pattern is fully explained by the documented push-mode hours; the manager-confirmed release-train context fully accounts for the off-hours logons, the cross-team access is normal release-cut behavior, and there's no further action required beyond noting the inquiry was made and the explanation was sufficient." },
           { id: "low-priority-monitor", label: "Note the pattern is consistent with the documented context. Set a low-priority monitor for any DIVERGENCE from the pattern (e.g. document downloads outside the team's usual document set)." },
         ],
         allowMultiple: false,
@@ -1036,7 +1036,7 @@ The two channels are complementary, not duplicative.
           {
             id: "block-and-forget",
             label:
-              "Block the sender domain and consider the matter closed.",
+              "Block the sender domain at the mail gateway and close the ticket; the user clicked through and the credentials are already rotated, so there's no operational urgency left. Spear phishing follow-ups generally use the same channel, so blocking the originating domain takes the sender out of play and removes the need for additional handling.",
           },
         ],
         allowMultiple: true,
@@ -1308,7 +1308,7 @@ need-to-know.
           {
             id: "polygraph-now",
             label:
-              "Schedule a polygraph immediately on the strength of the pattern alone.",
+              "Schedule a counterintelligence polygraph immediately on the strength of the access-pattern alone — the six-month escalation, the cross-team scope, and the share-link activity together are enough articulable suspicion to justify the request, and a polygraph result resolves the ambiguity faster than any data review.",
           },
         ],
         allowMultiple: true,

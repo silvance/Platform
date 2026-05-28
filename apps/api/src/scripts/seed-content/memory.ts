@@ -271,12 +271,12 @@ What netscan doesn't support:
           {
             id: "yes-established-means-sent",
             label:
-              "Yes. An ESTABLISHED state means data has been transferred.",
+              "Yes. An ESTABLISHED TCP state means the three-way handshake completed and the connection is now in the data-transfer phase; reaching ESTABLISHED requires application-layer bytes to have crossed the link in both directions, so the socket's existence at that state is itself proof of data exchange.",
           },
           {
             id: "yes-tcp443-implies-tls",
             label:
-              "Yes. The port-443 destination implies TLS traffic, which always means content was sent.",
+              "Yes. The port-443 destination implies TLS traffic, and a TLS connection always carries content (the handshake itself is encrypted application data, and the session reaching the ESTABLISHED state means at least the ClientHello + ServerHello exchange completed). \"Bytes were sent\" follows from the protocol semantics.",
           },
         ],
         allowMultiple: false,
@@ -621,7 +621,7 @@ afternoon.
           {
             id: "metasploit",
             label:
-              "The process is a confirmed Metasploit stager.",
+              "The process is a confirmed Metasploit stager. The combination of the canonical `fc 48 83 e4 f0` x64 prologue, the RWX memory region, the masquerading process name, and the C2-shaped socket pattern together identify the implant family at the level of confidence required to put \"Metasploit\" in the writeup as a direct observation rather than an inference.",
           },
         ],
         allowMultiple: true,
@@ -653,17 +653,17 @@ afternoon.
           {
             id: "parent-explorer-only",
             label:
-              "The parent process being explorer.exe.",
+              "The parent process being explorer.exe rather than services.exe. A legitimate Windows updater (Windows Update, WUSA, the trusted-installer chain) is always launched from the services tree by design; a child of explorer.exe is by itself sufficient to identify the process as user-launched malware.",
           },
           {
             id: "temp-path-only",
             label:
-              "The image path being under `%TEMP%`.",
+              "The image path being under `C:\\Users\\s.lin\\AppData\\Local\\Temp\\`. Signed-Microsoft updaters never live in or run from a user's `%TEMP%` directory by policy, so a process named `updater.exe` running from there is on its face a masquerading binary regardless of any other artifact.",
           },
           {
             id: "three-sockets-only",
             label:
-              "Three simultaneous outbound sockets to one IP.",
+              "Three simultaneous outbound sockets from one process to one external IP. Beacon implants typically multiplex across separate sockets for control, data, and heartbeat channels; the three-to-one socket pattern matches that architecture and is more specific than any single other signal in the artifact set.",
           },
         ],
         allowMultiple: false,
@@ -690,17 +690,17 @@ afternoon.
           {
             id: "terminate-and-reimage",
             label:
-              "Terminate PID 4012 and reimage the workstation immediately.",
+              "Terminate PID 4012 in-place and reimage the workstation immediately from known-good media. Once the process is killed and the disk is wiped, the implant is gone — the dump-and-analyse step adds time without changing the eventual remediation, which has to be a full reimage either way.",
           },
           {
             id: "wait-for-more-alerts",
             label:
-              "Wait for SOC to raise another alert before acting.",
+              "Wait for SOC to raise another alert on the host or for the same shellcode pattern on a second workstation before opening containment; a single Volatility hit on one host with low EDR confidence is below the threshold for a full IR escalation, and second-occurrence corroboration is the standard practice for ambiguous memory findings.",
           },
           {
             id: "block-ip-only",
             label:
-              "Block `203.0.113.42` at the firewall and consider the case closed.",
+              "Block `203.0.113.42` at the firewall and consider the case closed. Once the C2 channel is severed the implant has nowhere to call home, and a perimeter block is cheaper and lower-risk than touching the host directly — the remaining shellcode in memory is inert without its callback.",
           },
         ],
         allowMultiple: false,

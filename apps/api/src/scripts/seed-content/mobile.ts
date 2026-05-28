@@ -944,12 +944,12 @@ office honestly, and name the next acquisition step.
           {
             id: "reboot-and-retry",
             label:
-              "Power-cycle the device and re-attempt the acquisition from a fresh boot.",
+              "Power-cycle the device, allow it to boot fresh, and re-attempt the acquisition workflow from scratch — a clean reboot resets the GRAYKEY brute-force state into a deterministic baseline and avoids any partial-state corruption that might be slowing the current attempt; the second pass tends to be faster than the first.",
           },
           {
             id: "carve-encrypted-blobs",
             label:
-              "Use a forensic carving tool to recover the Notes content from the encrypted blobs in the BFU image.",
+              "Use a forensic carving tool against the BFU image to recover the Notes content directly from the encrypted blobs on disk; carving tools have evolved to handle Apple Data Protection class C blobs and the Notes content can often be reassembled from on-disk fragments even without the user keys.",
           },
         ],
         allowMultiple: true,
@@ -1382,17 +1382,17 @@ to verify?"*
           {
             id: "permitted-tools-agree",
             label:
-              "Permitted when both tools agree on counts.",
+              "Permitted when both tools agree on counts. Cross-tool agreement on the row count is itself the verification step — once two independently-implemented parsers produce the same number, that number can be reported as the complete corpus and the writeup is shielded from the parser-skew critique that single-tool reports attract.",
           },
           {
             id: "permitted-primary-tool",
             label:
-              "Permitted when the primary tool's count is signed off by a reviewer.",
+              "Permitted when the primary tool's count is signed off by a senior examiner reviewer. The lab's SOP delegates the completeness-claim authority to the reviewer's sign-off rather than to a multi-tool requirement, so a reviewed and approved single-tool count is permissible to phrase as \"complete\" in the writeup.",
           },
           {
             id: "permitted-with-footnote",
             label:
-              "Permitted only with an accompanying confidence-5 footnote.",
+              "Permitted only with an accompanying confidence-5 footnote stating the basis for the completeness claim — the tool, the parser version, and the acquisition method. The footnote is the SOP-recognised mechanism for preserving the headline language while documenting its scope.",
           },
           {
             id: "forbidden",
@@ -1652,12 +1652,12 @@ sheet.
           {
             id: "messages-count-exact",
             label:
-              "The device contains exactly 4,118 active Messages rows.",
+              "The device contains exactly 4,118 active Messages rows. UFED's count is the authoritative number; AXIOM's higher count is an artifact of its more aggressive de-dup heuristic that splits some thread events into separate rows, and the lower of the two tools' numbers is the actual on-device row count.",
           },
           {
             id: "signal-zero",
             label:
-              "The user has never used Signal on this device.",
+              "The user has never used Signal on this device. AXIOM's module read the encrypted-at-rest DB during the analysis pass and reported zero Signal rows, and the only Signal counts on the device are the 18 OS-cache rows UFED surfaced — which are application installer breadcrumbs rather than user-generated messages.",
           },
         ],
         allowMultiple: false,
@@ -1684,12 +1684,12 @@ sheet.
           {
             id: "user-deleted-after",
             label:
-              "The user deleted the messages between the UFED parse and the AXIOM parse.",
+              "The user deleted the 88 Messages from the device between the time UFED parsed the extract and the time AXIOM parsed it; UFED captured the rows in free-page state before they were overwritten, and by the time AXIOM ran the deletion had progressed far enough that nothing remained for the carving stage to find.",
           },
           {
             id: "axiom-buggy",
             label:
-              "AXIOM is buggy and miscounts deleted rows.",
+              "AXIOM is buggy on this version and is miscounting deleted rows for iOS Messages — the Apple-iOS module's deleted-message recovery routine has a known issue at this AXIOM revision that under-reports counts. Recommend logging an AXIOM support ticket and treating UFED's 88 as the authoritative deleted-row count.",
           },
         ],
         allowMultiple: false,
