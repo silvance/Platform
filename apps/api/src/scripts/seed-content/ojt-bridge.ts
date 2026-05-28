@@ -801,4 +801,358 @@ evidence supports some of those claims and not others.
       },
     ],
   },
+
+  // ─── Capstone — combine the prior six scenarios on one mini-case ──
+  {
+    slug: "ojt-bridge-first-day-triage-001",
+    title: "First-Day Triage: Combining the Pieces",
+    summary:
+      "A workstation flagged for possible USB-based exfil. Five small artifacts, one combined case. Match the right artifact to each sub-question and write a finding that doesn't outrun the evidence.",
+    skillAreas: [
+      "df_artifacts",
+      "windows_artifacts",
+      "removable_media",
+      "inference_discipline",
+    ],
+    difficulty: 2,
+    estimatedMinutes: 30,
+    tags: [
+      "ojt-bridge",
+      "windows_artifacts",
+      "removable_media",
+      "df_artifacts",
+      "inference_discipline",
+      "capstone",
+    ],
+    lane: "ojt_bridge",
+    module: "Capstone",
+    sequence: 7,
+    status: "draft",
+    brief: `
+# Brief
+
+Every prior scenario in this lane drilled one skill on one
+artifact. This one bundles them. A workstation (\`WS-OPS-058\`)
+was flagged by the security manager because of a "possible
+USB-based exfiltration" report from a teammate. You receive five
+small artifacts and a draft finding from a junior analyst:
+
+- the AXIOM-style case summary,
+- the acquisition log,
+- a Prefetch listing for a tool of interest,
+- a USBSTOR record,
+- a browser-download row.
+
+Your tasking is short:
+
+1. For each sub-question, identify the **right artifact** to read.
+2. Read it carefully — the same discipline as the prior scenarios.
+3. Pick the calibrated finding from three drafts at the end.
+
+Nothing in this case requires a new tool or a deeper artifact
+than the lane has already shown you. The new skill is the
+synthesis — *which artifact answers which claim*, and *do not
+let one artifact's evidence be borrowed by a different claim*.
+`.trim(),
+    artifacts: [
+      {
+        ordinal: 1,
+        displayName: "case-summary.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "Case summary — parsed artifact counts",
+            "-------------------------------------",
+            "",
+            "  Browser history records ........... 2,118",
+            "  Email messages .................... 0",
+            "  SMS messages ...................... 0",
+            "  USB device records ................ 1",
+            "  Prefetch entries .................. 142",
+            "  Recycle Bin items ................. 4",
+            "",
+            "Parser           : AXIOM 9.x (Windows artifacts module)",
+            "Image            : /evidence/2026/308/WS-OPS-058.E01",
+            "Processed (UTC)  : 2026-11-04 19:42:08",
+            "",
+          ].join("\n"),
+        ),
+      },
+      {
+        ordinal: 2,
+        displayName: "acquisition.log",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "Live acquisition — completion summary",
+            "-------------------------------------",
+            "",
+            "  Source            : Internal hard drive (512 GB)",
+            "  Target            : /evidence/2026/308/WS-OPS-058.E01",
+            "  Image format      : EnCase E01 (compressed)",
+            "  Started           : 2026-11-04 14:18:11 UTC",
+            "  Finished          : 2026-11-04 16:08:55 UTC",
+            "  SHA-256 (source)  : a4d2...7e0c   (computed during read)",
+            "  SHA-256 (image)   : a4d2...7e0c   (verified after write)",
+            "  Status            : COMPLETE — no read errors",
+            "",
+            "Custody (DA Form 4137 #4137-2026-308-A):",
+            "  Released by    : SSG K. Owens (unit security manager)",
+            "  Received by    : (signature illegible — receiving DFE",
+            "                    column on the 4137 has a date and a",
+            "                    badge number but no printed name)",
+            "  Received date  : 2026-11-04",
+            "",
+          ].join("\n"),
+        ),
+      },
+      {
+        ordinal: 3,
+        displayName: "prefetch-listing.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "Prefetch entries — selected rows",
+            "--------------------------------",
+            "",
+            "  File name                 Last run UTC          Run count",
+            "  ROBOCOPY.EXE-0A9F2BAD.pf  2026-11-03 21:14:08    1",
+            "  EXPLORER.EXE-1F2D0001.pf  2026-11-03 22:08:42    7",
+            "  NOTEPAD.EXE-5B41C0DE.pf   2026-11-03 22:11:55    3",
+            "",
+            "(Prefetch is enabled on this host. The robocopy entry is",
+            " the one of interest — it's a Windows file-copy utility",
+            " that the user's role does not require for daily work.)",
+            "",
+          ].join("\n"),
+        ),
+      },
+      {
+        ordinal: 4,
+        displayName: "usbstor-record.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "USBSTOR record — single device",
+            "------------------------------",
+            "",
+            "  Vendor / Product   : SanDisk Cruzer Glide",
+            "  Serial             : SD-CG-2208",
+            "  First install date : 2026-08-22 10:18:22 UTC",
+            "  Last arrival date  : 2026-11-03 20:55:08 UTC",
+            "  Last removal date  : 2026-11-03 22:42:18 UTC",
+            "",
+          ].join("\n"),
+        ),
+      },
+      {
+        ordinal: 5,
+        displayName: "browser-downloads.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "Browser downloads — single row of interest",
+            "------------------------------------------",
+            "",
+            "  URL              : https://internal-portal.unit.example/docs/sow-2025-118.pdf",
+            "  Downloaded as    : C:\\Users\\j.cole\\Downloads\\sow-2025-118.pdf",
+            "  Started (UTC)    : 2026-11-03 19:42:11",
+            "  Finished (UTC)   : 2026-11-03 19:42:14",
+            "  Size             : 318,442 bytes",
+            "  SHA-256          : c811...0d4f",
+            "",
+            "(Source URL resolves to an internal SharePoint-style",
+            " portal. The document is unit-internal.)",
+            "",
+          ].join("\n"),
+        ),
+      },
+    ],
+    questions: [
+      {
+        ordinal: 1,
+        type: "multi_choice",
+        weight: 1,
+        promptMd:
+          "Which artifact answers \"**was a removable device connected to this workstation in the window of interest?**\"",
+        options: [
+          { id: "axiom", label: "The AXIOM-style case summary (`case-summary.txt`)." },
+          { id: "acq", label: "The acquisition log (`acquisition.log`)." },
+          { id: "pf", label: "The Prefetch listing (`prefetch-listing.txt`)." },
+          { id: "usbstor", label: "The USBSTOR record (`usbstor-record.txt`)." },
+          { id: "browser", label: "The browser download row (`browser-downloads.txt`)." },
+        ],
+        allowMultiple: false,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["usbstor"],
+          allowMultiple: false,
+        },
+        debriefMd:
+          "**USBSTOR.** That's the registry artifact that records device-was-here facts (vendor / product / serial, plus first-install and last-arrival / last-removal times). The case summary's *USB device records: 1* tells you AXIOM extracted one such record from the image — that's a parser count, not the device fact itself.",
+      },
+      {
+        ordinal: 2,
+        type: "multi_choice",
+        weight: 1,
+        promptMd:
+          "From the Prefetch listing, what is **directly supported** about `ROBOCOPY.EXE`?",
+        options: [
+          {
+            id: "ran-once",
+            label:
+              "`ROBOCOPY.EXE` was executed on this host at least once; the most recent run was 2026-11-03 21:14:08 UTC.",
+          },
+          {
+            id: "copied-to-usb",
+            label:
+              "`ROBOCOPY.EXE` was used to copy files to the SanDisk USB.",
+          },
+          {
+            id: "ran-by-cole",
+            label:
+              "`j.cole` ran `ROBOCOPY.EXE` (account attribution).",
+          },
+        ],
+        allowMultiple: false,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["ran-once"],
+          allowMultiple: false,
+        },
+        debriefMd:
+          "**Executed on this host, last run 2026-11-03 21:14:08 UTC.** Prefetch is a host-level execution artifact — it records *this binary ran*, but doesn't carry per-user attribution and doesn't record what files (if any) the binary touched. Account attribution lives in UserAssist / 4688 / Sysmon (out of scope for this lane). The *source → destination* of a copy lives in EDR file-write events or the USN journal (also out of scope here).",
+      },
+      {
+        ordinal: 3,
+        type: "multi_choice",
+        weight: 1,
+        promptMd:
+          "Read the acquisition log carefully. Which of the following is a **real concern** for the case, vs a thing that looks like a concern but isn't?",
+        options: [
+          {
+            id: "hash-mismatch",
+            label:
+              "The source SHA-256 and image SHA-256 don't match.",
+          },
+          {
+            id: "custody-gap",
+            label:
+              "The DA Form 4137 receiving-DFE field has a date and badge number but no printed name. The custody chain has an unattributed handoff.",
+          },
+          {
+            id: "image-too-small",
+            label:
+              "The completion time (≈1h 50m for 512 GB) is faster than expected and the image is probably corrupted.",
+          },
+          {
+            id: "no-prefetch-time",
+            label:
+              "The acquisition log doesn't list any Prefetch entries.",
+          },
+        ],
+        allowMultiple: false,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["custody-gap"],
+          allowMultiple: false,
+        },
+        debriefMd:
+          "**The custody gap.** The receiving-DFE entry on the 4137 has an illegible signature and no printed name — that's an articulable break in the chain and counsel will ask about it. The two hashes *do* match (look again: both are `a4d2...7e0c`). Acquisition time is reasonable for a 512 GB drive at modern read speeds. And acquisition logs don't list Prefetch entries — those live in the analysis side, not the collection side.",
+      },
+      {
+        ordinal: 4,
+        type: "text_match",
+        weight: 1,
+        promptMd:
+          "Quote the **serial number** of the device in the USBSTOR record, exactly as printed.",
+        textMatch: {
+          acceptableAnswers: ["SD-CG-2208"],
+          hint: "Look at the `Serial :` line in `usbstor-record.txt`.",
+          hintAfterTries: 2,
+        },
+        expected: {
+          type: "text_match",
+          acceptableAnswers: ["SD-CG-2208"],
+          regex: false,
+        },
+        debriefMd:
+          "`SD-CG-2208`. Specific serial numbers belong in a writeup whenever they're available — *a SanDisk USB* is weaker than *SanDisk Cruzer Glide, serial SD-CG-2208*, and the latter is what a reviewer (or counsel) needs to disambiguate this device from any other.",
+      },
+      {
+        ordinal: 5,
+        type: "multi_choice",
+        weight: 1,
+        promptMd:
+          "Cross-check the timestamps. Which sentence is **supportable** from the five artifacts together?",
+        options: [
+          {
+            id: "downloaded-then-usb",
+            label:
+              "`sow-2025-118.pdf` was downloaded from an internal portal at 19:42 UTC; a removable device (SanDisk, serial `SD-CG-2208`) was connected from 20:55 to 22:42 UTC the same evening; and `robocopy.exe` ran at 21:14 UTC during the connection window.",
+          },
+          {
+            id: "downloaded-and-copied",
+            label:
+              "`sow-2025-118.pdf` was downloaded from an internal portal and then copied to the SanDisk USB.",
+          },
+          {
+            id: "exfil-occurred",
+            label:
+              "An exfiltration event occurred on 2026-11-03.",
+          },
+        ],
+        allowMultiple: false,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["downloaded-then-usb"],
+          allowMultiple: false,
+        },
+        debriefMd:
+          "The first sentence reads each artifact at face value and stops. The second imports a `was copied to the USB` claim that no artifact in this set supports — Prefetch shows robocopy ran, not what it copied, and there is no file-write telemetry in this artifact set. The third compresses everything into a verdict (`exfiltration`) that the evidence motivates as a next step but does not establish. The first sentence is what belongs in the writeup; the third is what belongs in the next-steps section.",
+      },
+      {
+        ordinal: 6,
+        type: "multi_choice",
+        weight: 2,
+        promptMd: [
+          "Pick the **calibrated** rewrite of the junior analyst's draft. The other two over-claim or under-claim.",
+          "",
+          "Junior analyst's draft:",
+          "",
+          "> *On 2026-11-03, j.cole downloaded internal SOW documentation and copied it to a personal SanDisk USB drive using robocopy.*",
+        ].join("\n"),
+        options: [
+          {
+            id: "overclaim",
+            label:
+              "*j.cole downloaded SOW-2025-118 from the unit internal portal at 19:42 UTC and exfiltrated it to a personal SanDisk USB using robocopy.exe.*",
+          },
+          {
+            id: "calibrated",
+            label:
+              "*On 2026-11-03 the account `j.cole` downloaded `sow-2025-118.pdf` from an internal unit portal at 19:42 UTC. A removable device (SanDisk Cruzer Glide, serial SD-CG-2208) was connected to WS-OPS-058 from 20:55 UTC to 22:42 UTC the same evening. Prefetch shows `ROBOCOPY.EXE` ran on the host at 21:14 UTC during that window. The artifacts do not record file-write events to the USB volume, so no row in the current evidence set proves the document was written to the device; that question is open pending file-system / USN-journal review of the image. The receiving-DFE entry on DA Form 4137 #4137-2026-308-A is missing a printed name and should be corrected before the case folder is closed.*",
+          },
+          {
+            id: "underclaim",
+            label:
+              "*No exfiltration occurred. A SanDisk USB was connected but no file-write events were observed.*",
+          },
+        ],
+        allowMultiple: false,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["calibrated"],
+          allowMultiple: false,
+        },
+        debriefMd:
+          "**The calibrated rewrite.** It names each event at the level the evidence supports, calls out the **custody gap** on the 4137 (which the other two ignore), and explicitly flags the file-write question as **open** rather than answered in either direction. The over-claim asserts `exfiltrated` and `personal` — neither is in the artifact set. The under-claim treats *absence of evidence of writes* as *evidence of absence of writes*; without removable-media file-write telemetry, the right posture is *open, pending review*, not *no*.",
+      },
+    ],
+  },
 ];
