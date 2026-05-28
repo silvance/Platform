@@ -482,4 +482,401 @@ reportable cyberspace indicators.
       },
     ],
   },
+
+  // ─── Capstone — multi-email BEC triage ──────────────────────
+  {
+    slug: "bec-capstone-vendor-redirect-thread-001",
+    title: "BEC Capstone: A Vendor Thread Goes Sideways",
+    summary:
+      "Finance received three emails in the same thread from what looks like a known vendor. One of them is the lure. Read the headers, the attachment, and the vendor master record, then decide what to send back to finance.",
+    skillAreas: ["email_headers", "bec", "report_writing", "inference_discipline"],
+    difficulty: 3,
+    estimatedMinutes: 60,
+    tags: [
+      "bec",
+      "email_headers",
+      "report_writing",
+      "inference_discipline",
+      "capstone",
+    ],
+    lane: "email_bec",
+    module: "Capstone",
+    sequence: 1,
+    status: "draft",
+    brief: `
+# Brief
+
+The finance office forwarded a three-message thread on a Friday
+afternoon. It looks like a routine vendor invoice followed by a
+"correction" with new bank routing. Finance hasn't paid yet.
+They want to know if it's safe to remit.
+
+Vendor is **Northstar Integrators**, a long-standing unit
+contractor. The thread is below as three separate \`.eml.txt\`
+extracts. You also have the vendor master record (the
+unit-of-record routing info on file) and a parsed auth-results
+panel for each message.
+
+You're not the final decision-maker; finance is. But your
+read is what they're going to lean on. Be specific about which
+signals are forgery on the wire vs which are just social-
+engineering markers, and recommend a next step finance can
+actually take this afternoon.
+`.trim(),
+    artifacts: [
+      {
+        ordinal: 1,
+        displayName: "01-original-invoice.eml.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "From: Billing <billing@northstar-integrators.com>",
+            "To: ap-team@unit.example",
+            "Date: Wed, 14 Nov 2026 09:14:08 -0600",
+            "Subject: Invoice #NS-2026-0418 (Nov contract period)",
+            "Message-ID: <NS-0418@mta-3.northstar-integrators.com>",
+            "Reply-To: Billing <billing@northstar-integrators.com>",
+            "Return-Path: <bounces@northstar-integrators.com>",
+            "Received: from mta-3.northstar-integrators.com (mta-3.northstar-integrators.com [203.0.113.18])",
+            "  by mx-unit-1.example with ESMTPS for ap-team@unit.example;",
+            "  Wed, 14 Nov 2026 15:14:14 +0000",
+            "Authentication-Results: mx-unit-1.example;",
+            "  spf=pass (mta-3.northstar-integrators.com: domain of bounces@northstar-integrators.com designates 203.0.113.18 as permitted sender) smtp.mailfrom=bounces@northstar-integrators.com;",
+            "  dkim=pass (2048-bit key) header.d=northstar-integrators.com header.s=mta3;",
+            "  dmarc=pass (p=reject) header.from=northstar-integrators.com",
+            "",
+            "(body, plain text)",
+            "  Hello AP,",
+            "  Attached is invoice NS-2026-0418 for the November",
+            "  contract period. Net 30. Wire instructions on file",
+            "  are unchanged.",
+            "  -- Billing, Northstar Integrators",
+            "",
+          ].join("\n"),
+        ),
+      },
+      {
+        ordinal: 2,
+        displayName: "02-correction-followup.eml.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "From: \"Billing - Northstar Integrators\" <billing@northstar-integraters.com>",
+            "To: ap-team@unit.example",
+            "Date: Fri, 16 Nov 2026 13:42:22 -0600",
+            "Subject: RE: Invoice #NS-2026-0418 (Nov contract period)",
+            "In-Reply-To: <NS-0418@mta-3.northstar-integrators.com>",
+            "Message-ID: <a8c1-44518@send.relayhub-mailer.net>",
+            "Reply-To: \"Billing\" <ap-updates@protonmail.com>",
+            "Return-Path: <bounces@relayhub-mailer.net>",
+            "Received: from send.relayhub-mailer.net (send.relayhub-mailer.net [198.51.100.42])",
+            "  by mx-unit-1.example with ESMTPS for ap-team@unit.example;",
+            "  Fri, 16 Nov 2026 19:42:30 +0000",
+            "Authentication-Results: mx-unit-1.example;",
+            "  spf=pass (send.relayhub-mailer.net: domain of bounces@relayhub-mailer.net designates 198.51.100.42 as permitted sender) smtp.mailfrom=bounces@relayhub-mailer.net;",
+            "  dkim=fail (no key for selector mta3) header.d=northstar-integraters.com;",
+            "  dmarc=fail (p=none for northstar-integraters.com) header.from=northstar-integraters.com",
+            "",
+            "(body, plain text)",
+            "  Hi AP team,",
+            "  Quick correction on NS-2026-0418 — our processing",
+            "  bank changed last week. Please update the routing",
+            "  and remit per the attached. Apologies for the late",
+            "  notice; we're trying to wrap up the AR batch before",
+            "  the holiday.",
+            "  Please reply to confirm receipt so I can flag it",
+            "  internally.",
+            "  -- Billing",
+            "",
+            "(attachment: 03-payment-update.pdf — 1 page)",
+            "",
+          ].join("\n"),
+        ),
+      },
+      {
+        ordinal: 3,
+        displayName: "03-payment-update.pdf.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "(rendered text from 03-payment-update.pdf)",
+            "",
+            "  ── Northstar Integrators — Payment Update ──",
+            "",
+            "  Vendor: Northstar Integrators LLC",
+            "  Effective: 11 Nov 2026",
+            "  Reason: Banking provider change",
+            "",
+            "  Old routing (do not use):",
+            "    Bank: Capitol Trust",
+            "    Routing: 026-009-593",
+            "    Account: 4418-22-7714",
+            "",
+            "  New routing (use immediately):",
+            "    Bank: Meridian Commercial Holdings",
+            "    Routing: 121-000-358",
+            "    Account: 9911-04-2207",
+            "    Name on account: Northstar Holdings International",
+            "",
+            "  Contact for questions: ap-updates@protonmail.com",
+            "",
+            "  -- Billing, Northstar Integrators",
+            "",
+          ].join("\n"),
+        ),
+      },
+      {
+        ordinal: 4,
+        displayName: "vendor-master-record.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "Vendor master record — Northstar Integrators",
+            "--------------------------------------------",
+            "",
+            "  Legal name        : Northstar Integrators LLC",
+            "  Vendor ID         : V-2021-118",
+            "  Onboarded         : 2021-09-14 (re-verified 2025-08-02)",
+            "  Primary contact   : Diane Park, AR Manager",
+            "  Phone (verified)  : +1-512-555-0118 ext 4",
+            "  Billing email     : billing@northstar-integrators.com",
+            "",
+            "  Wire on file (unchanged since 2024-03):",
+            "    Bank            : Capitol Trust",
+            "    Routing         : 026-009-593",
+            "    Account         : 4418-22-7714",
+            "    Name on account : Northstar Integrators LLC",
+            "",
+            "  Last verified by call    : 2025-08-02 (D. Park to AP)",
+            "",
+          ].join("\n"),
+        ),
+      },
+      {
+        ordinal: 5,
+        displayName: "auth-results-side-by-side.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "Auth-Results — parsed side-by-side",
+            "----------------------------------",
+            "",
+            "  Field            | Msg 01 (original)              | Msg 02 (correction)",
+            "  -----------------+--------------------------------+--------------------------------",
+            "  From-domain      | northstar-integrators.com      | northstar-integraters.com",
+            "  Envelope-from    | bounces@northstar-integrators  | bounces@relayhub-mailer.net",
+            "  Sending IP       | 203.0.113.18                   | 198.51.100.42",
+            "  Sending host     | mta-3.northstar-integrators... | send.relayhub-mailer.net",
+            "  SPF              | pass                           | pass",
+            "  DKIM             | pass (d=northstar-integrators) | fail (d=northstar-integraters)",
+            "  DMARC            | pass                           | fail",
+            "  Reply-To         | billing@northstar-integrators  | ap-updates@protonmail.com",
+            "",
+            "(SPF passes when the envelope-from's domain authorises the",
+            " sending IP. SPF says nothing about the visible From: domain",
+            " a recipient sees — that's DKIM's and DMARC's job.)",
+            "",
+          ].join("\n"),
+        ),
+      },
+    ],
+    questions: [
+      {
+        ordinal: 1,
+        type: "multi_choice",
+        weight: 2,
+        promptMd:
+          "Comparing Msg 01 and Msg 02, which of these are **on-the-wire forgery signals** (something the headers themselves prove is wrong), as opposed to social-engineering markers?",
+        options: [
+          {
+            id: "lookalike-domain",
+            label:
+              "The From-domain on Msg 02 (`northstar-integraters.com`) is a lookalike of the real vendor's domain — one letter different.",
+          },
+          {
+            id: "dkim-fail",
+            label:
+              "DKIM on Msg 02 fails — the signature doesn't validate against any key the sender's published domain advertises.",
+          },
+          {
+            id: "dmarc-fail",
+            label:
+              "DMARC on Msg 02 fails — the visible From: domain didn't authorise the message.",
+          },
+          {
+            id: "reply-to-mismatch",
+            label:
+              "The Reply-To on Msg 02 routes to a generic ProtonMail address that doesn't match the From: domain.",
+          },
+          {
+            id: "urgency",
+            label:
+              "Msg 02 uses urgency language (\"trying to wrap up the AR batch before the holiday\").",
+          },
+        ],
+        allowMultiple: true,
+        expected: {
+          type: "multi_choice",
+          correctIds: [
+            "lookalike-domain",
+            "dkim-fail",
+            "dmarc-fail",
+            "reply-to-mismatch",
+          ],
+          allowMultiple: true,
+        },
+        debriefMd:
+          "The first four are wire-evidence: lookalike From-domain, DKIM fail, DMARC fail, and Reply-To redirected to a free-mail address. Urgency is a behavioural marker — useful colour for the writeup, but not something the message headers prove on their own. SPF passing on Msg 02 doesn't rescue the case: SPF only authenticates the envelope sender (`bounces@relayhub-mailer.net`), not the visible From: domain the recipient reads.",
+      },
+      {
+        ordinal: 2,
+        type: "multi_choice",
+        weight: 2,
+        promptMd:
+          "Comparing the payment-update PDF against the vendor master record, what is **directly different**?",
+        options: [
+          {
+            id: "routing-and-account",
+            label:
+              "Bank, routing number, and account number all differ from the on-file record.",
+          },
+          {
+            id: "account-name",
+            label:
+              "Account name on the PDF is \"Northstar Holdings International\" — the vendor master has the legal name as \"Northstar Integrators LLC\".",
+          },
+          {
+            id: "contact-email",
+            label:
+              "Contact email on the PDF is a free-mail ProtonMail address; the master record's billing email is on the vendor's own domain.",
+          },
+          {
+            id: "phone-changed",
+            label:
+              "The phone number changed.",
+          },
+        ],
+        allowMultiple: true,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["routing-and-account", "account-name", "contact-email"],
+          allowMultiple: true,
+        },
+        debriefMd:
+          "Three real differences: the wire details (bank, routing, account), the name on the account (the receiving bank account is held by a *different* legal entity), and the contact channel (free-mail address rather than the vendor's own domain). The phone number isn't on the PDF at all — nothing to compare. The mismatched account holder is the loudest signal here: a legitimate banking-provider change wouldn't transfer funds into a differently-named entity.",
+      },
+      {
+        ordinal: 3,
+        type: "multi_choice",
+        weight: 1,
+        promptMd:
+          "Out of the artifacts in this set, which **single one** is the strongest standalone evidence that this is a redirect attempt rather than a legitimate banking-change request?",
+        options: [
+          {
+            id: "auth-results",
+            label:
+              "The auth-results side-by-side (DKIM + DMARC fail on Msg 02; lookalike domain).",
+          },
+          {
+            id: "account-name-mismatch",
+            label:
+              "The PDF's account holder name differing from the vendor master (\"Northstar Holdings International\" vs \"Northstar Integrators LLC\").",
+          },
+          {
+            id: "urgency",
+            label:
+              "The urgency language in Msg 02.",
+          },
+          {
+            id: "reply-to-protonmail",
+            label:
+              "The Reply-To on Msg 02 pointing to a ProtonMail address.",
+          },
+        ],
+        allowMultiple: false,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["account-name-mismatch"],
+          allowMultiple: false,
+        },
+        debriefMd:
+          "The account-holder mismatch is the strongest standalone signal because it's a fraud signal even setting the email aside — a legitimate bank-provider change moves the same vendor's account to a new bank; it does not change the name the account is held under. The auth-results are damning *for the email*, but a real banking change could plausibly come from a different mail relay during a vendor transition. The Reply-To and urgency are corroborating. The mismatched holder name is the artifact a counsel would lead with.",
+      },
+      {
+        ordinal: 4,
+        type: "multi_choice",
+        weight: 1,
+        promptMd:
+          "Finance wants a next-step they can take this afternoon. What is the **single best one**?",
+        options: [
+          {
+            id: "phone-known-good",
+            label:
+              "Call Diane Park at the verified phone number from the vendor master record. Ask whether a banking change is in flight. Do not use any phone number provided in Msg 02 or the attached PDF.",
+          },
+          {
+            id: "reply-confirm",
+            label:
+              "Reply to Msg 02 asking the sender to confirm the new routing.",
+          },
+          {
+            id: "pay-and-claw-back",
+            label:
+              "Pay against the new routing and treat any issue as a recoverable transaction later.",
+          },
+          {
+            id: "wait-and-see",
+            label:
+              "Wait for the vendor to follow up if they don't hear back.",
+          },
+        ],
+        allowMultiple: false,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["phone-known-good"],
+          allowMultiple: false,
+        },
+        debriefMd:
+          "Phone the known-good number on file. Replying to Msg 02 confirms nothing — if the attacker controls or is reading the inbox, they'll just say *yes, please remit*. Paying against the new routing and clawing back later is an order of magnitude harder than calling Diane; wire fraud recoveries are slow and often unsuccessful. Waiting is not a response.",
+      },
+      {
+        ordinal: 5,
+        type: "multi_choice",
+        weight: 2,
+        promptMd: [
+          "Three drafts of what to send back to the finance office. Pick the one you'd actually send.",
+        ].join("\n"),
+        options: [
+          {
+            id: "overclaim",
+            label:
+              "*This is a confirmed BEC against your office. The vendor has been compromised and their domain is in attacker control. Do not pay. We are opening an incident and contacting law enforcement.*",
+          },
+          {
+            id: "calibrated",
+            label:
+              "*The first message (Wed 14 Nov, from `billing@northstar-integrators.com`) authenticates cleanly and matches the vendor on file. The second message (Fri 16 Nov), styled as a correction with new routing, comes from a lookalike domain — `northstar-integraters.com` (one letter different) — and fails DKIM and DMARC. Its Reply-To is a ProtonMail address. The attached PDF directs payment to a bank account held under a different legal entity (\"Northstar Holdings International\") than the on-file vendor name (\"Northstar Integrators LLC\"). Recommended action: do not remit against the new routing. Call Diane Park at the vendor's verified phone number on the master record (extension 4) to ask whether any banking change is actually in flight. Once that call resolves, we can decide whether this is a vendor-side compromise to escalate to them or an unrelated impersonation to report to the carrier and law-enforcement channel.*",
+          },
+          {
+            id: "underclaim",
+            label:
+              "*Probably fine to pay. The vendor name and project context all check out and SPF passes on the new message. Recommend remitting against the updated routing and confirming with the vendor by replying to the thread.*",
+          },
+        ],
+        allowMultiple: false,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["calibrated"],
+          allowMultiple: false,
+        },
+        debriefMd:
+          "The middle one. It names each artifact at the resolution it actually carries — auth-results on the second message, the lookalike domain, the account-holder mismatch on the PDF — and recommends the one action finance can take this afternoon (phone call to a known-good number). The first draft declares vendor compromise and a confirmed BEC without evidence that the vendor's real domain is involved at all — the second message uses a *lookalike* domain, which is impersonation, not compromise. The third rests on SPF passing without understanding that SPF authenticates the envelope, not the visible From: domain, and recommends a reply-to-thread that an attacker reading the inbox happily confirms.",
+      },
+    ],
+  },
 ];
