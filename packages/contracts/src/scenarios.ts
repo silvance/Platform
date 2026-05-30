@@ -10,6 +10,7 @@ export const SkillArea = z.enum([
   "df_artifacts",
   "removable_media",
   "windows_artifacts",
+  "linux_artifacts",
   "network_logs",
   "account_compromise",
   "rf_awareness",
@@ -26,6 +27,7 @@ export const SKILL_AREA_LABELS: Record<SkillArea, string> = {
   df_artifacts: "DF Artifacts",
   removable_media: "Removable Media",
   windows_artifacts: "Windows Artifacts",
+  linux_artifacts: "Linux Artifacts",
   network_logs: "Network Logs",
   account_compromise: "Account Compromise",
   rf_awareness: "RF Awareness",
@@ -164,6 +166,7 @@ export const Lane = z.enum([
   "foundations",
   "email_bec",
   "windows_artifacts",
+  "linux_forensics",
   "removable_media_spillage",
   "insider_risk",
   "network_logs",
@@ -180,6 +183,7 @@ export const LANE_LABELS: Record<Lane, string> = {
   foundations: "Foundations",
   email_bec: "Email & BEC",
   windows_artifacts: "Windows Artifacts",
+  linux_forensics: "Linux Forensics",
   removable_media_spillage: "Removable Media / Spillage",
   insider_risk: "Insider Threat",
   network_logs: "Network & Logs",
@@ -199,6 +203,8 @@ export const LANE_DESCRIPTIONS: Record<Lane, string> = {
     "Business Email Compromise (BEC) and phishing triage. Read headers, attachments, and lure mechanics; separate spoof from compromise.",
   windows_artifacts:
     "Windows-specific artifacts: execution evidence, registry, recent files, Windows 11 additions.",
+  linux_forensics:
+    "Linux host triage — auth logs, shell history, systemd / cron persistence, auditd evidence, and SSH lateral-movement traces. Read what each artifact actually proves, not what a tool's summary implies.",
   removable_media_spillage:
     "USB / removable-media handling and the spillage scenarios that come with it.",
   insider_risk:
