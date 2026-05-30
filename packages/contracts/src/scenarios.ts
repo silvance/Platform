@@ -11,6 +11,7 @@ export const SkillArea = z.enum([
   "removable_media",
   "windows_artifacts",
   "linux_artifacts",
+  "macos_artifacts",
   "network_logs",
   "account_compromise",
   "rf_awareness",
@@ -28,6 +29,7 @@ export const SKILL_AREA_LABELS: Record<SkillArea, string> = {
   removable_media: "Removable Media",
   windows_artifacts: "Windows Artifacts",
   linux_artifacts: "Linux Artifacts",
+  macos_artifacts: "macOS Artifacts",
   network_logs: "Network Logs",
   account_compromise: "Account Compromise",
   rf_awareness: "RF Awareness",
@@ -167,6 +169,7 @@ export const Lane = z.enum([
   "email_bec",
   "windows_artifacts",
   "linux_forensics",
+  "macos_forensics",
   "removable_media_spillage",
   "insider_risk",
   "network_logs",
@@ -184,6 +187,7 @@ export const LANE_LABELS: Record<Lane, string> = {
   email_bec: "Email & BEC",
   windows_artifacts: "Windows Artifacts",
   linux_forensics: "Linux Forensics",
+  macos_forensics: "macOS Forensics",
   removable_media_spillage: "Removable Media / Spillage",
   insider_risk: "Insider Threat",
   network_logs: "Network & Logs",
@@ -205,6 +209,8 @@ export const LANE_DESCRIPTIONS: Record<Lane, string> = {
     "Windows-specific artifacts: execution evidence, registry, recent files, Windows 11 additions.",
   linux_forensics:
     "Linux host triage — auth logs, shell history, systemd / cron persistence, auditd evidence, and SSH lateral-movement traces. Read what each artifact actually proves, not what a tool's summary implies.",
+  macos_forensics:
+    "macOS host triage — unified logs, the TCC privacy database, LaunchAgents / LaunchDaemons persistence, FSEvents, quarantine xattrs, and Spotlight metadata. Notice what SIP protects, what TCC redacts, and what each artifact does NOT prove.",
   removable_media_spillage:
     "USB / removable-media handling and the spillage scenarios that come with it.",
   insider_risk:

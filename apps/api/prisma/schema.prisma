@@ -28,6 +28,7 @@ enum SkillArea {
   removable_media
   windows_artifacts
   linux_artifacts
+  macos_artifacts
   network_logs
   account_compromise
   rf_awareness
@@ -44,6 +45,7 @@ enum Lane {
   email_bec
   windows_artifacts
   linux_forensics
+  macos_forensics
   removable_media_spillage
   insider_risk
   network_logs
