@@ -48,6 +48,7 @@ export class AccessCodesController {
       code: body.code,
       usesLimit: body.usesLimit,
       expiresAt: body.expiresAt,
+      autoApprove: body.autoApprove,
     });
     return { code };
   }

@@ -140,9 +140,11 @@ export class AuthService implements OnModuleInit {
           displayName: input.displayName,
           passwordHash,
           role: "user",
- // access-code-gated registrations are auto-approved.
-          // The admin who issued the code is the trust anchor.
-          approvedAt: new Date(),
+          // Set approvedAt at create-time iff the access code is
+          // flagged autoApprove. Codes minted with autoApprove=false
+          // land the user as pending; an admin approves from
+          // /admin/users before the account can sign in.
+          approvedAt: consumed.autoApprove ? new Date() : null,
         },
       });
     });

@@ -38,6 +38,11 @@ export const AccessCodeRecord = z.object({
   expiresAt: z.string().nullable(),
   usesCount: z.number().int().nonnegative(),
   usesLimit: z.number().int().positive().nullable(),
+  // When true, registrations consuming this code auto-approve. When
+  // false, the resulting account lands pending and requires an admin
+  // to approve from /admin/users. Default at the DB layer is true,
+  // matching the pre-flag behavior.
+  autoApprove: z.boolean(),
   createdAt: z.string(),
   createdByUserId: z.string().uuid().nullable(),
 });
@@ -57,6 +62,9 @@ export const CreateAccessCodeRequest = z.object({
   code: z.string().min(4).max(64).optional(),
   usesLimit: z.number().int().positive().max(10_000).optional(),
   expiresAt: z.string().datetime().optional(),
+  // Omit to keep the auto-approve default (true). Set false to mint a
+  // "register and wait for admin approval" code.
+  autoApprove: z.boolean().optional(),
 });
 export type CreateAccessCodeRequest = z.infer<typeof CreateAccessCodeRequest>;
 

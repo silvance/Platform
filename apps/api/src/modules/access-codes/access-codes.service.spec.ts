@@ -18,15 +18,15 @@ function makeService(): AccessCodesService {
 }
 
 describe("AccessCodesService.validateAndConsume", () => {
-  it("returns false when the code does not exist", async () => {
+  it("returns null when the code does not exist", async () => {
     const tx = makeFakeTx();
     tx.accessCode.findUnique.mockResolvedValue(null);
-    const ok = await makeService().validateAndConsume(tx as never, "MISSING");
-    expect(ok).toBe(false);
+    const result = await makeService().validateAndConsume(tx as never, "MISSING");
+    expect(result).toBeNull();
     expect(tx.accessCode.updateMany).not.toHaveBeenCalled();
   });
 
-  it("returns false when the code is disabled", async () => {
+  it("returns null when the code is disabled", async () => {
     const tx = makeFakeTx();
     tx.accessCode.findUnique.mockResolvedValue({
       id: "c1",
@@ -34,13 +34,14 @@ describe("AccessCodesService.validateAndConsume", () => {
       expiresAt: null,
       usesCount: 0,
       usesLimit: null,
+      autoApprove: true,
     });
-    const ok = await makeService().validateAndConsume(tx as never, "OLD-CODE");
-    expect(ok).toBe(false);
+    const result = await makeService().validateAndConsume(tx as never, "OLD-CODE");
+    expect(result).toBeNull();
     expect(tx.accessCode.updateMany).not.toHaveBeenCalled();
   });
 
-  it("returns false when the code has expired", async () => {
+  it("returns null when the code has expired", async () => {
     const tx = makeFakeTx();
     tx.accessCode.findUnique.mockResolvedValue({
       id: "c1",
@@ -48,13 +49,14 @@ describe("AccessCodesService.validateAndConsume", () => {
       expiresAt: new Date(Date.now() - 60_000),
       usesCount: 0,
       usesLimit: null,
+      autoApprove: true,
     });
-    const ok = await makeService().validateAndConsume(tx as never, "EXP-CODE");
-    expect(ok).toBe(false);
+    const result = await makeService().validateAndConsume(tx as never, "EXP-CODE");
+    expect(result).toBeNull();
     expect(tx.accessCode.updateMany).not.toHaveBeenCalled();
   });
 
-  it("returns false when usesLimit is exhausted", async () => {
+  it("returns null when usesLimit is exhausted", async () => {
     const tx = makeFakeTx();
     tx.accessCode.findUnique.mockResolvedValue({
       id: "c1",
@@ -62,13 +64,14 @@ describe("AccessCodesService.validateAndConsume", () => {
       expiresAt: null,
       usesCount: 5,
       usesLimit: 5,
+      autoApprove: true,
     });
-    const ok = await makeService().validateAndConsume(tx as never, "FULL");
-    expect(ok).toBe(false);
+    const result = await makeService().validateAndConsume(tx as never, "FULL");
+    expect(result).toBeNull();
     expect(tx.accessCode.updateMany).not.toHaveBeenCalled();
   });
 
-  it("increments and returns true when the code is valid", async () => {
+  it("increments and returns { autoApprove: true } when the code is valid and auto-approves", async () => {
     const tx = makeFakeTx();
     tx.accessCode.findUnique.mockResolvedValue({
       id: "c1",
@@ -76,11 +79,12 @@ describe("AccessCodesService.validateAndConsume", () => {
       expiresAt: null,
       usesCount: 2,
       usesLimit: 5,
+      autoApprove: true,
     });
     tx.accessCode.updateMany.mockResolvedValue({ count: 1 });
 
-    const ok = await makeService().validateAndConsume(tx as never, "  OK  ");
-    expect(ok).toBe(true);
+    const result = await makeService().validateAndConsume(tx as never, "  OK  ");
+    expect(result).toEqual({ autoApprove: true });
     expect(tx.accessCode.updateMany).toHaveBeenCalledTimes(1);
     const args = tx.accessCode.updateMany.mock.calls[0][0];
     expect(args.where.id).toBe("c1");
@@ -88,7 +92,23 @@ describe("AccessCodesService.validateAndConsume", () => {
     expect(args.data.usesCount).toEqual({ increment: 1 });
   });
 
-  it("returns false when the concurrent-safe update guard finds 0 rows (race lost)", async () => {
+  it("increments and returns { autoApprove: false } when the code requires approval", async () => {
+    const tx = makeFakeTx();
+    tx.accessCode.findUnique.mockResolvedValue({
+      id: "c2",
+      disabledAt: null,
+      expiresAt: null,
+      usesCount: 0,
+      usesLimit: null,
+      autoApprove: false,
+    });
+    tx.accessCode.updateMany.mockResolvedValue({ count: 1 });
+
+    const result = await makeService().validateAndConsume(tx as never, "PENDING-CODE");
+    expect(result).toEqual({ autoApprove: false });
+  });
+
+  it("returns null when the concurrent-safe update guard finds 0 rows (race lost)", async () => {
     const tx = makeFakeTx();
     tx.accessCode.findUnique.mockResolvedValue({
       id: "c1",
@@ -96,19 +116,20 @@ describe("AccessCodesService.validateAndConsume", () => {
       expiresAt: null,
       usesCount: 4,
       usesLimit: 5,
+      autoApprove: true,
     });
     // A concurrent registration drained the last slot between the
     // read and the conditional update; updateMany hits 0 rows.
     tx.accessCode.updateMany.mockResolvedValue({ count: 0 });
 
-    const ok = await makeService().validateAndConsume(tx as never, "RACE");
-    expect(ok).toBe(false);
+    const result = await makeService().validateAndConsume(tx as never, "RACE");
+    expect(result).toBeNull();
   });
 
-  it("returns false on empty/whitespace input without hitting the DB", async () => {
+  it("returns null on empty/whitespace input without hitting the DB", async () => {
     const tx = makeFakeTx();
-    const ok = await makeService().validateAndConsume(tx as never, "   ");
-    expect(ok).toBe(false);
+    const result = await makeService().validateAndConsume(tx as never, "   ");
+    expect(result).toBeNull();
     expect(tx.accessCode.findUnique).not.toHaveBeenCalled();
   });
 });

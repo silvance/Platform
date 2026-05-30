@@ -30,6 +30,7 @@ export class AccessCodesService {
     code?: string;
     usesLimit?: number;
     expiresAt?: string;
+    autoApprove?: boolean;
   }): Promise<AccessCodeRecord> {
     const code = input.code?.trim() ? input.code.trim() : generateCode();
     try {
@@ -40,6 +41,11 @@ export class AccessCodesService {
           createdByUserId: actorUserId,
           usesLimit: input.usesLimit ?? null,
           expiresAt: input.expiresAt ? new Date(input.expiresAt) : null,
+          // Omit to take the DB default (true). Caller passes false to
+          // mint a "register and wait for admin approval" code.
+          ...(input.autoApprove !== undefined
+            ? { autoApprove: input.autoApprove }
+            : {}),
         },
       });
       return toRecord(row);
@@ -73,26 +79,27 @@ export class AccessCodesService {
   // The registration-time entry point. Runs inside a transaction so
   // the validity check + uses-count increment can't race against a
   // concurrent registration attempt that would push us past
-  // usesLimit. Returns true iff the code was valid AND the increment
-  // succeeded — i.e., the caller should proceed with user creation.
+  // usesLimit.
   //
-  // Returns false for ALL failure modes (missing, wrong, disabled,
-  // expired, exhausted) so the caller can map to a single generic
-  // 400 message without distinguishing why.
+  // Returns `{ autoApprove }` on success so the caller can decide
+  // whether to set the new user's approvedAt at create-time. Returns
+  // null for ALL failure modes (missing, wrong, disabled, expired,
+  // exhausted) so the caller can map to a single generic 400 message
+  // without distinguishing why.
   async validateAndConsume(
     tx: Prisma.TransactionClient,
     rawCode: string,
-  ): Promise<boolean> {
+  ): Promise<{ autoApprove: boolean } | null> {
     const code = rawCode.trim();
-    if (!code) return false;
+    if (!code) return null;
     const row = await tx.accessCode.findUnique({ where: { code } });
-    if (!row) return false;
-    if (row.disabledAt !== null) return false;
+    if (!row) return null;
+    if (row.disabledAt !== null) return null;
     if (row.expiresAt !== null && row.expiresAt.getTime() <= Date.now()) {
-      return false;
+      return null;
     }
     if (row.usesLimit !== null && row.usesCount >= row.usesLimit) {
-      return false;
+      return null;
     }
     // Atomic conditional increment via a WHERE guard. If a concurrent
     // call drained the last available use between our read and this
@@ -109,7 +116,8 @@ export class AccessCodesService {
       where: whereGuard,
       data: { usesCount: { increment: 1 } },
     });
-    return result.count === 1;
+    if (result.count !== 1) return null;
+    return { autoApprove: row.autoApprove };
   }
 }
 
@@ -121,6 +129,7 @@ function toRecord(row: {
   expiresAt: Date | null;
   usesCount: number;
   usesLimit: number | null;
+  autoApprove: boolean;
   createdAt: Date;
   createdByUserId: string | null;
 }): AccessCodeRecord {
@@ -132,6 +141,7 @@ function toRecord(row: {
     expiresAt: row.expiresAt ? row.expiresAt.toISOString() : null,
     usesCount: row.usesCount,
     usesLimit: row.usesLimit,
+    autoApprove: row.autoApprove,
     createdAt: row.createdAt.toISOString(),
     createdByUserId: row.createdByUserId,
   };
