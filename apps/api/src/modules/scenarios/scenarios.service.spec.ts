@@ -223,13 +223,13 @@ describe("ScenariosService (unit)", () => {
       const svc = new ScenariosService(prisma);
       const { lanes } = await svc.laneOverview("user", "test-user-id");
 
-      // 14 canonical lanes returned regardless of contents
+      // 15 canonical lanes returned regardless of contents
       // (ojt_bridge, foundations, email_bec, windows_artifacts,
       // linux_forensics, macos_forensics, removable_media_spillage,
       // insider_risk, network_logs, memory_forensics,
-      // mobile_forensics, rf_awareness, evidence_handling,
-      // report_writing).
-      expect(lanes).toHaveLength(14);
+      // malware_analysis, mobile_forensics, rf_awareness,
+      // evidence_handling, report_writing).
+      expect(lanes).toHaveLength(15);
       const foundations = lanes.find((l) => l.lane === "foundations");
       const win = lanes.find((l) => l.lane === "windows_artifacts");
       const empty = lanes.find((l) => l.lane === "rf_awareness");
