@@ -150,7 +150,7 @@ const LANE_SECTIONS: readonly LaneSectionConfig[] = [
     key: "cyber-triage",
     title: "Cyber Triage",
     description:
-      "Reading inbound telemetry without over-claiming — email + BEC, network logs, malware samples, insider-risk indicators, RF awareness.",
+      "Reading inbound telemetry without over-claiming — email + BEC, network logs, malware samples, insider-risk indicators, signals awareness.",
     laneSlugs: [
       "email_bec",
       "network_logs",

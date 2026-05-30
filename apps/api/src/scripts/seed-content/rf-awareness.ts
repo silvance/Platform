@@ -1,16 +1,20 @@
 import { utf8, tinyPngBytes } from "./util";
 import type { ScenarioSeed } from "./types";
 
-// RF-awareness family. Every scenario in this family carries the
-// same disclaimer — these are *awareness* modules, not TSCM
-// training. The exercise is investigative language discipline
-// around bounded observations.
+// Signals-awareness family (lane slug remains `rf_awareness` for
+// URL stability; display name is "Signals Awareness"). Covers RF
+// + acoustic observation reporting and TSCM Familiarity. Every
+// scenario in this family carries the same framing — these are
+// *awareness* modules: the analyst learns to recognise what an
+// observation does and doesn't support, and when to escalate to
+// qualified TSCM personnel. The exercise is investigative
+// language discipline around bounded observations, not TSCM work.
 
 export const RF_AWARENESS_SCENARIOS: ScenarioSeed[] = [
   // ─── Tier 1 (polished) ──────────────────────────────────────
   {
     slug: "rf-awareness-clean-sweep-001",
-    title: "RF Awareness: \"Clean Sweep\" Report Review",
+    title: "Signals Awareness: \"Clean Sweep\" Report Review",
     summary:
       "A field element forwards a one-page sweep report concluding 'no devices present.' Assess the language for overclaim and identify when escalation to qualified TSCM personnel is warranted.",
     skillAreas: ["rf_awareness", "report_writing", "inference_discipline"],
@@ -43,10 +47,11 @@ The workspace tabs hold:
 
 ## What this scenario is — and is not
 
-This is an **awareness module**, not a TSCM training scenario.
+This is a **TSCM Familiarity** module — awareness-level, not
+TSCM-qualified work.
 
 - ✅ It trains how to read sweep-style observations with a CI cyber lens.
-- ✅ It trains when to escalate to qualified TSCM personnel.
+- ✅ It trains how to recognise when to escalate to qualified TSCM personnel.
 - ✅ It trains how to document RF observations *without overstating
   conclusions*.
 - ❌ It does **not** qualify you to perform RF sweeps, evaluate
@@ -158,7 +163,7 @@ language that collapses that distinction.
           "",
           "- The Wi-Fi / Bluetooth / cellular observations are descriptions of what *was* observed during the window — they don't claim anything about what wasn't.",
           "",
-          "Awareness module reminder: this exercise trains *language discipline*. It does not qualify you to render TSCM findings.",
+          "TSCM Familiarity reminder: this exercise trains *language discipline*. It does not qualify you to render TSCM findings.",
         ].join("\n"),
       },
       {
@@ -200,7 +205,7 @@ language that collapses that distinction.
           "",
           "Either alone would make a \"clean sweep\" declaration unsupportable; together they amount to *bounded observation, not absence*. A rewrite that names both bounds and ties escalation to \"presence-of-evidence questions outside the observation window\" would land the right framing.",
           "",
-          "**Reasoning discipline reminder**: this is an awareness module. The exercise is **language calibration**, not TSCM training.",
+          "**Reasoning discipline reminder**: this is a TSCM Familiarity module. The exercise is **language calibration**, not TSCM-qualified work.",
         ].join("\n"),
       },
     ],
@@ -209,7 +214,7 @@ language that collapses that distinction.
   // ─── Tier 2 (draft) ─────────────────────────────────────────
   {
     slug: "rf-awareness-suspicious-observation-001",
-    title: "RF Awareness: Suspicious Observation Report",
+    title: "Signals Awareness: Suspicious Observation Report",
     summary:
       "Field element reports a persistent narrowband emitter during a sensitive event. Decide what to do without doing TSCM yourself.",
     skillAreas: ["rf_awareness", "report_writing", "inference_discipline"],
@@ -324,7 +329,7 @@ language should say and what the operational next step is.
   // ─── Post-trip RF / device-awareness debrief ────────────────
   {
     slug: "rf-awareness-post-trip-debrief-001",
-    title: "RF Awareness: Post-Trip Debrief Triage",
+    title: "Signals Awareness: Post-Trip Debrief Triage",
     summary:
       "A short trip narrative with several travel incidents. Decide which warrant a CIAR debrief and which don't, and draft non-speculative wording for the ones that do.",
     skillAreas: ["rf_awareness", "report_writing", "inference_discipline"],
@@ -519,6 +524,508 @@ The goal isn't to dramatise; it isn't to dismiss; it's to be
         expected: { type: "confidence", expectedRange: [1, 3] },
         debriefMd:
           "**1 to 3.** The narrative is a set of observations that warrant technical inspection — loss-of-control + post-trip battery anomaly + ambient social-engineering attempt. None of those *prove* compromise. Naming compromise without a technical inspection result is the canonical over-claim on a post-trip debrief. Hold the wording at \"observed indicators consistent with a need for technical inspection\" and let the inspection close the question.",
+      },
+    ],
+  },
+
+  // ─── Acoustic-anomaly awareness ─────────────────────────────
+  {
+    slug: "signals-awareness-acoustic-anomaly-001",
+    title: "Signals Awareness: Acoustic Anomaly in a Sensitive Office",
+    summary:
+      "An analyst working in a sensitive office notices a faint hum and a vibration in the wall during quiet hours. Triage the observation — what does it support, what doesn't it, and when does it warrant a TSCM call?",
+    skillAreas: ["rf_awareness", "report_writing", "inference_discipline"],
+    difficulty: 2,
+    estimatedMinutes: 20,
+    tags: ["rf_awareness", "acoustic", "tscm_familiarity", "report_writing", "inference_discipline"],
+    lane: "rf_awareness",
+    module: "Acoustic awareness",
+    sequence: 1,
+    brief: `
+# Brief
+
+You share a sensitive office on the third floor of a multi-tenant
+building. During quiet hours on a recent Friday evening, while
+the office was otherwise empty, you noticed two things:
+
+1. A **faint, persistent hum** at what you'd characterise as
+   low-frequency — the sort you feel as much as hear.
+2. A **faint vibration in the shared wall** with the adjacent
+   tenant's space when you put your hand against it.
+
+You wrote a short observation note and asked your CISO whether
+this warrants action. Your job: review the note for language
+discipline, identify which of the listed mundane explanations
+the observation can and can't rule out, and recommend the
+correct next step.
+
+## What this scenario is — and is not
+
+This is a **TSCM Familiarity** module — awareness-level, not
+TSCM-qualified work.
+
+- ✅ Trains how to read an acoustic / vibration observation with
+  a CI cyber lens.
+- ✅ Trains how to recognise when to escalate to qualified TSCM
+  personnel.
+- ✅ Trains how to write the observation up without overclaim.
+- ❌ Does **not** qualify you to perform acoustic surveys, assess
+  structure-borne audio paths, or render any TSCM finding.
+
+## Reasoning focus
+
+Acoustic and vibration anomalies have a **long list of mundane
+explanations** in a multi-tenant building — HVAC equipment,
+elevator motors, plumbing in chases, transformers in service
+closets, the upstairs neighbour's washing machine. Most are
+benign. The discipline is: describe what you observed, name
+what you can and can't rule out from your own observation,
+and let qualified personnel decide whether to investigate.
+
+The wrong moves are equally bad — assuming the hum is *nothing*
+when it could be a structure-borne audio leak path, and assuming
+it's a *device* when an HVAC chase is sitting two metres above
+your head.
+`.trim(),
+    artifacts: [
+      {
+        ordinal: 1,
+        displayName: "observation-note.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "OBSERVATION NOTE — DRAFT",
+            "Office:   3rd floor, suite 308",
+            "When:     Friday 2026-05-22, ~19:15 local (after-hours)",
+            "Observer: J. Doe (not TSCM-qualified)",
+            "",
+            "Observations:",
+            "  - A persistent low-frequency hum is audible in the office.",
+            "    It is steady, not pulsed. I'd guess it's around 60-80 Hz",
+            "    but I have no way to measure that.",
+            "  - With a hand on the shared north wall (with suite 309), I",
+            "    can feel a faint vibration. The wall sounds slightly",
+            "    different when tapped near the floor than near the",
+            "    ceiling, but I would not call that a strong signal.",
+            "  - The office HVAC supply diffuser is in the ceiling",
+            "    directly above the desk. The supply was running when I",
+            "    arrived. I have not yet tried switching it off via the",
+            "    BMS to see whether the hum changes.",
+            "  - The building has an elevator bank on the same floor,",
+            "    approximately 8 metres from the office wall.",
+            "  - Suite 309 is leased to a commercial tenant whose nature",
+            "    I do not know.",
+            "",
+            "Tentative conclusion (PLEASE REVIEW BEFORE I FORWARD):",
+            "  \"There is evidence of an active surveillance device or",
+            "  audio bridge in the shared wall with suite 309. Recommend",
+            "  immediate sweep.\"",
+          ].join("\n") + "\n",
+        ),
+      },
+      {
+        ordinal: 2,
+        displayName: "building-context.json",
+        kind: "json",
+        mimeType: "application/json; charset=utf-8",
+        bytes: utf8(
+          JSON.stringify(
+            {
+              building: "Multi-tenant commercial, 6 floors",
+              suite: "3rd floor, suite 308 (the observer's office)",
+              shared_systems_within_audible_range: [
+                {
+                  system: "VAV-fed HVAC supply",
+                  notes:
+                    "Ceiling diffuser directly above the observer's desk. Variable-air-volume box upstream on the same branch. Supply fans on building floor 6.",
+                },
+                {
+                  system: "Elevator machine room",
+                  notes:
+                    "Two passenger cars, machine room on the roof. Hoist motors and brake actuators audible at low frequency when cars travel.",
+                },
+                {
+                  system: "Plumbing risers",
+                  notes:
+                    "Cold/hot water + storm risers run in the north chase between suites 308 and 309. Pumps in basement.",
+                },
+                {
+                  system: "Step-down transformer",
+                  notes:
+                    "Tenant-side step-down transformer in the floor 3 electrical closet, ~6 metres from the observer's office.",
+                },
+              ],
+              adjacent_tenant_309: {
+                lease: "Commercial; tenant identity not investigated",
+                note:
+                  "Walls between 308 and 309 are gypsum-on-stud with no documented STC rating; structural framing is shared.",
+              },
+              tscm_resource: {
+                available: true,
+                note:
+                  "The supporting ACI element has on-call TSCM personnel who can be tasked through your CISO. This is an awareness-level observation; the TSCM team makes the assessment.",
+              },
+            },
+            null,
+            2,
+          ) + "\n",
+        ),
+      },
+    ],
+    questions: [
+      {
+        ordinal: 1,
+        type: "multi_choice",
+        weight: 2,
+        promptMd:
+          "Read the observation note and the building context. Which of these are **valid mundane explanations** that the observation, as written, does NOT rule out?",
+        options: [
+          {
+            id: "hvac-vav",
+            label:
+              "The VAV-fed HVAC supply directly above the desk produces a steady low-frequency hum and can couple vibration into the ceiling grid and stud framing.",
+          },
+          {
+            id: "elevator",
+            label:
+              "Elevator hoist motors and brake actuators produce a low-frequency hum that is audible in offices on the same floor when cars are travelling.",
+          },
+          {
+            id: "plumbing",
+            label:
+              "Plumbing risers in the shared north chase between 308 and 309 carry pumped water and produce both low-frequency hum and wall-felt vibration.",
+          },
+          {
+            id: "transformer",
+            label:
+              "A nearby step-down transformer in the floor-3 electrical closet hums at 60 Hz and its multiples; transformer hum is structure-borne and felt at adjacent walls.",
+          },
+          {
+            id: "active-bug",
+            label:
+              "An active covert audio device in the shared wall — the observation specifically rules this in as the most plausible source because the hum and vibration appear together and the adjacent tenant is uncharacterised.",
+          },
+        ],
+        allowMultiple: true,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["hvac-vav", "elevator", "plumbing", "transformer"],
+          allowMultiple: true,
+        },
+        debriefMd: [
+          "All four mundane explanations are consistent with what was observed — HVAC, elevator, plumbing, and electrical infrastructure are present, sit at the right distances, and produce both audible hum and structure-borne vibration at the right frequencies.",
+          "",
+          "Pre-empting any of them as \"ruled out\" without measurement is exactly the kind of move TSCM Familiarity training is meant to suppress. The observation by itself does not distinguish between the mundane and the covert; that's why it gets escalated, not characterised.",
+          "",
+          "The covert-device option is the trap: it phrases an observation as proof of the most exciting candidate explanation. The honest read is \"observation consistent with several mundane sources and not foreclosing on a covert one — escalate to qualified personnel.\"",
+        ].join("\n"),
+      },
+      {
+        ordinal: 2,
+        type: "multi_choice",
+        weight: 1,
+        promptMd:
+          "The draft's tentative conclusion is *\"There is evidence of an active surveillance device or audio bridge in the shared wall with suite 309.\"* What's the most defensible replacement?",
+        options: [
+          {
+            id: "good",
+            label:
+              "\"A persistent low-frequency hum and a faint vibration in the shared north wall were observed during after-hours in suite 308. Multiple mundane sources (HVAC, elevator, plumbing riser, electrical closet transformer) are consistent with the observation and have not been ruled out. Recommend referral to qualified TSCM personnel via the CISO; the observer is not TSCM-qualified.\"",
+          },
+          {
+            id: "bug-confirmed",
+            label:
+              "\"An active audio surveillance device is present in the shared wall between suites 308 and 309. The combination of a persistent low-frequency hum and a structure-borne vibration is the canonical signature of an audio bridge transmitting through the wall, and the adjacent tenant's lack of declared identity is consistent with deliberate placement opposite a sensitive office.\"",
+          },
+          {
+            id: "minimising",
+            label:
+              "\"No findings to report. The hum and wall vibration are consistent with normal HVAC operation in a commercial building and the observation does not justify escalation; the office can be considered acoustically clean for ordinary use.\"",
+          },
+          {
+            id: "speculative",
+            label:
+              "\"There may or may not be a covert listening device in the shared wall; further observation by the office occupants over the next several weeks should clarify whether the hum is mechanical or device-driven, and only if it persists should we consider referring this to TSCM.\"",
+          },
+        ],
+        allowMultiple: false,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["good"],
+          allowMultiple: false,
+        },
+        debriefMd:
+          "Describe the observation, name the mundane candidates that aren't ruled out, name the observer's non-qualification, and recommend the right next step (escalation to TSCM). The bug-confirmed option overclaims; the minimising option suppresses the observation; the speculative option asks the non-qualified observer to do an extended monitoring loop that the TSCM team should own.",
+      },
+      {
+        ordinal: 3,
+        type: "confidence",
+        weight: 1,
+        promptMd:
+          "Confidence (1–5) that an active covert audio device is present in the shared wall, based ONLY on the observation note and building context.",
+        expected: { type: "confidence", expectedRange: [1, 2] },
+        debriefMd:
+          "**1–2.** The observation is consistent with several mundane sources that haven't been ruled out and was made by a non-TSCM-qualified observer with no instrumentation. That doesn't make a covert source impossible — it makes the observation not informative for that question. Reserve confidence 4–5 for after a qualified TSCM assessment.",
+      },
+    ],
+  },
+
+  // ─── Wi-Fi / BT signal-baseline awareness ───────────────────
+  {
+    slug: "signals-awareness-wifi-bt-baseline-001",
+    title: "Signals Awareness: Reading a Venue Wi-Fi / Bluetooth Baseline",
+    summary:
+      "Before a sensitive event, a junior analyst captures a Wi-Fi + Bluetooth scan of the venue and lists every device they saw. Triage what the list does and does not support — and notice the rogue-AP candidate before it bites.",
+    skillAreas: ["rf_awareness", "report_writing", "inference_discipline"],
+    difficulty: 3,
+    estimatedMinutes: 25,
+    tags: ["rf_awareness", "wifi", "bluetooth", "tscm_familiarity", "inference_discipline"],
+    lane: "rf_awareness",
+    module: "Signal-baseline awareness",
+    sequence: 1,
+    brief: `
+# Brief
+
+A junior analyst on your team is prepping the room for a
+sensitive cross-organisation meeting at a hotel venue. Two
+hours before the meeting they ran a handheld Wi-Fi + Bluetooth
+scan and produced a list of every SSID and BT device the tool
+saw. They've asked you to look at the list and tell them what's
+worth flagging before the meeting starts.
+
+## What this scenario is — and is not
+
+This is a **TSCM Familiarity** module — awareness-level, not
+TSCM-qualified work.
+
+- ✅ Trains how to read a passive signal baseline with a CI
+  cyber lens.
+- ✅ Trains how to recognise rogue-AP / evil-twin candidates and
+  separate them from boring ambient noise.
+- ✅ Trains how to escalate the right observations to qualified
+  personnel before they bite.
+- ❌ Does **not** qualify you to perform RF surveys, characterise
+  emitters, or render any TSCM finding. Passive observation of
+  signals visible to a consumer handheld is **not** a sweep.
+
+## Reading the list
+
+A hotel scan looks busy because hotels are busy. The vast
+majority of what the tool sees is legitimate — venue Wi-Fi,
+guest devices, BT headphones, the building's IoT pool (printers,
+beacons, lighting). The trick is naming the entries that don't
+match the venue's published infrastructure, **without** treating
+every unknown as hostile.
+
+Common watch items, in roughly increasing concern:
+
+- **Same SSID, different BSSID** — multiple APs broadcasting the
+  same network name. Normal on big venue Wi-Fi. Concerning when
+  the unexpected BSSID is on a vendor you don't recognise.
+- **Evil-twin pattern** — guest-Wi-Fi SSID being broadcast by an
+  AP whose MAC OUI isn't the venue's documented Wi-Fi vendor.
+- **Captive portal mismatch** — guest network with no captive
+  portal where one is expected, or a portal that asks for
+  unusual credentials.
+- **High-power AP not in the venue plan** — a previously unseen
+  BSSID at signal strength suggesting it's physically inside or
+  immediately adjacent to the meeting room.
+- **Bluetooth beacons or named "audio recorder" / "voice memo"
+  device classes** in the immediate room.
+
+None of these is by itself proof. They're escalation prompts.
+`.trim(),
+    artifacts: [
+      {
+        ordinal: 1,
+        displayName: "wifi-scan.csv",
+        kind: "csv",
+        mimeType: "text/csv; charset=utf-8",
+        bytes: utf8(
+          [
+            "ssid,bssid,band,channel,rssi_dbm,oui_vendor,captive_portal_observed,note",
+            "Grand Hotel WiFi,b8:27:eb:11:22:33,2.4 GHz,6,-58,Ruckus Networks,yes,documented venue AP",
+            "Grand Hotel WiFi,b8:27:eb:11:22:34,5 GHz,36,-62,Ruckus Networks,yes,documented venue AP",
+            "Grand Hotel WiFi,b8:27:eb:11:22:35,5 GHz,149,-64,Ruckus Networks,yes,documented venue AP",
+            "Grand Hotel WiFi,3c:5a:b4:01:02:03,2.4 GHz,11,-49,TP-Link Technologies,no,not in the venue infrastructure plan",
+            "Grand Hotel Staff,b8:27:eb:11:22:36,5 GHz,44,-71,Ruckus Networks,(no — staff network),documented venue staff AP",
+            "(hidden),fc:f5:28:11:22:33,2.4 GHz,1,-83,Espressif Inc.,(n/a),likely IoT / ESP32 device",
+            "ATT-1A2B,a0:55:4f:33:44:55,2.4 GHz,11,-79,AT&T Mobility,no,likely tethered phone — guest belt-pack signal level",
+            "(hidden),f8:1a:67:22:33:44,5 GHz,165,-77,Apple Inc.,(n/a),likely personal hotspot",
+            "Vendor-AV-Room-Link,d8:fc:93:55:66:77,5 GHz,52,-66,Intel Corporate,no,probable AV truck back-channel; not documented in venue plan",
+          ].join("\n") + "\n",
+        ),
+      },
+      {
+        ordinal: 2,
+        displayName: "bt-scan.csv",
+        kind: "csv",
+        mimeType: "text/csv; charset=utf-8",
+        bytes: utf8(
+          [
+            "device_name,bd_addr,device_class,rssi_dbm,note",
+            "(no name),50:c2:75:aa:bb:cc,Audio/Video : Headset,-72,likely guest headphones",
+            "JBL Charge 5,7c:1c:4e:dd:ee:ff,Audio/Video : Portable Audio,-68,likely guest speaker",
+            "MX Anywhere 3,40:9e:e3:11:00:00,Peripheral : Pointing device,-77,likely conference mouse",
+            "VoiceMemoXR-22,3a:1f:c8:22:11:00,Audio/Video : Wearable Headset,-46,*high signal strength; named device class is recording-capable wearable",
+            "(no name),18:74:2e:33:44:55,Phone : Smartphone,-63,likely guest phone",
+            "BT Tile,7f:a2:5d:66:77:88,Object Tracker,-79,likely keychain tracker; benign",
+            "AV-RX-Channel-3,d8:fc:93:55:66:77,Audio/Video : Headphones,-66,same OUI as Vendor-AV-Room-Link AP",
+          ].join("\n") + "\n",
+        ),
+      },
+      {
+        ordinal: 3,
+        displayName: "venue-infrastructure-plan.json",
+        kind: "json",
+        mimeType: "application/json; charset=utf-8",
+        bytes: utf8(
+          JSON.stringify(
+            {
+              venue: "Grand Hotel — Conference Centre",
+              meeting_room: "Cedar Room (3rd floor, room 312)",
+              published_wifi: [
+                {
+                  ssid: "Grand Hotel WiFi",
+                  vendor: "Ruckus Networks",
+                  oui_prefixes: ["b8:27:eb"],
+                  captive_portal: true,
+                },
+                {
+                  ssid: "Grand Hotel Staff",
+                  vendor: "Ruckus Networks",
+                  oui_prefixes: ["b8:27:eb"],
+                  captive_portal: false,
+                  scope: "Staff-only, 802.1x",
+                },
+              ],
+              published_av_infra: {
+                vendor: "Independent AV contractor",
+                notes:
+                  "AV runs on its own wired backbone; no documented 5 GHz back-channel. A Wi-Fi-bridged AV link in the meeting room would be NOT in the venue plan.",
+              },
+              expected_iot_pool: [
+                "Hotel printers, lighting bridges, hallway BT beacons (low signal)",
+                "Guest devices in/around the floor 3 corridor",
+              ],
+              tscm_resource: {
+                available: true,
+                note:
+                  "Supporting ACI element has TSCM personnel who can be tasked through the meeting principal's CISO with 30-60 min lead time for an unscheduled assessment.",
+              },
+            },
+            null,
+            2,
+          ) + "\n",
+        ),
+      },
+    ],
+    questions: [
+      {
+        ordinal: 1,
+        type: "multi_choice",
+        weight: 2,
+        promptMd:
+          "From the Wi-Fi + Bluetooth scans and the published venue plan, which entries are **worth flagging for escalation** before the meeting starts? Select all that apply.",
+        options: [
+          {
+            id: "evil-twin-tplink",
+            label:
+              "A second BSSID broadcasting `Grand Hotel WiFi` from a TP-Link OUI (`3c:5a:b4:...`) with no captive portal at strong signal — the venue plan documents Ruckus as the Wi-Fi vendor, not TP-Link.",
+          },
+          {
+            id: "vendor-av-undocumented",
+            label:
+              "An undocumented `Vendor-AV-Room-Link` AP plus a matching-OUI Bluetooth `AV-RX-Channel-3` device — the venue plan says AV is wired and lists no documented 5 GHz back-channel.",
+          },
+          {
+            id: "voicememo-bt",
+            label:
+              "A Bluetooth device named `VoiceMemoXR-22` with a recording-capable wearable device class, observed at very high signal strength (-46 dBm) in or immediately adjacent to the meeting room.",
+          },
+          {
+            id: "att-tether",
+            label:
+              "An `ATT-1A2B` SSID at low signal strength on the AT&T Mobility OUI — guest-phone tether pattern. This is the canonical fingerprint of an attacker-controlled rogue AP because guest phones routinely auto-join SSIDs they've seen before and the SSID was specifically named to attract trusted devices.",
+          },
+          {
+            id: "esp32-hidden",
+            label:
+              "A hidden SSID on an Espressif OUI at -83 dBm. Hidden ESP32 SSIDs at low signal in a hotel are the textbook signature of a long-running covert beacon and should be the highest-priority flag on the list.",
+          },
+          {
+            id: "jbl-headphones",
+            label:
+              "`JBL Charge 5` Bluetooth speaker at -68 dBm — consumer audio gear in a hotel ballroom is the most common rogue-AP cover for a packet sniffer and warrants escalation by default.",
+          },
+        ],
+        allowMultiple: true,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["evil-twin-tplink", "vendor-av-undocumented", "voicememo-bt"],
+          allowMultiple: true,
+        },
+        debriefMd: [
+          "**Worth flagging:**",
+          "",
+          "- *TP-Link `Grand Hotel WiFi`*: evil-twin candidate. Venue plan documents Ruckus; the TP-Link AP broadcasting the same SSID with no captive portal is the textbook pattern. Has guests' devices auto-joined it already?",
+          "- *Vendor-AV-Room-Link + matching-OUI BT device*: undocumented Wi-Fi presence specifically tied to an AV channel; venue plan says AV is wired. Could be a sloppy vendor; could be an unauthorised back-channel into the room.",
+          "- *VoiceMemoXR-22*: recording-capable BT device class, very high signal strength (=in the room or right outside it), name explicitly references voice recording. Worth at minimum a polite \"whose device is this?\" walk-around.",
+          "",
+          "**Not worth escalating (ordinary hotel noise):**",
+          "",
+          "- *ATT-1A2B*: weak-signal AT&T-OUI personal hotspot — guest tether, not a rogue AP. The \"named to attract trusted devices\" framing is fiction; the SSID is just AT&T's default tether name.",
+          "- *Hidden ESP32 at -83 dBm*: weak-signal IoT device — hotels are full of these (door lock controllers, BLE bridges, lighting). Default device class on Espressif silicon; not a TSCM concern in isolation.",
+          "- *JBL Charge 5*: consumer Bluetooth speaker. Sniffer cover stories don't make consumer electronics suspicious.",
+        ].join("\n"),
+      },
+      {
+        ordinal: 2,
+        type: "multi_choice",
+        weight: 1,
+        promptMd:
+          "Of the items worth flagging, which one warrants **escalation to qualified TSCM personnel before the meeting begins**, vs handling locally?",
+        options: [
+          {
+            id: "tplink-tscm",
+            label:
+              "The TP-Link `Grand Hotel WiFi` evil-twin candidate — the venue plan specifies Ruckus, the TP-Link AP can intercept guest credentials and is potentially attributable to a positioned actor; this is exactly the call TSCM (and venue IT) should make before the principal enters the room.",
+          },
+          {
+            id: "av-tscm",
+            label:
+              "The undocumented `Vendor-AV-Room-Link` plus the matching-OUI BT receiver — this is the highest-priority flag because AV truck back-channels carry meeting audio by design, and an unauthorised one is a direct audio-exfiltration risk.",
+          },
+          {
+            id: "voicememo-local",
+            label:
+              "The `VoiceMemoXR-22` BT device — handle locally with a walk-around to identify whose device it is; if it can't be attributed in five minutes, escalate.",
+          },
+          {
+            id: "all-three",
+            label:
+              "All three — the disciplined call when multiple unrelated rogue-candidate observations stack up in the same pre-meeting window is to escalate the whole picture to qualified personnel rather than triage them individually.",
+          },
+        ],
+        allowMultiple: false,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["all-three"],
+          allowMultiple: false,
+        },
+        debriefMd:
+          "When three independent rogue-candidate signals stack in the same pre-meeting window — undocumented WiFi vendor broadcasting a hotel SSID, undocumented vendor-AV channel, and a recording-capable BT device in the room — the disciplined call is to stop triaging individually and hand the picture to qualified TSCM personnel. The 30-60 min TSCM lead time documented in the venue plan exists exactly so the principal doesn't enter the room while a junior analyst is working through the list one item at a time.",
+      },
+      {
+        ordinal: 3,
+        type: "confidence",
+        weight: 1,
+        promptMd:
+          "Confidence (1–5) that the TP-Link AP broadcasting `Grand Hotel WiFi` is a deliberately positioned evil twin (vs a guest's misconfigured portable router), based ONLY on these artifacts.",
+        expected: { type: "confidence", expectedRange: [2, 3] },
+        debriefMd:
+          "**2–3.** The pattern is suspicious — a non-vendor AP broadcasting the venue's SSID with no captive portal is exactly what an evil twin looks like. But it's also exactly what a clueless guest's portable travel router cloned-by-name looks like. Without RSSI triangulation, channel-utilisation tracking over time, or actual deauth-attack telemetry, the artifact can't distinguish deliberate from incidental. Hand it to TSCM and let them confirm.",
       },
     ],
   },
