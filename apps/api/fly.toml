@@ -1,0 +1,67 @@
+# Fly.io configuration for the API container.
+#
+# This file is scaffolding for the cheap-hosting migration path —
+# not in use yet. When you're ready to switch off Hetzner:
+#
+#   1. Provision a Neon database, set DATABASE_URL secret on the
+#      Fly app (`fly secrets set DATABASE_URL=...`).
+#   2. Provision a Cloudflare R2 bucket, set the S3_* secrets
+#      and ARTIFACT_STORAGE_BACKEND=s3.
+#   3. Run the artifact-byte migration once from your laptop:
+#        node dist/scripts/migrate-artifacts-to-s3.js
+#   4. Update the web app's API_INTERNAL_URL to point at the Fly
+#      hostname (https://ci-cyber-lab-api.fly.dev).
+#   5. fly deploy.
+#
+# The app name below is a placeholder — fly launch will offer to
+# rename when you first set this up.
+
+app = "ci-cyber-lab-api"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile"
+  # Build context is the repo root because the Dockerfile copies
+  # workspace packages (contracts) alongside the api package.
+  # Run `fly deploy` from the repo root so this path works.
+
+[env]
+  NODE_ENV = "production"
+  PORT = "4000"
+  # ARTIFACT_STORAGE_BACKEND is set as a secret (not here) so it
+  # can flip between "local" (for the legacy volume-mount case) and
+  # "s3" (R2-backed) without a redeploy.
+
+[http_service]
+  internal_port = 4000
+  force_https = true
+  auto_stop_machines = "suspend"
+  # Suspend on idle, wake on first request. Suits an
+  # admin-driven training app; first request after suspend is
+  # ~1-2 s slower while the machine resumes.
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+  [http_service.concurrency]
+    type = "connections"
+    hard_limit = 50
+    soft_limit = 25
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  # 512 MB clears the bar for NestJS + Prisma client + the argon2id
+  # password-hash workspace (19 MiB per hash). 256 MB is the free
+  # tier minimum but cuts very close on argon2id; bump to 512 MB
+  # for ~$3/mo headroom and avoid OOM-kills during login bursts.
+  memory_mb = 512
+
+[checks]
+  [checks.health]
+    type = "http"
+    interval = "15s"
+    timeout = "2s"
+    method = "GET"
+    path = "/v1/healthz"
+    grace_period = "10s"
