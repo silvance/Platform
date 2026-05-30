@@ -546,8 +546,8 @@ answer.
         options: [
           { id: "downloaded", label: "The file `util-x.exe` was downloaded by Chrome to the user's Downloads folder." },
           { id: "motw-set", label: "The file carries Mark-of-the-Web (Internet zone)." },
-          { id: "user-executed", label: "The user executed `util-x.exe`." },
-          { id: "user-did-NOT-execute", label: "The user did NOT execute `util-x.exe`." },
+          { id: "user-executed", label: "The user executed `util-x.exe` from the Downloads folder; the file's presence at a known-launch path combined with the elapsed time since download is sufficient to attribute an execution event." },
+          { id: "user-did-NOT-execute", label: "The user did NOT execute `util-x.exe` — the lack of a Prefetch entry combined with no Sysmon ProcessCreate row for the binary together establish that the file was downloaded but never launched on this host." },
           { id: "no-prefetch-entry", label: "There is no Prefetch entry for `util-x.exe` on this host." },
         ],
         allowMultiple: true,
@@ -1366,7 +1366,7 @@ subkey carrying:
           {
             id: "files-copied",
             label:
-              "These artifacts establish whether files were copied to the SanDisk.",
+              "These artifacts together establish that files were copied to the SanDisk during the mount window — the registry-side enumeration of the device, the timestamped enumerate/disconnect pair, and the user-attribution from the security log are sufficient to attribute a copy event to the SanDisk for the period.",
           },
         ],
         allowMultiple: true,
@@ -1865,12 +1865,12 @@ goes on the ISSM's desk this afternoon.
           {
             id: "never-touched",
             label:
-              "The device has never been mounted on any unit workstation.",
+              "The device has never been mounted on any unit workstation. The unit's USBSTOR-history feed is exhaustive across all tracked endpoints; a 0-row return on a serial means that serial does not appear in any endpoint's mount-history record from any point in time.",
           },
           {
             id: "from-outside",
             label:
-              "The device was brought in from outside the unit by an unknown party.",
+              "The device was brought in from outside the unit by an unknown party — a non-asset-register serial recovered in the smoking area with no matching unit history is, by elimination, third-party material that originated outside the building.",
           },
         ],
         allowMultiple: false,

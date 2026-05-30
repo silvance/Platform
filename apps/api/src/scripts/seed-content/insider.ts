@@ -778,12 +778,12 @@ target a contracted relationship.
           {
             id: "reply-asking-confirmation",
             label:
-              "Reply to the suspect message asking the sender to confirm by quoting the beneficiary details back.",
+              "Reply to the suspect message asking the sender to confirm by quoting the beneficiary bank details back; a legitimate CEO will recognise their own request and re-affirm, while an impostor will hesitate or get the details wrong, surfacing the spoof immediately.",
           },
           {
             id: "post-to-team-chat",
             label:
-              "Post a screenshot to the company-wide chat to warn everyone.",
+              "Post a screenshot of the suspect email to the company-wide chat channel to warn everyone in finance and across the unit so similar spoofs targeting other recipients can be flagged early.",
           },
         ],
         allowMultiple: true,
@@ -1214,12 +1214,12 @@ need-to-know.
           {
             id: "single-month-anomaly",
             label:
-              "There is a single anomalous month that explains the pattern; the rest of the months look normal.",
+              "There is a single anomalous month that explains the pattern; the rest of the months look normal. One spike is consistent with project-context — a release prep window, a hand-off — and the six-month aggregate just bakes that one month into a longer-term average that looks elevated.",
           },
           {
             id: "prints-elevated",
             label:
-              "Print volume is significantly elevated compared to the team baseline.",
+              "Print volume is significantly elevated compared to the team baseline; the print-job count from d.kowalski's queue tracks the same out-of-scope curve as the DMS access pattern and amplifies the concern about physical-form exfiltration in parallel with the digital channel.",
           },
           {
             id: "share-link-shape",
@@ -2694,12 +2694,12 @@ DLP sees what tries to leave it.
           {
             id: "files-copied-to-usb",
             label:
-              "Files were copied from WS-RD-082 to the non-asset-register USB.",
+              "Files were copied from WS-RD-082 to the non-asset-register USB during the mount window. The combination of the mount, the recently-viewed sensitive documents, and the user's known context together establish the write event as a fact in the artifact set.",
           },
           {
             id: "intent-to-exfil",
             label:
-              "m.alvarez intended to exfiltrate documents to his new employer.",
+              "m.alvarez intended to exfiltrate documents to his new employer at Vector Apex Solutions. The directly-named overlap between his recent DMS views and the public job description's emerging-technology focus is a direct artifact-supported statement about his intent.",
           },
         ],
         allowMultiple: true,

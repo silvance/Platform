@@ -201,7 +201,7 @@ and execution-of-tool sit in different reporting buckets.
           {
             id: "only-execution",
             label:
-              "These are the only times `sync-helper.exe` ever executed on this host.",
+              "These are the only times `sync-helper.exe` ever executed on this host. BAM walks the per-user registry exhaustively and lists every execution it captured, so two rows means two total launches in the host's lifetime.",
           },
           {
             id: "both-users-same-binary",
@@ -211,7 +211,7 @@ and execution-of-tool sit in different reporting buckets.
           {
             id: "wong-d-drive",
             label:
-              "User `m.wong` executed `sync-helper.exe` from the `D:` drive.",
+              "User `m.wong` executed `sync-helper.exe` from the `D:` drive; the NT path resolves to `\\Device\\HarddiskVolume4` per the volume map, and the `m.wong` execution traces to a binary on a removable drive rather than the local C: install.",
           },
         ],
         allowMultiple: true,
@@ -626,7 +626,7 @@ question turns on what SRUM does and does not prove.
           {
             id: "exfil-by-cb-uploader",
             label:
-              "`cb-uploader.exe` is the process that performed the 398 MiB upload.",
+              "`cb-uploader.exe` is the process that performed the 398 MiB upload — the process spawned with a wks-archive target in the same minute as the egress, no other process on the host was actively transferring data at the time, and the cadence matches what a dedicated uploader would emit.",
           },
         ],
         allowMultiple: true,
@@ -1871,7 +1871,7 @@ yet.
           {
             id: "covert-archive-exfil",
             label:
-              "Covert exfiltration: the 7z archive is designed to bypass content scanning, and the OneDrive upload moved the archive off the host.",
+              "Covert exfiltration: the 7z archive is designed to bypass content scanning (the unit's DLP egress rules inspect file contents but cannot enter the archive), and the subsequent OneDrive upload moved the bundled files off the workstation in a single opaque blob. The sequence — archive first, transfer second — is the textbook smuggle pattern.",
           },
           {
             id: "neutral-needs-corroboration",
@@ -2019,12 +2019,12 @@ yet.
           {
             id: "interview-d-becker-immediate",
             label:
-              "Interview d.becker today without coordinating with counsel.",
+              "Interview d.becker today without coordinating with counsel. A direct conversation while the evidence is fresh would clarify the rclone purpose and the USB-mount story faster than any other investigative step, and counsel can be looped in afterward with a clean record of what was said.",
           },
           {
             id: "wipe-the-machine",
             label:
-              "Wipe and re-image the workstation to remove rclone before anyone can use it again.",
+              "Wipe and re-image the workstation to remove rclone before anyone else on the host can use it again. Containment-first is the standard incident-response posture and the re-image baselines the host so any further investigation works against a known-clean starting point.",
           },
         ],
         allowMultiple: true,

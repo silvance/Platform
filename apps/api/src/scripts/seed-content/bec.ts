@@ -218,12 +218,12 @@ Distinguish:
         promptMd:
           "Which of these signals — present in the EML viewer's parsed Authentication-Results and header strip — support a BEC hypothesis? Select all that apply.",
         options: [
-          { id: "spf-neutral", label: "SPF result is `neutral`" },
+          { id: "spf-neutral", label: "SPF result is `neutral`, which means the visible From: domain did not authorise the sending IP — a textbook tell of header spoofing on the wire" },
           { id: "dkim-fail", label: "DKIM result is `fail`" },
           { id: "dmarc-fail", label: "DMARC result is `fail`" },
           { id: "reply-to-divergent", label: "Reply-To address is on a different domain than From" },
           { id: "return-path-lookalike", label: "Return-Path is on a vendor-lookalike domain" },
-          { id: "subject-uppercase", label: "Subject is in all caps" },
+          { id: "subject-uppercase", label: "Subject is in all caps, which most legitimate vendor mail templates avoid — the pattern is itself an indicator of a hand-crafted lure rather than automated invoice messaging" },
         ],
         allowMultiple: true,
         expected: {
@@ -822,17 +822,17 @@ actually take this afternoon.
           {
             id: "reply-confirm",
             label:
-              "Reply to Msg 02 asking the sender to confirm the new routing.",
+              "Reply directly to Msg 02 asking the sender to confirm the new routing details and to clarify why the account-holder name on the PDF reads as Northstar Holdings International rather than Northstar Integrators LLC; the vendor's response on the thread will resolve the ambiguity quickly.",
           },
           {
             id: "pay-and-claw-back",
             label:
-              "Pay against the new routing and treat any issue as a recoverable transaction later.",
+              "Pay against the new routing today (the AR cutoff is real) and treat any subsequent issue as a recoverable transaction the bank can claw back if the routing turns out to be illegitimate; ACH and wire reversals are routine when the receiving bank cooperates.",
           },
           {
             id: "wait-and-see",
             label:
-              "Wait for the vendor to follow up if they don't hear back.",
+              "Wait for the vendor to follow up if they don't hear back from finance within their normal cadence; legitimate vendors chase their own AR, so the absence of follow-up over the next few business days is itself diagnostic.",
           },
         ],
         allowMultiple: false,
