@@ -34,14 +34,17 @@ export const SKILL_AREA_LABELS: Record<SkillArea, string> = {
   malware_analysis: "Malware Analysis",
   network_logs: "Network Logs",
   account_compromise: "Account Compromise",
-  rf_awareness: "RF Awareness",
+  rf_awareness: "Signals Awareness",
   report_writing: "Report Writing",
   inference_discipline: "Reasoning Discipline",
 };
 
-// rf_awareness is an *awareness-only* module per project scope. UI code
-// uses this to render the escalation disclaimer at the top of the brief
-// and debrief; the seed/import paths use it to require a disclaimer.
+// rf_awareness is an *awareness-only* module per project scope (the
+// internal slug stays `rf_awareness` for URL stability; the display
+// name is "Signals Awareness" and the lane covers RF + acoustic
+// observation reporting). UI code uses this to render the escalation
+// disclaimer at the top of the brief and debrief; the seed/import
+// paths use it to require a disclaimer.
 export const AWARENESS_ONLY_SKILL_AREAS = ["rf_awareness"] as const satisfies
   readonly SkillArea[];
 
@@ -197,7 +200,7 @@ export const LANE_LABELS: Record<Lane, string> = {
   memory_forensics: "Memory Forensics",
   malware_analysis: "Malware Analysis",
   mobile_forensics: "Mobile Forensics",
-  rf_awareness: "RF Awareness",
+  rf_awareness: "Signals Awareness",
   evidence_handling: "Evidence Handling",
   report_writing: "Report Writing",
 };
@@ -228,7 +231,7 @@ export const LANE_DESCRIPTIONS: Record<Lane, string> = {
   mobile_forensics:
     "Mobile-device extraction triage — Cellebrite UFED, GrayKey, Magnet AXIOM. Read what the tool actually got; decide what an extraction can and cannot prove.",
   rf_awareness:
-    "Awareness-level RF observation reporting. Not TSCM training.",
+    "Awareness-level RF + acoustic observation reporting and TSCM Familiarity. You won't render TSCM findings yourself; you'll learn to recognise what an observation does and doesn't support and when to escalate to qualified personnel.",
   evidence_handling:
     "Custody documents, descriptive vs speculative wording, and the corrective steps when a chain has gaps.",
   report_writing:
