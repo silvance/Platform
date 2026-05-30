@@ -44,7 +44,9 @@ function makeFakePrisma() {
   };
 }
 
-function makeAccessCodes(validateReturns: boolean): AccessCodesService {
+function makeAccessCodes(
+  validateReturns: { autoApprove: boolean } | null,
+): AccessCodesService {
   return {
     validateAndConsume: jest.fn().mockResolvedValue(validateReturns),
   } as unknown as AccessCodesService;
@@ -53,7 +55,7 @@ function makeAccessCodes(validateReturns: boolean): AccessCodesService {
 describe("AuthService.register (access-code gate)", () => {
   it("creates a new account with approvedAt set when the code is valid and email is new", async () => {
     const fake = makeFakePrisma();
-    const codes = makeAccessCodes(true);
+    const codes = makeAccessCodes({ autoApprove: true });
     const svc = new AuthService(fake.api, codes);
 
     fake.user.findUnique.mockResolvedValue(null);
@@ -76,7 +78,7 @@ describe("AuthService.register (access-code gate)", () => {
 
   it("never sets role=admin even if some upstream caller tried (defensive — controller already strips, but service must not trust input)", async () => {
     const fake = makeFakePrisma();
-    const codes = makeAccessCodes(true);
+    const codes = makeAccessCodes({ autoApprove: true });
     const svc = new AuthService(fake.api, codes);
     fake.user.findUnique.mockResolvedValue(null);
     fake.user.create.mockResolvedValue({ id: "u1" });
@@ -94,7 +96,7 @@ describe("AuthService.register (access-code gate)", () => {
 
   it("throws BadRequestException with a generic message when the code is invalid", async () => {
     const fake = makeFakePrisma();
-    const codes = makeAccessCodes(false);
+    const codes = makeAccessCodes(null);
     const svc = new AuthService(fake.api, codes);
 
     await expect(
@@ -114,7 +116,7 @@ describe("AuthService.register (access-code gate)", () => {
 
   it("is a no-op when the email is already registered (enumeration safety) and refunds the code use", async () => {
     const fake = makeFakePrisma();
-    const codes = makeAccessCodes(true);
+    const codes = makeAccessCodes({ autoApprove: true });
     const svc = new AuthService(fake.api, codes);
 
     fake.user.findUnique.mockResolvedValue({ id: "u1" });
@@ -138,7 +140,7 @@ describe("AuthService.register (access-code gate)", () => {
 
   it("hashes the password on both successful branches so response timing doesn't leak existence", async () => {
     const fake = makeFakePrisma();
-    const codes = makeAccessCodes(true);
+    const codes = makeAccessCodes({ autoApprove: true });
     const svc = new AuthService(fake.api, codes);
     fake.user.findUnique.mockResolvedValue({ id: "u1" });
 
@@ -156,7 +158,7 @@ describe("AuthService.register (access-code gate)", () => {
 describe("AuthService.login — pending approval gate (kept for legacy pending rows)", () => {
   it("refuses login when approvedAt is null", async () => {
     const fake = makeFakePrisma();
-    const svc = new AuthService(fake.api, makeAccessCodes(true));
+    const svc = new AuthService(fake.api, makeAccessCodes({ autoApprove: true }));
     const goodHash = await svc.hashPassword("real-password-x");
 
     fake.user.findUnique.mockResolvedValue({
@@ -178,7 +180,7 @@ describe("AuthService.login — pending approval gate (kept for legacy pending r
 
   it("admits login when approvedAt is set", async () => {
     const fake = makeFakePrisma();
-    const svc = new AuthService(fake.api, makeAccessCodes(true));
+    const svc = new AuthService(fake.api, makeAccessCodes({ autoApprove: true }));
     const goodHash = await svc.hashPassword("real-password-x");
 
     fake.user.findUnique.mockResolvedValue({
@@ -200,7 +202,7 @@ describe("AuthService.login — pending approval gate (kept for legacy pending r
 
   it("returns UnauthorizedException (not ForbiddenException) on a wrong password — never reaches the approval check", async () => {
     const fake = makeFakePrisma();
-    const svc = new AuthService(fake.api, makeAccessCodes(true));
+    const svc = new AuthService(fake.api, makeAccessCodes({ autoApprove: true }));
     const goodHash = await svc.hashPassword("real-password-x");
 
     fake.user.findUnique.mockResolvedValue({

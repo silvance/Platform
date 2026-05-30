@@ -145,6 +145,19 @@ model AccessCode {
   expiresAt    DateTime? @map("expires_at")
   usesCount    Int       @default(0) @map("uses_count")
   usesLimit    Int?      @map("uses_limit")
+  // When true, registrations consuming this code are auto-approved
+  // (user can sign in immediately). When false, the resulting account
+  // lands with approvedAt = NULL and requires an admin to approve it
+  // before the user can log in. Default true preserves the pre-flag
+  // behavior — every existing code keeps auto-approving.
+  //
+  // The intended split: codes shared with a vetted cohort (an OJT
+  // class roster, a known contractor list) keep autoApprove = true so
+  // admins don't have to babysit the inbox; codes posted to a wider
+  // channel (a Slack #welcome message, a public-event QR code) flip
+  // autoApprove = false so the access code is the entry gate but the
+  // admin still vets each new account before login.
+  autoApprove  Boolean  @default(true) @map("auto_approve")
   createdAt    DateTime  @default(now()) @map("created_at")
   createdByUserId String? @map("created_by_user_id") @db.Uuid
 

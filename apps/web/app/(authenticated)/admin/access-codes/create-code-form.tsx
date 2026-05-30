@@ -69,6 +69,30 @@ export function CreateAccessCodeForm() {
           />
         </label>
       </div>
+      <label
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          gap: ".55rem",
+          marginTop: ".85rem",
+        }}
+      >
+        <input
+          name="autoApprove"
+          type="checkbox"
+          defaultChecked
+          style={{ marginTop: ".2rem" }}
+        />
+        <span style={{ fontSize: ".9rem" }}>
+          Auto-approve registrations
+          <div style={{ color: "var(--muted)", fontSize: ".8rem" }}>
+            Checked: anyone with the code can sign in immediately after
+            registering. Uncheck to require an admin to approve each new
+            account from <code>/admin/users</code> first &mdash; useful
+            for codes posted to a wider channel.
+          </div>
+        </span>
+      </label>
       {state.error ? (
         <div className="tag-bad" style={msgStyle}>{state.error}</div>
       ) : null}

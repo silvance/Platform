@@ -20,6 +20,10 @@ export async function createAccessCodeAction(
   const codeRaw = formData.get("code");
   const usesLimitRaw = formData.get("usesLimit");
   const expiresAtRaw = formData.get("expiresAt");
+  // Checkbox: present in the form data iff checked; absent means
+  // the admin un-ticked it. Default = auto-approve (matches the
+  // DB-side default and the pre-flag behavior).
+  const autoApprove = formData.get("autoApprove") !== null;
 
   if (typeof labelRaw !== "string" || labelRaw.trim() === "") {
     return { error: "Label is required.", ok: null };
@@ -46,6 +50,7 @@ export async function createAccessCodeAction(
         : {}),
       ...(usesLimit !== undefined ? { usesLimit } : {}),
       ...(expiresAt !== undefined ? { expiresAt } : {}),
+      autoApprove,
     });
     revalidatePath("/admin/access-codes");
     return {

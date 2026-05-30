@@ -29,6 +29,23 @@ export function CodeRow({ code }: Props) {
           {code.code}
         </code>
         <div style={{ color: "var(--muted)", fontSize: ".82rem" }}>{code.label}</div>
+        <div style={{ marginTop: ".3rem" }}>
+          {code.autoApprove ? (
+            <span
+              className="chip"
+              title="Registrations using this code can sign in immediately."
+            >
+              auto-approve
+            </span>
+          ) : (
+            <span
+              className="chip chip-partial"
+              title="Registrations using this code wait for an admin to approve them from /admin/users."
+            >
+              needs approval
+            </span>
+          )}
+        </div>
       </td>
       <td style={cellStyle}>
         {active ? (
