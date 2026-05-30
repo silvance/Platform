@@ -12,6 +12,7 @@ export const SkillArea = z.enum([
   "windows_artifacts",
   "linux_artifacts",
   "macos_artifacts",
+  "malware_analysis",
   "network_logs",
   "account_compromise",
   "rf_awareness",
@@ -30,6 +31,7 @@ export const SKILL_AREA_LABELS: Record<SkillArea, string> = {
   windows_artifacts: "Windows Artifacts",
   linux_artifacts: "Linux Artifacts",
   macos_artifacts: "macOS Artifacts",
+  malware_analysis: "Malware Analysis",
   network_logs: "Network Logs",
   account_compromise: "Account Compromise",
   rf_awareness: "RF Awareness",
@@ -174,6 +176,7 @@ export const Lane = z.enum([
   "insider_risk",
   "network_logs",
   "memory_forensics",
+  "malware_analysis",
   "mobile_forensics",
   "rf_awareness",
   "evidence_handling",
@@ -192,6 +195,7 @@ export const LANE_LABELS: Record<Lane, string> = {
   insider_risk: "Insider Threat",
   network_logs: "Network & Logs",
   memory_forensics: "Memory Forensics",
+  malware_analysis: "Malware Analysis",
   mobile_forensics: "Mobile Forensics",
   rf_awareness: "RF Awareness",
   evidence_handling: "Evidence Handling",
@@ -219,6 +223,8 @@ export const LANE_DESCRIPTIONS: Record<Lane, string> = {
     "Reading access logs, flow records, and host-side network telemetry without over-claiming.",
   memory_forensics:
     "Volatility 3 reads of a memory image. Triage the process tree, network connections, and suspicious memory regions; separate \"this looks off\" from \"this is malware.\"",
+  malware_analysis:
+    "Static + dynamic triage of a sample without over-claiming. Read PE imports, YARA hits, sandbox detonation reports, packer fingerprints, and ssdeep / imphash pivots; tell what each technique proves vs implies, and where sandbox results mislead.",
   mobile_forensics:
     "Mobile-device extraction triage — Cellebrite UFED, GrayKey, Magnet AXIOM. Read what the tool actually got; decide what an extraction can and cannot prove.",
   rf_awareness:
