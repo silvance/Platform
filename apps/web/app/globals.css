@@ -1174,6 +1174,40 @@ footer { color: var(--muted); font-size: .85rem; margin-top: var(--space-12); }
 .muted { color: var(--muted); }
 .muted-strong { color: var(--muted-strong); }
 
+/* ─── Lane sections (challenge-library landing) ────────── */
+/* The /scenarios page groups lanes into a small training
+   progression (Recommended Start → Host & Device → Triage →
+   Findings) — see page.tsx. Section headings space evenly
+   and the description sits muted underneath so the page reads
+   as a curriculum without competing for attention with the
+   lane cards themselves. */
+
+.lane-sections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-7);
+  margin-top: var(--space-4);
+}
+.lane-section { display: block; }
+.lane-section-head {
+  margin: 0 0 var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.lane-section-title {
+  margin: 0;
+  font-size: 1.1rem;
+  letter-spacing: .01em;
+}
+.lane-section-desc {
+  margin: 0;
+  color: var(--muted);
+  max-width: 72ch;
+  font-size: .92rem;
+  line-height: 1.5;
+}
+
 /* ─── Auto-fit card grids ──────────────────────────────── */
 /* Used by the admin landing (stat tiles + tool cards) and the
    challenges lane overview. One ruleset, two grid densities. */
