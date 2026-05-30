@@ -104,9 +104,6 @@ export default async function ScenarioWorkspacePage({ params }: Props) {
           </span>
         ))}
         <span className="chip chip-difficulty">Level {scenario.difficulty}</span>
-        {scenario.estimatedMinutes !== null ? (
-          <span className="chip">≈ {scenario.estimatedMinutes} min</span>
-        ) : null}
         {scenario.tags.map((t) => (
           <span key={t} className="chip">#{t}</span>
         ))}
