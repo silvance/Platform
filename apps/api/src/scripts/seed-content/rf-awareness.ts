@@ -185,9 +185,9 @@ language that collapses that distinction.
         options: [
           { id: "band-limit", label: "**Band coverage** — only 25 MHz to 6 GHz was assessed; anything outside that window is invisible to this equipment." },
           { id: "time-limit", label: "**Duration** — only a 90-minute window was observed; a duty-cycled emitter that doesn't transmit during the window doesn't appear." },
-          { id: "ambient-wifi", label: "Wi-Fi and Bluetooth traffic was observed at expected levels." },
-          { id: "carrier-cellular", label: "Background cellular activity was nominal." },
-          { id: "no-anomaly", label: "No persistent signals outside known carrier / Wi-Fi / BT profiles." },
+          { id: "ambient-wifi", label: "Wi-Fi and Bluetooth traffic was observed at expected levels — the presence of normal background traffic in the consumer bands means the room's spectrum is being actively used as expected and any covert emitter would have been audible against that baseline." },
+          { id: "carrier-cellular", label: "Background cellular activity was nominal — clean carrier emissions in the room mean there's no signal-injection or stand-in transmitter masking other activity, so the unanimous absence of anomalies during the window can stand as a clean reading." },
+          { id: "no-anomaly", label: "No persistent signals outside known carrier / Wi-Fi / BT profiles were detected during the window, which is the operational definition of \"no anomalous emissions\" the TSCM SOP uses for sweeping a room as clear." },
         ],
         allowMultiple: true,
         expected: {

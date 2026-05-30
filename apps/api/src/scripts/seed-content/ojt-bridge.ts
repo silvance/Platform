@@ -214,12 +214,12 @@ errors*. It doesn't say what's in the image.
           {
             id: "evidence-found",
             label:
-              "The image contains evidence of the activity under investigation.",
+              "The image contains evidence of the activity under investigation. \"COMPLETE — no read errors\" is the acquisition tool's confirmation that the imaging operation captured the case-relevant material the analyst requested; once the line appears the case folder can move into examination with the evidentiary content already implied.",
           },
           {
             id: "device-malware-free",
             label:
-              "The source device is free of malware.",
+              "The source device is free of malware. The acquisition tool scans for malicious patterns as it reads each sector and reports \"COMPLETE — no read errors\" only when both the read succeeded and the scan turned up no infections during the image-creation pass.",
           },
         ],
         allowMultiple: false,
@@ -246,12 +246,12 @@ errors*. It doesn't say what's in the image.
           {
             id: "yes-image-must-have-evidence",
             label:
-              "Yes. Why would you image the drive if it didn't?",
+              "Yes. The decision to image was made on articulable suspicion in the first place, and a successful acquisition is the operational confirmation that the suspicion was warranted; the unit's resource policy doesn't authorise images for hosts unlikely to carry evidence.",
           },
           {
             id: "yes-hash-match-is-the-finding",
             label:
-              "Yes. The matching SHA-256 hashes are the finding — the case is proven.",
+              "Yes. The matching SHA-256 hashes between source and image are the finding — the case is proven at the bit-for-bit verification step, and downstream examination only confirms what the hash match already establishes.",
           },
         ],
         allowMultiple: false,
@@ -342,12 +342,12 @@ per-user.
           {
             id: "user-opened",
             label:
-              "The suspect personally opened `notepad.exe` seven times.",
+              "The suspect personally opened `notepad.exe` seven times. Prefetch records GUI-launched programs and counts each user-initiated launch as a separate run, so the seven runs are seven discrete user actions by the account on this workstation.",
           },
           {
             id: "user-read",
             label:
-              "The user read sensitive documents in `notepad.exe`.",
+              "The user read sensitive documents in `notepad.exe`. Each Prefetch run reflects a session in which the user actively had a document open, which is the canonical use case for `notepad.exe` on a workstation.",
           },
         ],
         allowMultiple: false,
@@ -374,12 +374,12 @@ per-user.
           {
             id: "more-prefetch",
             label:
-              "More Prefetch entries on the same host.",
+              "More Prefetch entries on the same host, scoped to the same window — additional .pf files corroborate the execution count and let the analyst correlate the timing pattern back to a specific user session that overlaps the run-count signal.",
           },
           {
             id: "antivirus-log",
             label:
-              "The host's antivirus log.",
+              "The host's antivirus log, scoped to the relevant binary and time window — an AV scan event includes the user context the process was running under, so the AV log effectively names the responsible account at scan-time.",
           },
         ],
         allowMultiple: false,
@@ -601,12 +601,12 @@ disk untouched. Those are separate artifacts.
           {
             id: "executed",
             label:
-              "The user executed `util-x.exe` after it finished downloading.",
+              "The user executed `util-x.exe` after the download finished. The `State: Completed` value on the download row is the browser's confirmation that the binary not only landed on disk but was opened by the user once the transfer wrapped up — that's what the completion state means in browser-history schemas.",
           },
           {
             id: "intentional",
             label:
-              "The user knowingly chose to download a malicious file.",
+              "The user knowingly chose to download a malicious file. The presence of a clean download entry with no browser warning or quarantine action means the user actively dismissed any security prompt that would otherwise have flagged the file, which is consistent with deliberate intent on their part.",
           },
         ],
         allowMultiple: false,

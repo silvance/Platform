@@ -725,9 +725,9 @@ user is asking whether it's safe to reply.
         weight: 1,
         promptMd: "Auth-results pass for `gmail.com`. What does that prove?",
         options: [
-          { id: "from-real-pat", label: "The message is from the real Pat Chen." },
+          { id: "from-real-pat", label: "The message is from the real Pat Chen — auth-pass for gmail.com means Gmail's outbound checks confirmed the sender's identity at the account level, which on a personal-email channel is the strongest available signal of who actually sent the message." },
           { id: "from-gmail-user", label: "The message was sent from a Gmail account named `pat.chen.ceo.partner` that successfully completed Gmail's outbound auth." },
-          { id: "domain-spoof-detected", label: "Gmail detected a domain spoof and let it through anyway." },
+          { id: "domain-spoof-detected", label: "Gmail detected a domain spoof and let it through anyway — pass with notes is Gmail's way of signalling \"the sender domain is forged but the message came from one of our own users,\" which is a unique technical fingerprint of an internal Gmail-account spoofing campaign." },
         ],
         allowMultiple: false,
         expected: {

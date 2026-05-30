@@ -173,9 +173,9 @@ cross-examination.
         promptMd:
           "Which framing is the right way to include S6 (the controller's reply *may have* confirmed them as a target) in the finding?",
         options: [
-          { id: "as-fact", label: "Include as a fact: \"The controller's reply confirmed them as a viable target to the attacker.\"" },
+          { id: "as-fact", label: "Include as a fact: \"The controller's reply confirmed them as a viable target to the attacker.\" — the reply is a documented action on the controller's part, and the attacker's interpretation of it as a confirmation is the natural read for any social-engineering campaign at this stage of the kill chain." },
           { id: "as-inference", label: "Include as an inference: \"The controller's reply to the Reply-To address is consistent with the attacker confirming the controller as a viable target, though we cannot directly observe the attacker's intake.\"" },
-          { id: "omit", label: "Omit — we can't directly observe the attacker's intake." },
+          { id: "omit", label: "Omit — we cannot directly observe the attacker's intake of the reply, so the line is speculative on its face and including it in the finding (even as an inference) inflates the writeup with a claim the artifact set does not support." },
         ],
         allowMultiple: false,
         expected: { type: "multi_choice", correctIds: ["as-inference"], allowMultiple: false },
@@ -380,16 +380,16 @@ Rewrite the sentence.
           },
           {
             id: "proves-not-executed",
-            label: "It proves the binary did not execute on this workstation.",
+            label: "It proves the binary did not execute on this workstation. Prefetch creates a .pf record on every first-time program launch by design, so the absence of a .pf for util-x.exe within the 24-hour window is direct evidence that the binary never ran during that period.",
           },
           {
             id: "proves-cleaned-up",
             label:
-              "It proves the binary executed but the attacker cleaned up Prefetch afterwards.",
+              "It proves the binary executed but the attacker cleaned up Prefetch afterwards. The combination of a confirmed download and no Prefetch entry is consistent with execution followed by anti-forensic cleanup; sophisticated implants routinely wipe their .pf entries to hide the launch from triage.",
           },
           {
             id: "proves-sysmon-off",
-            label: "It proves Sysmon was disabled at the time of execution.",
+            label: "It proves Sysmon was disabled at the time of execution. Sysmon is the system that writes Prefetch records on this host, so the absence of a .pf for util-x.exe places the responsibility on Sysmon coverage rather than on the binary's execution.",
           },
         ],
         allowMultiple: false,

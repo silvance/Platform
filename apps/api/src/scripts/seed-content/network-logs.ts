@@ -450,12 +450,12 @@ Reasonable signals that the noise is benign:
           {
             id: "block-everything",
             label:
-              "Block all DNS queries to `*.io` at the resolver immediately.",
+              "Block all DNS queries to `*.io` at the resolver immediately. A TLD-wide block stops the suspect domain at source and gives the analyst time to investigate without further beaconing, even if a few legitimate `.io` services break in the process.",
           },
           {
             id: "ignore",
             label:
-              "Ignore the burst — DNS noise of this kind is normal background traffic.",
+              "Ignore the burst — DNS noise of this kind is normal background traffic for any moderately-used workstation, and the high-volume queries to a long-tail domain are within the variability you'd expect from a developer's tooling or a misbehaving browser extension.",
           },
         ],
         allowMultiple: true,
