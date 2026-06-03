@@ -1,0 +1,197 @@
+CI Cyber Lab — Air-gap install instructions
+===========================================
+
+You have two boxes:
+
+  - ONLINE BOX  — has internet, can pull from GitHub + npm.
+  - OFFLINE BOX — the air-gapped target where the platform will live.
+
+You will:
+
+  1. Run airgap.ps1 -Mode Pack on the online box to build a USB bundle.
+  2. Carry the USB to the offline box.
+  3. Run airgap.ps1 -Mode Install on the offline box.
+
+Both boxes are Windows. PowerShell 5.1 (built into Windows 10/11) is fine.
+
+
+--------------------------------------------------------------------
+PHASE 1 — Build the bundle on the ONLINE box
+--------------------------------------------------------------------
+
+Prereqs on the online box:
+  - Node.js >= 20.11   (https://nodejs.org)
+  - Git                (https://git-scm.com)
+  - PowerShell 5.1+    (built in)
+  - The repo cloned somewhere local
+  - A USB drive with at least 5 GB free
+
+Steps:
+
+  1. Plug in the USB. Note the drive letter (e.g. E:).
+
+  2. Open PowerShell, cd to the repo root (where airgap.ps1 lives).
+
+  3. Run:
+
+       .\airgap.ps1 -Mode Pack -Output E:\ci-cyber-lab-bundle
+
+     The script will:
+       - download the Node.js installer        (~30 MB)
+       - download the PostgreSQL installer     (~300 MB)
+       - run pnpm install + prisma generate + a production build
+       - copy the repo + node_modules to the bundle directory
+       - write manifest.json and INSTALL.txt into the bundle root
+
+     Expect 10-30 minutes depending on disk + connection speed.
+
+  4. When you see "Bundle complete", eject the USB.
+
+Optional overrides (defaults are fine for most cases):
+
+  -NodeMsiUrl <url>           Newer Node LTS MSI
+  -PostgresInstallerUrl <url> Different Postgres major version
+
+
+--------------------------------------------------------------------
+PHASE 2 — Install on the OFFLINE box
+--------------------------------------------------------------------
+
+Prereqs on the offline box:
+  - Local administrator rights
+  - PowerShell 5.1+ (built in)
+  - At least 5 GB free under C:\ (or wherever you point -Target)
+
+Steps:
+
+  1. Plug the USB in. Note its drive letter (e.g. E:).
+
+  2. Open PowerShell AS ADMINISTRATOR. Right-click PowerShell, choose
+     "Run as administrator". Confirm the title bar shows "Administrator".
+
+  3. If PowerShell refuses to run unsigned local scripts, allow this
+     session only:
+
+       Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+
+  4. Run the installer. From the USB:
+
+       cd E:\ci-cyber-lab-bundle\repo
+       .\airgap.ps1 -Mode Install -Source E:\ci-cyber-lab-bundle -Target C:\ci-cyber-lab -Seed
+
+     What happens, in order:
+
+     a. Node.js installs silently. (Use -SkipNode if it's already there.)
+
+     b. The PostgreSQL installer opens. It is interactive on purpose:
+        you choose the postgres-user password. Defaults for the rest
+        are fine.
+
+        REMEMBER THE POSTGRES PASSWORD. You'll paste it into a
+        DATABASE_URL in the next step.
+
+        (Use -SkipPostgres if a Postgres server is already running
+        on this machine.)
+
+     c. The repo copies to C:\ci-cyber-lab (or wherever you pointed
+        -Target). This includes a pre-built node_modules so the
+        offline box doesn't need to resolve any npm packages.
+
+     d. The script prompts for DATABASE_URL. Paste something like:
+
+          postgresql://postgres:YOUR_PASSWORD@localhost:5432/ci_cyber_lab
+
+        You can change the database name; you'll create the database
+        in step (e) if it doesn't exist.
+
+     e. Prisma migrations apply. If the database doesn't exist yet,
+        create it first (one-time) — in a separate PowerShell:
+
+          & "C:\Program Files\PostgreSQL\16\bin\psql.exe" -U postgres -c "CREATE DATABASE ci_cyber_lab;"
+
+        Then re-run the install command. Prisma is idempotent — it
+        skips already-applied migrations.
+
+     f. If -Seed was passed, the seed script populates the curated
+        challenge catalog. Skip the flag and run it later with:
+
+          cd C:\ci-cyber-lab
+          node apps\api\dist\scripts\seed.js
+
+
+--------------------------------------------------------------------
+PHASE 3 — Start the platform
+--------------------------------------------------------------------
+
+The script does NOT register Windows services for you (operator
+choice — you may want NSSM, you may want a scheduled task, you may
+want to run under a service account). For a quick verification:
+
+  API (port 4000):
+      cd C:\ci-cyber-lab\apps\api
+      node dist\main.js
+
+  Web (port 3000):
+      cd C:\ci-cyber-lab\apps\web
+      node node_modules\next\dist\bin\next start -p 3000
+
+Open http://localhost:3000 in a browser on the same box. You should
+see the login screen.
+
+First admin account:
+  An admin account is created by the seed step. The default
+  credentials are printed to stdout by the seed script — capture
+  them from the seed output and change the password on first login.
+
+
+--------------------------------------------------------------------
+What the script does NOT automate (intentionally)
+--------------------------------------------------------------------
+
+These are operator decisions that vary too much site-to-site:
+
+  - Choosing the postgres-user password.
+  - Choosing where Postgres puts its data directory.
+  - Opening Windows Firewall ports if you want other hosts on the
+    LAN to reach the web app. (By default, both services bind to
+    localhost only — safe for a single-box install.)
+  - Running the API + web as a service (NSSM, scheduled task,
+    sc.exe — pick what your IA / sysadmin policy requires).
+  - TLS termination (none configured by default — use IIS or
+    Caddy in front of the API + web if you want HTTPS).
+  - Backups of the Postgres data directory and the artifact
+    storage folder under C:\ci-cyber-lab\apps\api\data
+    (or wherever ARTIFACT_STORAGE_ROOT points).
+
+The README and CLAUDE.md in the repo cover environment variables
+in more depth.
+
+
+--------------------------------------------------------------------
+Troubleshooting
+--------------------------------------------------------------------
+
+"running scripts is disabled on this system"
+  Run:  Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+  in the same PowerShell window before running airgap.ps1.
+
+"corepack: command not found" during pack
+  Reinstall Node.js >= 20.11 from nodejs.org; corepack ships with it.
+
+"pnpm install" pulls something during pack and fails
+  You're on the online box but behind a corporate proxy. Set
+  HTTPS_PROXY / HTTP_PROXY before running airgap.ps1.
+
+prisma migrate deploy fails with "database does not exist"
+  Create it once with psql (see Phase 2 step e), then re-run the
+  install with the same -Source and -Target.
+
+Postgres installer hangs or won't start during install
+  The Bitrock installer is sensitive to weird console states.
+  Run it directly from the bundle:
+      E:\ci-cyber-lab-bundle\installers\postgresql.exe
+  then re-run airgap.ps1 with -SkipPostgres.
+
+Anything else
+  manifest.json in the bundle root captures the Node URL, Postgres
+  URL, repo commit, and pack time — useful for filing a bug.
