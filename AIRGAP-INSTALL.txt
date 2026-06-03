@@ -1,6 +1,22 @@
 CI Cyber Lab — Air-gap install instructions
 ===========================================
 
+TL;DR — two commands, one per box:
+
+  Online (internet) box, from the repo root:
+      .\airgap.ps1 -Mode Pack -Output E:\ci-cyber-lab-bundle
+
+  Air-gapped box, elevated PowerShell, from the USB:
+      .\airgap.ps1 -Mode Install -Source E:\ci-cyber-lab-bundle -Target C:\ci-cyber-lab -Seed
+
+  Need a refresher at the console?  .\airgap.ps1  (prints a banner.)
+
+(If you ran .\airgap.ps1 without arguments before this change, you
+saw a "Supply values for the following parameters: Mode:" prompt.
+That was PowerShell's default behaviour for a missing mandatory
+parameter. The script now prints the banner above instead — type
+Ctrl+C if you're still at that old prompt, then run it again.)
+
 You have two boxes:
 
   - ONLINE BOX  — has internet, can pull from GitHub + npm.
