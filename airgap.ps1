@@ -24,7 +24,10 @@
 
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory)][ValidateSet("Pack", "Install")]
+    # Pack or Install. If omitted, the script prints usage and
+    # exits — no interactive prompt (PowerShell's default prompt
+    # confuses operators who haven't read AIRGAP-INSTALL.txt).
+    [ValidateSet("Pack", "Install", "Help")]
     [string]$Mode,
 
     # Pack mode: where to write the bundle. Install mode: ignored.
@@ -299,7 +302,45 @@ verify the install.
 "@ -ForegroundColor Green
 }
 
+function Show-Usage {
+    Write-Host @"
+
+CI Cyber Lab — air-gap pack / install helper
+============================================
+
+You must supply -Mode. Two modes:
+
+  Pack   — on the internet-connected Windows box, build a USB bundle.
+  Install— on the air-gapped Windows box (elevated), consume the bundle.
+
+Quick start:
+
+  Online box:
+      .\airgap.ps1 -Mode Pack -Output E:\ci-cyber-lab-bundle
+
+      Defaults are fine. Adds ~330 MB to the USB; takes 10-30 min.
+
+  Air-gapped box (Run PowerShell as Administrator):
+      .\airgap.ps1 -Mode Install -Source E:\ci-cyber-lab-bundle -Target C:\ci-cyber-lab -Seed
+
+      Use -SkipNode if Node is already installed.
+      Use -SkipPostgres if a Postgres server already exists.
+
+Full walkthrough + troubleshooting:
+  AIRGAP-INSTALL.txt (next to this script, also copied into the
+  bundle root after a Pack run).
+
+For the full parameter list:
+  Get-Help .\airgap.ps1 -Detailed
+
+"@ -ForegroundColor Yellow
+}
+
 # ─── dispatch ─────────────────────────────────────────────────
+if (-not $Mode -or $Mode -eq "Help") {
+    Show-Usage
+    return
+}
 switch ($Mode) {
     "Pack"    { Invoke-Pack }
     "Install" { Invoke-Install }
