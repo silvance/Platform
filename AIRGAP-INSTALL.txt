@@ -201,6 +201,16 @@ Troubleshooting
   your PATH (the default %APPDATA%\npm is — anything else won't
   be unless you put it there). Then re-run the same Pack command.
 
+"ERR_PNPM_ENOENT" or "no such file or directory, rename" during pack
+  Half-finished state from a prior interrupted install. The script
+  now wipes node_modules before each Pack run, so simply re-run.
+  If it persists, check that your repo lives on an NTFS or ReFS
+  volume — FAT32 / exFAT (typical for USB sticks) cannot host a
+  pnpm node_modules. Check with:
+      (Get-Volume -DriveLetter I).FileSystemType
+  (substitute your drive letter). If it's not NTFS, clone the
+  repo to C:\ or another NTFS drive and re-run from there.
+
 "pnpm install" pulls something during pack and fails
   You're on the online box but behind a corporate proxy. Set
   HTTPS_PROXY / HTTP_PROXY before running airgap.ps1.
