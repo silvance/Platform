@@ -178,6 +178,31 @@ on PATH, then re-run.
 "@
         }
         Write-Note "pnpm at $pnpm"
+        # Clear any half-finished state from a prior failed run.
+        # pnpm's "rename to .ignored_<dep>" step fails noisily if a
+        # previous install was interrupted; starting clean avoids it.
+        # The pnpm content-addressable store is elsewhere so we're
+        # not throwing away any download work.
+        $repoNm  = Join-Path $repoRoot "node_modules"
+        $apiNm   = Join-Path $repoRoot "apps\api\node_modules"
+        $webNm   = Join-Path $repoRoot "apps\web\node_modules"
+        $cntrNm  = Join-Path $repoRoot "packages\contracts\node_modules"
+        foreach ($p in @($repoNm, $apiNm, $webNm, $cntrNm)) {
+            if (Test-Path -LiteralPath $p) {
+                Write-Note "Removing $p (clean slate for pnpm install)"
+                Remove-Item -LiteralPath $p -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        }
+        # Quick filesystem sanity check: pnpm requires NTFS-style
+        # symlinks for its node_modules layout. FAT32 / exFAT
+        # silently corrupt the install.
+        $repoDrive = (Get-Item $repoRoot).PSDrive.Name
+        $vol = Get-Volume -DriveLetter $repoDrive -ErrorAction SilentlyContinue
+        if ($vol -and $vol.FileSystemType -notin @("NTFS", "ReFS")) {
+            Write-Host "WARN: drive ${repoDrive}: filesystem is $($vol.FileSystemType); pnpm needs NTFS." -ForegroundColor Yellow
+            Write-Host "      If install fails, move the repo to an NTFS volume and re-run." -ForegroundColor Yellow
+        }
+
         & $pnpm install --frozen-lockfile
         if ($LASTEXITCODE -ne 0) { Fail "pnpm install failed." }
         # Prisma engines land in node_modules during postinstall;
