@@ -162,11 +162,20 @@ function Find-PnpmShim {
 
 # ─── PACK ─────────────────────────────────────────────────────
 function Invoke-Pack {
-    if (-not $Output) { Fail "Pack mode needs -Output <path-to-bundle-dir>." }
-
     $repoRoot = (Resolve-Path -LiteralPath $PSScriptRoot).Path
     if (-not (Test-Path -LiteralPath (Join-Path $repoRoot "package.json"))) {
         Fail "Run this script from the repo root (no package.json found next to airgap.ps1)."
+    }
+
+    # Default -Output to <repo-drive>:\ci-cyber-lab-bundle so the
+    # common case (cloned the repo to a USB, want the bundle on the
+    # same USB) needs no flags. The bundle drive can be exFAT/FAT32
+    # if it's separate from the repo drive (only the working repo
+    # needs NTFS — see the NTFS abort banner).
+    if (-not $Output) {
+        $repoDrive = (Get-Item $repoRoot).PSDrive.Name
+        $Output = "${repoDrive}:\ci-cyber-lab-bundle"
+        Write-Note "No -Output supplied; defaulting to $Output"
     }
 
     Require-Tool "node" "Install Node.js (>=20.11) and re-run."
@@ -478,9 +487,11 @@ You must supply -Mode. Two modes:
 Quick start:
 
   Online box:
-      .\airgap.ps1 -Mode Pack -Output E:\ci-cyber-lab-bundle
+      .\airgap.ps1 -Mode Pack
 
-      Defaults are fine. Adds ~330 MB to the USB; takes 10-30 min.
+      Bundle defaults to <repo-drive>:\ci-cyber-lab-bundle. Pass
+      -Output <path> if you want it somewhere else. Adds ~330 MB
+      to the drive; takes 10-30 min.
 
   Air-gapped box (Run PowerShell as Administrator):
       .\airgap.ps1 -Mode Install -Source E:\ci-cyber-lab-bundle -Target C:\ci-cyber-lab -Seed
