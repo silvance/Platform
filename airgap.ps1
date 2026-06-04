@@ -267,8 +267,35 @@ on PATH, then re-run.
         if ($LASTEXITCODE -ne 0) { Fail "prisma generate failed." }
         & $pnpm --filter "@ci-train/api" build
         if ($LASTEXITCODE -ne 0) { Fail "api build failed." }
-        & $pnpm --filter "@ci-train/web" build
-        if ($LASTEXITCODE -ne 0) { Fail "web build failed." }
+        # Next.js's `output: "standalone"` build step creates real
+        # NTFS symlinks under apps/web/.next/standalone/, which
+        # requires admin (or Developer Mode) on Windows. Pack mode
+        # shouldn't need admin, and we don't NEED the standalone
+        # bundle — Install mode runs `next start` against the
+        # regular .next/ directory. Temporarily disable standalone
+        # for this build and restore the config afterward.
+        $webConfig = Join-Path $repoRoot "apps\web\next.config.js"
+        $webConfigBackup = "$webConfig.airgap-backup"
+        $standaloneDisabled = $false
+        if (Test-Path -LiteralPath $webConfig) {
+            $original = Get-Content -LiteralPath $webConfig -Raw
+            $patched = $original -replace 'output:\s*["'']standalone["''],?', '// airgap: standalone disabled (Windows symlinks need admin)'
+            if ($patched -ne $original) {
+                Copy-Item -LiteralPath $webConfig -Destination $webConfigBackup -Force
+                Set-Content -LiteralPath $webConfig -Value $patched -Encoding UTF8 -NoNewline
+                $standaloneDisabled = $true
+                Write-Note "Temporarily disabled 'output: standalone' in next.config.js for build."
+            }
+        }
+        try {
+            & $pnpm --filter "@ci-train/web" build
+            if ($LASTEXITCODE -ne 0) { Fail "web build failed." }
+        } finally {
+            if ($standaloneDisabled -and (Test-Path -LiteralPath $webConfigBackup)) {
+                Move-Item -LiteralPath $webConfigBackup -Destination $webConfig -Force
+                Write-Note "Restored next.config.js."
+            }
+        }
     } finally {
         Pop-Location
     }
