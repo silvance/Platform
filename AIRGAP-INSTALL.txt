@@ -41,7 +41,9 @@ CI Cyber Lab — Air-gap install instructions
 TL;DR — two commands, one per box:
 
   Online (internet) box, from the repo root:
-      .\airgap.ps1 -Mode Pack -Output E:\ci-cyber-lab-bundle
+      .\airgap.ps1 -Mode Pack
+      (defaults to <repo-drive>:\ci-cyber-lab-bundle; override with
+       -Output <path> if you want the bundle elsewhere.)
 
   Air-gapped box, elevated PowerShell, from the USB:
       .\airgap.ps1 -Mode Install -Source E:\ci-cyber-lab-bundle -Target C:\ci-cyber-lab -Seed
@@ -87,7 +89,12 @@ Steps:
 
   3. Run:
 
-       .\airgap.ps1 -Mode Pack -Output E:\ci-cyber-lab-bundle
+       .\airgap.ps1 -Mode Pack
+
+     The bundle defaults to <repo-drive>:\ci-cyber-lab-bundle —
+     so if you cloned to I:\platform, the bundle lands at
+     I:\ci-cyber-lab-bundle automatically. Pass -Output <path>
+     if you want it somewhere else (e.g. a different USB).
 
      The script will:
        - download the Node.js installer        (~30 MB)
