@@ -123,8 +123,8 @@ function Invoke-Pack {
         Fail "Run this script from the repo root (no package.json found next to airgap.ps1)."
     }
 
-    Require-Tool "node"     "Install Node.js (>=20.11) and re-run."
-    Require-Tool "corepack" "corepack ships with Node 16+. If missing, reinstall Node."
+    Require-Tool "node" "Install Node.js (>=20.11) and re-run."
+    Require-Tool "npm"  "npm ships with Node. If missing, reinstall Node."
 
     # Bundle layout we're about to produce:
     #   $Output\manifest.json
@@ -155,21 +155,26 @@ function Invoke-Pack {
     Write-Stage "Refreshing repo dependencies (pnpm install + Prisma generate)"
     Push-Location $repoRoot
     try {
-        & corepack enable | Out-Null
-        & corepack prepare pnpm@9.12.0 --activate
-        if ($LASTEXITCODE -ne 0) { Fail "corepack prepare failed." }
-        # corepack installs its shims into a directory that is on
-        # the Machine PATH, but this PowerShell session was started
-        # before that PATH change took effect, so plain `pnpm` does
-        # not resolve here. Locate the shim and call it directly.
+        # Originally this used `corepack enable` + `corepack prepare
+        # pnpm@<v> --activate`, but on Windows `corepack enable`
+        # writes shims to `C:\Program Files\nodejs\` which requires
+        # admin; without admin it silently fails and leaves no pnpm
+        # on PATH. `npm install -g` writes to %APPDATA%\npm which is
+        # user-writable AND already on PATH after a standard Node
+        # install — far more reliable.
         $pnpm = Find-PnpmShim
         if (-not $pnpm) {
+            Write-Note "pnpm not found — installing via 'npm install -g pnpm@9.12.0'"
+            & npm install -g "pnpm@9.12.0"
+            if ($LASTEXITCODE -ne 0) { Fail "npm install -g pnpm failed." }
+            $pnpm = Find-PnpmShim
+        }
+        if (-not $pnpm) {
             Fail @"
-pnpm not found after corepack prepare.
-Either restart this PowerShell window (so PATH refreshes) and
-re-run the same Pack command, or install pnpm explicitly:
-    npm install -g pnpm@9.12.0
-then re-run.
+pnpm not found after 'npm install -g pnpm@9.12.0'.
+%APPDATA%\npm should be on PATH after a standard Node install.
+Check that 'npm config get prefix' returns a writable directory
+on PATH, then re-run.
 "@
         }
         Write-Note "pnpm at $pnpm"
