@@ -85,6 +85,35 @@ function Test-IsAdmin {
     return $p.IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 
+# `corepack enable` + `corepack prepare pnpm@... --activate` creates
+# a pnpm shim, but the directory it lands in may not be on this
+# PowerShell session's PATH (env changes don't propagate to a
+# running session). Try, in order: PATH as-is, PATH refreshed from
+# the registry, then known shim locations.
+function Find-PnpmShim {
+    $cmd = Get-Command pnpm -ErrorAction SilentlyContinue
+    if ($cmd) { return $cmd.Source }
+
+    $env:Path = `
+        [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + `
+        [Environment]::GetEnvironmentVariable("Path", "User")
+    $cmd = Get-Command pnpm -ErrorAction SilentlyContinue
+    if ($cmd) { return $cmd.Source }
+
+    $candidates = @()
+    $corepack = Get-Command corepack -ErrorAction SilentlyContinue
+    if ($corepack) {
+        $candidates += (Join-Path (Split-Path $corepack.Source) "pnpm.cmd")
+    }
+    $candidates += (Join-Path $env:LOCALAPPDATA "node\corepack\shims\pnpm.cmd")
+    $candidates += (Join-Path "$env:ProgramFiles\nodejs" "pnpm.cmd")
+    $candidates += (Join-Path $env:APPDATA "npm\pnpm.cmd")
+    foreach ($p in $candidates) {
+        if (Test-Path -LiteralPath $p) { return $p }
+    }
+    return $null
+}
+
 # ─── PACK ─────────────────────────────────────────────────────
 function Invoke-Pack {
     if (-not $Output) { Fail "Pack mode needs -Output <path-to-bundle-dir>." }
@@ -129,17 +158,32 @@ function Invoke-Pack {
         & corepack enable | Out-Null
         & corepack prepare pnpm@9.12.0 --activate
         if ($LASTEXITCODE -ne 0) { Fail "corepack prepare failed." }
-        & pnpm install --frozen-lockfile
+        # corepack installs its shims into a directory that is on
+        # the Machine PATH, but this PowerShell session was started
+        # before that PATH change took effect, so plain `pnpm` does
+        # not resolve here. Locate the shim and call it directly.
+        $pnpm = Find-PnpmShim
+        if (-not $pnpm) {
+            Fail @"
+pnpm not found after corepack prepare.
+Either restart this PowerShell window (so PATH refreshes) and
+re-run the same Pack command, or install pnpm explicitly:
+    npm install -g pnpm@9.12.0
+then re-run.
+"@
+        }
+        Write-Note "pnpm at $pnpm"
+        & $pnpm install --frozen-lockfile
         if ($LASTEXITCODE -ne 0) { Fail "pnpm install failed." }
         # Prisma engines land in node_modules during postinstall;
         # build the contracts + apps so the bundle ships ready-to-run.
-        & pnpm --filter "@ci-train/contracts" build
+        & $pnpm --filter "@ci-train/contracts" build
         if ($LASTEXITCODE -ne 0) { Fail "contracts build failed." }
-        & pnpm --filter "@ci-train/api" prisma:generate
+        & $pnpm --filter "@ci-train/api" prisma:generate
         if ($LASTEXITCODE -ne 0) { Fail "prisma generate failed." }
-        & pnpm --filter "@ci-train/api" build
+        & $pnpm --filter "@ci-train/api" build
         if ($LASTEXITCODE -ne 0) { Fail "api build failed." }
-        & pnpm --filter "@ci-train/web" build
+        & $pnpm --filter "@ci-train/web" build
         if ($LASTEXITCODE -ne 0) { Fail "web build failed." }
     } finally {
         Pop-Location
