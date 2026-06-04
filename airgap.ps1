@@ -59,7 +59,13 @@ param(
     [switch]$SkipPostgres,
 
     # Install mode: run the seed script after migrations.
-    [switch]$Seed
+    [switch]$Seed,
+
+    # Pack mode: bypass the NTFS / ReFS filesystem check on the
+    # repo drive. pnpm fundamentally requires NTFS-style symlinks;
+    # this switch only exists for power users who have explicitly
+    # configured `node-linker=hoisted` in .npmrc to work around it.
+    [switch]$AllowNonNtfs
 )
 
 $ErrorActionPreference = "Stop"
@@ -83,6 +89,46 @@ function Test-IsAdmin {
     $id = [System.Security.Principal.WindowsIdentity]::GetCurrent()
     $p  = New-Object System.Security.Principal.WindowsPrincipal($id)
     return $p.IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+
+# Loud banner shown when the repo drive isn't NTFS / ReFS. Most USB
+# sticks ship FAT32 or exFAT, neither of which supports the symlinks
+# pnpm uses, so the operator almost always hits this if they clone
+# straight to a USB. We abort before pnpm install — silent
+# corruption later is much worse than a hard stop now.
+function Show-NtfsAbort {
+    param([string]$DriveLetter, [string]$FsType)
+    $bar = "*" * 70
+    Write-Host ""
+    Write-Host $bar -ForegroundColor Red
+    Write-Host "*                                                                    *" -ForegroundColor Red
+    Write-Host "*   THE REPO DRIVE MUST BE NTFS.                                     *" -ForegroundColor Red
+    Write-Host "*                                                                    *" -ForegroundColor Red
+    Write-Host ("*   Drive {0}: is {1,-12} -- this WILL break pnpm install.        *" -f $DriveLetter, $FsType) -ForegroundColor Red
+    Write-Host "*                                                                    *" -ForegroundColor Red
+    Write-Host "*   Most USB sticks ship FAT32 or exFAT. pnpm uses NTFS-only         *" -ForegroundColor Red
+    Write-Host "*   symbolic links for its node_modules layout; FAT32 and exFAT      *" -ForegroundColor Red
+    Write-Host "*   silently corrupt the install partway through.                    *" -ForegroundColor Red
+    Write-Host "*                                                                    *" -ForegroundColor Red
+    Write-Host "*   YOUR OPTIONS:                                                    *" -ForegroundColor Red
+    Write-Host "*                                                                    *" -ForegroundColor Red
+    Write-Host "*   1. (Recommended) Clone the repo to C:\ and re-run from there.    *" -ForegroundColor Red
+    Write-Host "*          cd C:\                                                    *" -ForegroundColor Red
+    Write-Host "*          git clone <repo-url> platform                             *" -ForegroundColor Red
+    Write-Host "*          cd C:\platform                                            *" -ForegroundColor Red
+    Write-Host ("*          .\airgap.ps1 -Mode Pack -Output {0}:\bundle              *" -f $DriveLetter) -ForegroundColor Red
+    Write-Host "*                                                                    *" -ForegroundColor Red
+    Write-Host "*      The USB output drive can stay exFAT/FAT32 -- the bundle is    *" -ForegroundColor Red
+    Write-Host "*      just regular files. Only the WORKING REPO needs NTFS.         *" -ForegroundColor Red
+    Write-Host "*                                                                    *" -ForegroundColor Red
+    Write-Host "*   2. Reformat the drive to NTFS (DESTRUCTIVE; back up first):      *" -ForegroundColor Red
+    Write-Host ("*          format {0}: /FS:NTFS /Q                                  *" -f $DriveLetter) -ForegroundColor Red
+    Write-Host "*                                                                    *" -ForegroundColor Red
+    Write-Host "*   3. If you know what you're doing and have configured             *" -ForegroundColor Red
+    Write-Host "*      node-linker=hoisted in .npmrc, re-run with -AllowNonNtfs.     *" -ForegroundColor Red
+    Write-Host "*                                                                    *" -ForegroundColor Red
+    Write-Host $bar -ForegroundColor Red
+    Write-Host ""
 }
 
 # `corepack enable` + `corepack prepare pnpm@... --activate` creates
@@ -193,14 +239,22 @@ on PATH, then re-run.
                 Remove-Item -LiteralPath $p -Recurse -Force -ErrorAction SilentlyContinue
             }
         }
-        # Quick filesystem sanity check: pnpm requires NTFS-style
-        # symlinks for its node_modules layout. FAT32 / exFAT
-        # silently corrupt the install.
+        # Filesystem sanity check: pnpm requires NTFS-style symlinks
+        # for its node_modules/.pnpm/ layout. FAT32 and exFAT (the
+        # default format on most USB sticks) do NOT support symlinks
+        # and pnpm install will fail in confusing ways. Abort up
+        # front with reformat instructions; -AllowNonNtfs bypasses
+        # for the rare case the operator has wired `node-linker=
+        # hoisted` into .npmrc themselves.
         $repoDrive = (Get-Item $repoRoot).PSDrive.Name
         $vol = Get-Volume -DriveLetter $repoDrive -ErrorAction SilentlyContinue
         if ($vol -and $vol.FileSystemType -notin @("NTFS", "ReFS")) {
-            Write-Host "WARN: drive ${repoDrive}: filesystem is $($vol.FileSystemType); pnpm needs NTFS." -ForegroundColor Yellow
-            Write-Host "      If install fails, move the repo to an NTFS volume and re-run." -ForegroundColor Yellow
+            if ($AllowNonNtfs) {
+                Write-Host "WARN: drive ${repoDrive}: filesystem is $($vol.FileSystemType); proceeding because -AllowNonNtfs was set." -ForegroundColor Yellow
+            } else {
+                Show-NtfsAbort -DriveLetter $repoDrive -FsType $vol.FileSystemType
+                Fail "Repo drive ${repoDrive}: is $($vol.FileSystemType). Move the repo to an NTFS drive (e.g. C:\) and re-run, or pass -AllowNonNtfs if you know what you're doing."
+            }
         }
 
         & $pnpm install --frozen-lockfile

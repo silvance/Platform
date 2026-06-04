@@ -1,6 +1,43 @@
 CI Cyber Lab — Air-gap install instructions
 ===========================================
 
+**********************************************************************
+**********************************************************************
+**                                                                  **
+**   READ THIS BEFORE YOU CLONE THE REPO:                           **
+**                                                                  **
+**   THE WORKING COPY OF THE REPO MUST LIVE ON AN NTFS DRIVE.       **
+**                                                                  **
+**   Most USB sticks ship FAT32 or exFAT. Cloning the repo directly **
+**   to a fresh USB will appear to work, then break partway through **
+**   `pnpm install` with confusing rename errors. pnpm uses NTFS    **
+**   symbolic links for its node_modules layout; FAT32 and exFAT    **
+**   do not support them.                                           **
+**                                                                  **
+**   What to do:                                                    **
+**                                                                  **
+**   1. (Recommended) Clone to your C:\ drive, then point the       **
+**      pack script's -Output at the USB. The bundle on the USB     **
+**      is just plain files; exFAT / FAT32 is fine for THAT part.   **
+**                                                                  **
+**          cd C:\                                                  **
+**          git clone <repo-url> platform                           **
+**          cd C:\platform                                          **
+**          .\airgap.ps1 -Mode Pack -Output E:\ci-cyber-lab-bundle  **
+**                                                                  **
+**   2. Reformat the drive to NTFS (DESTRUCTIVE; back up first):    **
+**          format E: /FS:NTFS /Q                                   **
+**                                                                  **
+**   Check your drive's current filesystem with:                    **
+**          (Get-Volume -DriveLetter E).FileSystemType              **
+**                                                                  **
+**   The script will hard-abort with an on-screen banner if you     **
+**   try to pack from a non-NTFS drive (use -AllowNonNtfs to        **
+**   bypass only if you have set node-linker=hoisted in .npmrc).    **
+**                                                                  **
+**********************************************************************
+**********************************************************************
+
 TL;DR — two commands, one per box:
 
   Online (internet) box, from the repo root:
