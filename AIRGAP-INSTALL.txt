@@ -194,6 +194,16 @@ Troubleshooting
 "corepack: command not found" during pack
   Reinstall Node.js >= 20.11 from nodejs.org; corepack ships with it.
 
+"The term 'pnpm' is not recognized" during pack
+  This happens when Node was JUST installed and the current
+  PowerShell session's PATH still doesn't see the corepack shim.
+  The script now refreshes PATH from the registry and falls back
+  to known shim locations automatically. If you still hit it:
+    1. Close and reopen PowerShell (so PATH refreshes).
+    2. Re-run the same Pack command.
+  Or install pnpm globally and re-run:
+    npm install -g pnpm@9.12.0
+
 "pnpm install" pulls something during pack and fails
   You're on the online box but behind a corporate proxy. Set
   HTTPS_PROXY / HTTP_PROXY before running airgap.ps1.
