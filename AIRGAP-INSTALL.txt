@@ -248,6 +248,18 @@ Troubleshooting
   (substitute your drive letter). If it's not NTFS, clone the
   repo to C:\ or another NTFS drive and re-run from there.
 
+"EPERM: operation not permitted, symlink" during web build
+  Next.js's standalone-bundle output uses NTFS symlinks, which
+  require admin or Windows Developer Mode. The script now
+  temporarily disables 'output: "standalone"' in
+  apps/web/next.config.js for the duration of the airgap build
+  and restores it afterward — Install mode uses `next start`
+  against the regular .next/ directory, so the standalone bundle
+  isn't needed anyway. Just re-run the same Pack command. If the
+  failure persists, you can enable Windows Developer Mode
+  (Settings → Privacy & security → For developers) which lets
+  non-admin users create symlinks.
+
 "pnpm install" pulls something during pack and fails
   You're on the online box but behind a corporate proxy. Set
   HTTPS_PROXY / HTTP_PROXY before running airgap.ps1.
