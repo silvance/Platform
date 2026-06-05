@@ -1,7 +1,7 @@
-CI Cyber Lab — Air-gap install instructions (Linux)
+CI Cyber Lab -- Air-gap install instructions (Linux)
 ====================================================
 
-TL;DR — two commands, one per box:
+TL;DR -- two commands, one per box:
 
   Online (internet) Linux box, from the repo root:
       ./airgap.sh pack
@@ -15,14 +15,14 @@ TL;DR — two commands, one per box:
 
 You have two boxes:
 
-  - ONLINE BOX  — has internet, can pull from GitHub + npm.
-  - OFFLINE BOX — the air-gapped target where the platform will live.
+  - ONLINE BOX  -- has internet, can pull from GitHub + npm.
+  - OFFLINE BOX -- the air-gapped target where the platform will live.
 
 You will:
 
   1. Run ./airgap.sh pack on the online box to build a portable bundle.
   2. Carry the bundle to the offline box (USB, tarball over removable
-     media, scp through a one-way data diode — whatever your IA
+     media, scp through a one-way data diode -- whatever your IA
      policy allows).
   3. Run ./airgap.sh install on the offline box.
 
@@ -30,7 +30,7 @@ Both boxes are Linux x86_64. Bash 4+ is fine (any modern distro).
 
 
 --------------------------------------------------------------------
-PHASE 1 — Build the bundle on the ONLINE box
+PHASE 1 -- Build the bundle on the ONLINE box
 --------------------------------------------------------------------
 
 Prereqs on the online box:
@@ -66,7 +66,7 @@ Steps:
 
 
 --------------------------------------------------------------------
-PHASE 2 — Install on the OFFLINE box
+PHASE 2 -- Install on the OFFLINE box
 --------------------------------------------------------------------
 
 Prereqs on the offline box:
@@ -108,7 +108,7 @@ Steps:
 
      b. The script verifies psql is available. (Use
         --skip-postgres-check if you really know what you're
-        doing — e.g. using a remote DB.)
+        doing -- e.g. using a remote DB.)
 
      c. The repo copies to /opt/ci-cyber-lab.
 
@@ -117,7 +117,7 @@ Steps:
           postgresql://postgres:YOUR_PASSWORD@localhost:5432/ci_cyber_lab
 
      e. Prisma migrations apply against that DATABASE_URL. Prisma
-        is idempotent — already-applied migrations are skipped.
+        is idempotent -- already-applied migrations are skipped.
 
      f. If --seed was passed, the seed script populates the
         curated challenge catalog. Skip the flag and run later:
@@ -127,7 +127,7 @@ Steps:
 
 
 --------------------------------------------------------------------
-PHASE 3 — Start the platform
+PHASE 3 -- Start the platform
 --------------------------------------------------------------------
 
 For a quick verification:
@@ -143,7 +143,7 @@ For a quick verification:
 Open http://localhost:3000 in a browser on the same box.
 
 First admin account:
-  The seed step prints default admin credentials to stdout —
+  The seed step prints default admin credentials to stdout --
   capture them and change the password on first login.
 
 To run as systemd services (recommended for anything beyond a
@@ -213,7 +213,7 @@ Troubleshooting
 
 "command not found: pnpm" during pack
   The script will `npm install -g pnpm@9.12.0` automatically.
-  If that fails, your npm global prefix may not be writable —
+  If that fails, your npm global prefix may not be writable --
   check with `npm config get prefix`. If it returns a system
   directory you can't write to, set a user-writable one:
       npm config set prefix "$HOME/.npm-global"
@@ -224,7 +224,7 @@ Troubleshooting
   You skipped the CREATE DATABASE step in Phase 2 prereqs.
   Create it manually with:
       sudo -u postgres psql -c "CREATE DATABASE ci_cyber_lab;"
-  then re-run install — it's idempotent.
+  then re-run install -- it's idempotent.
 
 Web app build fails with native-module errors mid-install on the
 target box
@@ -239,4 +239,4 @@ systemd service won't start with EACCES
 
 Anything else
   manifest.json in the bundle root captures the Node URL, repo
-  commit, and pack time — useful for filing a bug.
+  commit, and pack time -- useful for filing a bug.

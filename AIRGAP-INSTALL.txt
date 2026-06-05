@@ -1,4 +1,4 @@
-CI Cyber Lab — Air-gap install instructions
+CI Cyber Lab -- Air-gap install instructions
 ===========================================
 
 **********************************************************************
@@ -38,7 +38,7 @@ CI Cyber Lab — Air-gap install instructions
 **********************************************************************
 **********************************************************************
 
-TL;DR — two commands, one per box:
+TL;DR -- two commands, one per box:
 
   Online (internet) box, from the repo root:
       .\airgap.ps1 -Mode Pack
@@ -53,13 +53,13 @@ TL;DR — two commands, one per box:
 (If you ran .\airgap.ps1 without arguments before this change, you
 saw a "Supply values for the following parameters: Mode:" prompt.
 That was PowerShell's default behaviour for a missing mandatory
-parameter. The script now prints the banner above instead — type
+parameter. The script now prints the banner above instead -- type
 Ctrl+C if you're still at that old prompt, then run it again.)
 
 You have two boxes:
 
-  - ONLINE BOX  — has internet, can pull from GitHub + npm.
-  - OFFLINE BOX — the air-gapped target where the platform will live.
+  - ONLINE BOX  -- has internet, can pull from GitHub + npm.
+  - OFFLINE BOX -- the air-gapped target where the platform will live.
 
 You will:
 
@@ -71,7 +71,7 @@ Both boxes are Windows. PowerShell 5.1 (built into Windows 10/11) is fine.
 
 
 --------------------------------------------------------------------
-PHASE 1 — Build the bundle on the ONLINE box
+PHASE 1 -- Build the bundle on the ONLINE box
 --------------------------------------------------------------------
 
 Prereqs on the online box:
@@ -91,7 +91,7 @@ Steps:
 
        .\airgap.ps1 -Mode Pack
 
-     The bundle defaults to <repo-drive>:\ci-cyber-lab-bundle —
+     The bundle defaults to <repo-drive>:\ci-cyber-lab-bundle --
      so if you cloned to I:\platform, the bundle lands at
      I:\ci-cyber-lab-bundle automatically. Pass -Output <path>
      if you want it somewhere else (e.g. a different USB).
@@ -114,7 +114,7 @@ Optional overrides (defaults are fine for most cases):
 
 
 --------------------------------------------------------------------
-PHASE 2 — Install on the OFFLINE box
+PHASE 2 -- Install on the OFFLINE box
 --------------------------------------------------------------------
 
 Prereqs on the offline box:
@@ -165,11 +165,11 @@ Steps:
         in step (e) if it doesn't exist.
 
      e. Prisma migrations apply. If the database doesn't exist yet,
-        create it first (one-time) — in a separate PowerShell:
+        create it first (one-time) -- in a separate PowerShell:
 
           & "C:\Program Files\PostgreSQL\16\bin\psql.exe" -U postgres -c "CREATE DATABASE ci_cyber_lab;"
 
-        Then re-run the install command. Prisma is idempotent — it
+        Then re-run the install command. Prisma is idempotent -- it
         skips already-applied migrations.
 
      f. If -Seed was passed, the seed script populates the curated
@@ -180,11 +180,11 @@ Steps:
 
 
 --------------------------------------------------------------------
-PHASE 3 — Start the platform
+PHASE 3 -- Start the platform
 --------------------------------------------------------------------
 
 The script does NOT register Windows services for you (operator
-choice — you may want NSSM, you may want a scheduled task, you may
+choice -- you may want NSSM, you may want a scheduled task, you may
 want to run under a service account). For a quick verification:
 
   API (port 4000):
@@ -200,7 +200,7 @@ see the login screen.
 
 First admin account:
   An admin account is created by the seed step. The default
-  credentials are printed to stdout by the seed script — capture
+  credentials are printed to stdout by the seed script -- capture
   them from the seed output and change the password on first login.
 
 
@@ -214,10 +214,10 @@ These are operator decisions that vary too much site-to-site:
   - Choosing where Postgres puts its data directory.
   - Opening Windows Firewall ports if you want other hosts on the
     LAN to reach the web app. (By default, both services bind to
-    localhost only — safe for a single-box install.)
+    localhost only -- safe for a single-box install.)
   - Running the API + web as a service (NSSM, scheduled task,
-    sc.exe — pick what your IA / sysadmin policy requires).
-  - TLS termination (none configured by default — use IIS or
+    sc.exe -- pick what your IA / sysadmin policy requires).
+  - TLS termination (none configured by default -- use IIS or
     Caddy in front of the API + web if you want HTTPS).
   - Backups of the Postgres data directory and the artifact
     storage folder under C:\ci-cyber-lab\apps\api\data
@@ -242,14 +242,14 @@ Troubleshooting
   The script will now `npm install -g pnpm@9.12.0` automatically
   if pnpm isn't found on PATH. If that step itself fails, check
   that `npm config get prefix` returns a directory that's on
-  your PATH (the default %APPDATA%\npm is — anything else won't
+  your PATH (the default %APPDATA%\npm is -- anything else won't
   be unless you put it there). Then re-run the same Pack command.
 
 "ERR_PNPM_ENOENT" or "no such file or directory, rename" during pack
   Half-finished state from a prior interrupted install. The script
   now wipes node_modules before each Pack run, so simply re-run.
   If it persists, check that your repo lives on an NTFS or ReFS
-  volume — FAT32 / exFAT (typical for USB sticks) cannot host a
+  volume -- FAT32 / exFAT (typical for USB sticks) cannot host a
   pnpm node_modules. Check with:
       (Get-Volume -DriveLetter I).FileSystemType
   (substitute your drive letter). If it's not NTFS, clone the
@@ -260,11 +260,11 @@ Troubleshooting
   require admin or Windows Developer Mode. The script now
   temporarily disables 'output: "standalone"' in
   apps/web/next.config.js for the duration of the airgap build
-  and restores it afterward — Install mode uses `next start`
+  and restores it afterward -- Install mode uses `next start`
   against the regular .next/ directory, so the standalone bundle
   isn't needed anyway. Just re-run the same Pack command. If the
   failure persists, you can enable Windows Developer Mode
-  (Settings → Privacy & security → For developers) which lets
+  (Settings -> Privacy & security -> For developers) which lets
   non-admin users create symlinks.
 
 "pnpm install" pulls something during pack and fails
@@ -283,4 +283,4 @@ Postgres installer hangs or won't start during install
 
 Anything else
   manifest.json in the bundle root captures the Node URL, Postgres
-  URL, repo commit, and pack time — useful for filing a bug.
+  URL, repo commit, and pack time -- useful for filing a bug.
