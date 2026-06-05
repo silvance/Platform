@@ -15,14 +15,14 @@
 #     for DATABASE_URL, runs `prisma migrate deploy`, optionally
 #     seeds.
 #
-# Postgres is intentionally NOT bundled — distro packages vary
+# Postgres is intentionally NOT bundled -- distro packages vary
 # too much (apt vs dnf vs rpm vs snap) and the operator's install
 # media usually has the right version anyway. Install Postgres
 # on the target before running install mode.
 
 set -euo pipefail
 
-# ─── helpers ─────────────────────────────────────────────────
+# --- helpers -------------------------------------------------
 stage()  { printf '\n\033[36m==> %s\033[0m\n' "$*"; }
 note()   { printf '    %s\n' "$*"; }
 ok()     { printf '    \033[32m%s\033[0m\n' "$*"; }
@@ -36,7 +36,7 @@ require_tool() {
 usage() {
     cat <<EOF
 
-CI Cyber Lab — air-gap pack / install helper (Linux)
+CI Cyber Lab -- air-gap pack / install helper (Linux)
 ====================================================
 
 Usage:
@@ -56,13 +56,13 @@ Full walkthrough + troubleshooting: AIRGAP-INSTALL-LINUX.txt
 EOF
 }
 
-# ─── default tuning ──────────────────────────────────────────
+# --- default tuning ------------------------------------------
 NODE_TARBALL="node-v20.18.0-linux-x64.tar.xz"
 NODE_URL_DEFAULT="https://nodejs.org/dist/v20.18.0/${NODE_TARBALL}"
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# ─── PACK ────────────────────────────────────────────────────
+# --- PACK ----------------------------------------------------
 do_pack() {
     [ -f "${REPO_ROOT}/package.json" ] || \
         fail "Run from the repo root (no package.json next to airgap.sh)."
@@ -101,7 +101,7 @@ do_pack() {
     done
 
     if ! command -v pnpm >/dev/null 2>&1; then
-        note "pnpm not found — installing via 'npm install -g pnpm@9.12.0'"
+        note "pnpm not found -- installing via 'npm install -g pnpm@9.12.0'"
         npm install -g pnpm@9.12.0
     fi
     note "pnpm at $(command -v pnpm)"
@@ -111,7 +111,7 @@ do_pack() {
     pnpm --filter "@ci-train/api" prisma:generate
     pnpm --filter "@ci-train/api" build
     # Linux supports symlinks natively, so Next.js's `output:
-    # "standalone"` build step works fine — no need for the
+    # "standalone"` build step works fine -- no need for the
     # standalone-disable hack the Windows script needs.
     pnpm --filter "@ci-train/web" build
     ok "Dependencies + builds ready."
@@ -158,12 +158,12 @@ EOF
     note "    sudo ./airgap.sh install -s <bundle-path> -t /opt/ci-cyber-lab --seed"
 }
 
-# ─── INSTALL ─────────────────────────────────────────────────
+# --- INSTALL -------------------------------------------------
 do_install() {
     [ -n "${SOURCE:-}" ] || fail "install needs -s /path/to/bundle."
     [ -n "${TARGET:-}" ] || fail "install needs -t /install/path."
     [ -f "${SOURCE}/manifest.json" ] || \
-        fail "manifest.json not found under ${SOURCE} — is this the right bundle?"
+        fail "manifest.json not found under ${SOURCE} -- is this the right bundle?"
     [ "$(id -u)" -eq 0 ] || \
         fail "install needs root (sudo) for /opt + DB setup."
 
@@ -236,7 +236,7 @@ admin password, and verify the install.
 EOF
 }
 
-# ─── argument parsing ────────────────────────────────────────
+# --- argument parsing ----------------------------------------
 MODE="${1:-}"
 [ -n "${MODE}" ] || { usage; exit 1; }
 shift || true

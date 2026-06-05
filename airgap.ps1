@@ -1,6 +1,6 @@
 # Air-gap pack / install helper for the CI Cyber Lab platform.
 #
-# Two modes — same script:
+# Two modes -- same script:
 #
 #   Online (internet-connected) Windows box:
 #       .\airgap.ps1 -Mode Pack -Output E:\ci-cyber-lab-bundle
@@ -19,13 +19,13 @@
 # Honest scope: this script is a starting point. Postgres
 # password selection, firewall rules, choosing where to bind
 # the API, TLS termination, and how to keep the service running
-# are operator decisions — see AIRGAP-INSTALL.txt for the steps
+# are operator decisions -- see AIRGAP-INSTALL.txt for the steps
 # the script intentionally leaves to you.
 
 [CmdletBinding()]
 param(
     # Pack or Install. If omitted, the script prints usage and
-    # exits — no interactive prompt (PowerShell's default prompt
+    # exits -- no interactive prompt (PowerShell's default prompt
     # confuses operators who haven't read AIRGAP-INSTALL.txt).
     [ValidateSet("Pack", "Install", "Help")]
     [string]$Mode,
@@ -94,7 +94,7 @@ function Test-IsAdmin {
 # Loud banner shown when the repo drive isn't NTFS / ReFS. Most USB
 # sticks ship FAT32 or exFAT, neither of which supports the symlinks
 # pnpm uses, so the operator almost always hits this if they clone
-# straight to a USB. We abort before pnpm install — silent
+# straight to a USB. We abort before pnpm install -- silent
 # corruption later is much worse than a hard stop now.
 function Show-NtfsAbort {
     param([string]$DriveLetter, [string]$FsType)
@@ -160,7 +160,7 @@ function Find-PnpmShim {
     return $null
 }
 
-# ─── PACK ─────────────────────────────────────────────────────
+# --- PACK -----------------------------------------------------
 function Invoke-Pack {
     $repoRoot = (Resolve-Path -LiteralPath $PSScriptRoot).Path
     if (-not (Test-Path -LiteralPath (Join-Path $repoRoot "package.json"))) {
@@ -171,7 +171,7 @@ function Invoke-Pack {
     # common case (cloned the repo to a USB, want the bundle on the
     # same USB) needs no flags. The bundle drive can be exFAT/FAT32
     # if it's separate from the repo drive (only the working repo
-    # needs NTFS — see the NTFS abort banner).
+    # needs NTFS -- see the NTFS abort banner).
     if (-not $Output) {
         $repoDrive = (Get-Item $repoRoot).PSDrive.Name
         $Output = "${repoDrive}:\ci-cyber-lab-bundle"
@@ -216,10 +216,10 @@ function Invoke-Pack {
         # admin; without admin it silently fails and leaves no pnpm
         # on PATH. `npm install -g` writes to %APPDATA%\npm which is
         # user-writable AND already on PATH after a standard Node
-        # install — far more reliable.
+        # install -- far more reliable.
         $pnpm = Find-PnpmShim
         if (-not $pnpm) {
-            Write-Note "pnpm not found — installing via 'npm install -g pnpm@9.12.0'"
+            Write-Note "pnpm not found -- installing via 'npm install -g pnpm@9.12.0'"
             & npm install -g "pnpm@9.12.0"
             if ($LASTEXITCODE -ne 0) { Fail "npm install -g pnpm failed." }
             $pnpm = Find-PnpmShim
@@ -287,7 +287,7 @@ on PATH, then re-run.
         # NTFS symlinks under apps/web/.next/standalone/, which
         # requires admin (or Developer Mode) on Windows. Pack mode
         # shouldn't need admin, and we don't NEED the standalone
-        # bundle — Install mode runs `next start` against the
+        # bundle -- Install mode runs `next start` against the
         # regular .next/ directory. Temporarily disable standalone
         # for this build and restore the config afterward.
         $webConfig = Join-Path $repoRoot "apps\web\next.config.js"
@@ -319,7 +319,7 @@ on PATH, then re-run.
 
     Write-Stage "Copying repo into bundle (this is the slow part)"
     # robocopy with default symlink-follow behaviour: pnpm uses NTFS
-    # symlinks for node_modules/<pkg> → node_modules/.pnpm/... and we
+    # symlinks for node_modules/<pkg> -> node_modules/.pnpm/... and we
     # WANT robocopy to dereference those so the bundle is self-
     # contained on the air-gapped box. /MIR mirrors; /R:1 /W:1 keeps
     # it from stalling on a locked file; /NFL /NDL /NP /NJH /NJS
@@ -352,7 +352,7 @@ on PATH, then re-run.
     if (Test-Path -LiteralPath $instructionsSrc) {
         Copy-Item -LiteralPath $instructionsSrc -Destination (Join-Path $Output "INSTALL.txt") -Force
     } else {
-        Write-Note "AIRGAP-INSTALL.txt not found at repo root — bundle will not include operator instructions."
+        Write-Note "AIRGAP-INSTALL.txt not found at repo root -- bundle will not include operator instructions."
     }
 
     Write-Stage "Bundle complete"
@@ -361,7 +361,7 @@ on PATH, then re-run.
     Write-Note "    .\airgap.ps1 -Mode Install -Source <bundle-path> -Target C:\ci-cyber-lab"
 }
 
-# ─── INSTALL ──────────────────────────────────────────────────
+# --- INSTALL --------------------------------------------------
 function Invoke-Install {
     if (-not $Source) { Fail "Install mode needs -Source <bundle-path>." }
     if (-not $Target) { Fail "Install mode needs -Target <install-path>." }
@@ -371,7 +371,7 @@ function Invoke-Install {
 
     $manifestPath = Join-Path $Source "manifest.json"
     if (-not (Test-Path -LiteralPath $manifestPath)) {
-        Fail "manifest.json not found under $Source — is this the right path?"
+        Fail "manifest.json not found under $Source -- is this the right path?"
     }
 
     if (-not $SkipNode) {
@@ -392,10 +392,10 @@ function Invoke-Install {
     }
 
     if (-not $SkipPostgres) {
-        Write-Stage "Running PostgreSQL installer (interactive — choose the postgres password)"
+        Write-Stage "Running PostgreSQL installer (interactive -- choose the postgres password)"
         $pgExe = Join-Path $Source "installers\postgresql.exe"
         if (-not (Test-Path -LiteralPath $pgExe)) { Fail "postgresql.exe missing in bundle." }
-        Write-Note "When the installer asks: remember the postgres-user password —"
+        Write-Note "When the installer asks: remember the postgres-user password --"
         Write-Note "you'll paste it into DATABASE_URL in a moment."
         $p = Start-Process -FilePath $pgExe -Wait -PassThru
         if ($p.ExitCode -ne 0) { Fail "Postgres installer returned $($p.ExitCode)." }
@@ -476,13 +476,13 @@ verify the install.
 function Show-Usage {
     Write-Host @"
 
-CI Cyber Lab — air-gap pack / install helper
+CI Cyber Lab -- air-gap pack / install helper
 ============================================
 
 You must supply -Mode. Two modes:
 
-  Pack   — on the internet-connected Windows box, build a USB bundle.
-  Install— on the air-gapped Windows box (elevated), consume the bundle.
+  Pack   -- on the internet-connected Windows box, build a USB bundle.
+  Install-- on the air-gapped Windows box (elevated), consume the bundle.
 
 Quick start:
 
@@ -509,7 +509,7 @@ For the full parameter list:
 "@ -ForegroundColor Yellow
 }
 
-# ─── dispatch ─────────────────────────────────────────────────
+# --- dispatch -------------------------------------------------
 if (-not $Mode -or $Mode -eq "Help") {
     Show-Usage
     return
