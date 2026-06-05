@@ -1,0 +1,242 @@
+CI Cyber Lab — Air-gap install instructions (Linux)
+====================================================
+
+TL;DR — two commands, one per box:
+
+  Online (internet) Linux box, from the repo root:
+      ./airgap.sh pack
+      (defaults to <parent-of-repo>/ci-cyber-lab-bundle; override
+       with -o <path> if you want the bundle elsewhere.)
+
+  Air-gapped Linux box, from the bundle, as root/sudo:
+      sudo ./airgap.sh install -s /path/to/bundle -t /opt/ci-cyber-lab --seed
+
+  Need a refresher at the console?  ./airgap.sh help
+
+You have two boxes:
+
+  - ONLINE BOX  — has internet, can pull from GitHub + npm.
+  - OFFLINE BOX — the air-gapped target where the platform will live.
+
+You will:
+
+  1. Run ./airgap.sh pack on the online box to build a portable bundle.
+  2. Carry the bundle to the offline box (USB, tarball over removable
+     media, scp through a one-way data diode — whatever your IA
+     policy allows).
+  3. Run ./airgap.sh install on the offline box.
+
+Both boxes are Linux x86_64. Bash 4+ is fine (any modern distro).
+
+
+--------------------------------------------------------------------
+PHASE 1 — Build the bundle on the ONLINE box
+--------------------------------------------------------------------
+
+Prereqs on the online box:
+  - Node.js >= 20.11    (https://nodejs.org)
+  - Git
+  - curl, tar, rsync    (universal; reinstall via apt/dnf if missing)
+  - The repo cloned somewhere local
+
+Steps:
+
+  1. cd into the repo root (where airgap.sh lives).
+
+  2. Run:
+
+       ./airgap.sh pack
+
+     The bundle defaults to <parent-of-repo>/ci-cyber-lab-bundle.
+     Override with -o:
+
+       ./airgap.sh pack -o /media/usb/ci-cyber-lab-bundle
+
+     The script will:
+       - download the Node.js Linux x64 tarball              (~30 MB)
+       - install pnpm globally via npm (no admin needed for nvm-managed
+         Node; needs sudo if Node is in a system path)
+       - run pnpm install + prisma generate + a production build
+       - copy the repo + node_modules to the bundle directory
+       - write manifest.json and INSTALL.txt into the bundle root
+
+     Expect 5-20 minutes depending on disk + connection speed.
+
+  3. When you see "Bundle complete", the bundle is ready to carry.
+
+
+--------------------------------------------------------------------
+PHASE 2 — Install on the OFFLINE box
+--------------------------------------------------------------------
+
+Prereqs on the offline box:
+  - Root / sudo access for /opt + the Node symlinks.
+  - PostgreSQL installed and running locally.
+
+      Debian/Ubuntu:
+          apt install postgresql postgresql-client
+      RHEL/Rocky/Fedora:
+          dnf install postgresql-server postgresql
+          postgresql-setup --initdb
+          systemctl enable --now postgresql
+
+      Then set the postgres user's password (one-time):
+          sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'YOUR_PASSWORD';"
+
+      Then create the application database (one-time):
+          sudo -u postgres psql -c "CREATE DATABASE ci_cyber_lab;"
+
+  - rsync, tar (almost always preinstalled).
+
+Steps:
+
+  1. Make the bundle visible to the offline box (mount the USB,
+     copy with scp, etc.).
+
+  2. Run:
+
+       sudo ./airgap.sh install \
+           -s /path/to/bundle \
+           -t /opt/ci-cyber-lab \
+           --seed
+
+     What happens, in order:
+
+     a. Node.js is extracted to /opt/node-vX.X.X-linux-x64/ and
+        symlinked into /usr/local/bin/{node,npm,npx}. (Use
+        --skip-node if Node is already installed.)
+
+     b. The script verifies psql is available. (Use
+        --skip-postgres-check if you really know what you're
+        doing — e.g. using a remote DB.)
+
+     c. The repo copies to /opt/ci-cyber-lab.
+
+     d. The script prompts for DATABASE_URL. Paste something like:
+
+          postgresql://postgres:YOUR_PASSWORD@localhost:5432/ci_cyber_lab
+
+     e. Prisma migrations apply against that DATABASE_URL. Prisma
+        is idempotent — already-applied migrations are skipped.
+
+     f. If --seed was passed, the seed script populates the
+        curated challenge catalog. Skip the flag and run later:
+
+          cd /opt/ci-cyber-lab/apps/api
+          node dist/scripts/seed.js
+
+
+--------------------------------------------------------------------
+PHASE 3 — Start the platform
+--------------------------------------------------------------------
+
+For a quick verification:
+
+  API (port 4000):
+      cd /opt/ci-cyber-lab/apps/api
+      node dist/main.js
+
+  Web (port 3000):
+      cd /opt/ci-cyber-lab/apps/web
+      node node_modules/next/dist/bin/next start -p 3000
+
+Open http://localhost:3000 in a browser on the same box.
+
+First admin account:
+  The seed step prints default admin credentials to stdout —
+  capture them and change the password on first login.
+
+To run as systemd services (recommended for anything beyond a
+quick test), create two unit files under /etc/systemd/system/:
+
+    # /etc/systemd/system/ci-cyber-lab-api.service
+    [Unit]
+    Description=CI Cyber Lab API
+    After=network.target postgresql.service
+    Requires=postgresql.service
+
+    [Service]
+    Type=simple
+    User=ci-cyber-lab
+    WorkingDirectory=/opt/ci-cyber-lab/apps/api
+    EnvironmentFile=/opt/ci-cyber-lab/apps/api/.env
+    ExecStart=/usr/local/bin/node dist/main.js
+    Restart=on-failure
+    RestartSec=5
+
+    [Install]
+    WantedBy=multi-user.target
+
+    # /etc/systemd/system/ci-cyber-lab-web.service
+    [Unit]
+    Description=CI Cyber Lab Web
+    After=network.target ci-cyber-lab-api.service
+
+    [Service]
+    Type=simple
+    User=ci-cyber-lab
+    WorkingDirectory=/opt/ci-cyber-lab/apps/web
+    ExecStart=/usr/local/bin/node node_modules/next/dist/bin/next start -p 3000
+    Restart=on-failure
+    RestartSec=5
+
+    [Install]
+    WantedBy=multi-user.target
+
+Create the service user, fix ownership, enable both:
+
+    useradd -r -d /opt/ci-cyber-lab -s /usr/sbin/nologin ci-cyber-lab
+    chown -R ci-cyber-lab:ci-cyber-lab /opt/ci-cyber-lab
+    systemctl daemon-reload
+    systemctl enable --now ci-cyber-lab-api ci-cyber-lab-web
+
+
+--------------------------------------------------------------------
+What the script does NOT automate (intentionally)
+--------------------------------------------------------------------
+
+Operator-policy decisions:
+
+  - Installing PostgreSQL and choosing the postgres password.
+  - Creating the application database (CREATE DATABASE ...).
+  - Opening firewall rules (default install binds to localhost).
+  - TLS termination (none configured; use nginx, Caddy, or your
+    org's reverse-proxy of choice in front of the API + web).
+  - Backups of the Postgres data dir and any artifact storage
+    folder under /opt/ci-cyber-lab/apps/api/data (or wherever
+    ARTIFACT_STORAGE_ROOT points).
+
+
+--------------------------------------------------------------------
+Troubleshooting
+--------------------------------------------------------------------
+
+"command not found: pnpm" during pack
+  The script will `npm install -g pnpm@9.12.0` automatically.
+  If that fails, your npm global prefix may not be writable —
+  check with `npm config get prefix`. If it returns a system
+  directory you can't write to, set a user-writable one:
+      npm config set prefix "$HOME/.npm-global"
+      export PATH="$HOME/.npm-global/bin:$PATH"
+  then re-run pack.
+
+"prisma migrate deploy" fails with "database does not exist"
+  You skipped the CREATE DATABASE step in Phase 2 prereqs.
+  Create it manually with:
+      sudo -u postgres psql -c "CREATE DATABASE ci_cyber_lab;"
+  then re-run install — it's idempotent.
+
+Web app build fails with native-module errors mid-install on the
+target box
+  The bundle was built on a glibc version newer than the target's.
+  Build the bundle on a host that matches the target's libc
+  (e.g. pack on an Ubuntu 22.04 host if installing on Ubuntu 22.04)
+  and re-run.
+
+systemd service won't start with EACCES
+  The ci-cyber-lab user can't read /opt/ci-cyber-lab. Re-run:
+      chown -R ci-cyber-lab:ci-cyber-lab /opt/ci-cyber-lab
+
+Anything else
+  manifest.json in the bundle root captures the Node URL, repo
+  commit, and pack time — useful for filing a bug.
