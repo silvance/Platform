@@ -503,7 +503,11 @@ Common causes:
     } else {
         $dbUrl = Read-Host "Paste the DATABASE_URL (e.g. postgresql://postgres:PASSWORD@localhost:5432/ci_cyber_lab)"
         if (-not $dbUrl) { Fail "DATABASE_URL is required to run migrations." }
-        Set-Content -LiteralPath $existingEnv -Value "DATABASE_URL=$dbUrl" -Encoding UTF8
+        # ASCII encoding (no BOM). Set-Content -Encoding UTF8 in
+        # Windows PowerShell 5.1 writes a BOM, which Node's
+        # --env-file parser treats as part of the first variable
+        # name, breaking DATABASE_URL lookup in the seed script.
+        Set-Content -LiteralPath $existingEnv -Value "DATABASE_URL=$dbUrl" -Encoding ASCII
         Write-OK "Wrote $existingEnv"
     }
 
@@ -530,13 +534,27 @@ Common causes:
         Write-Stage "Seeding content"
         Push-Location (Join-Path $Target "apps\api")
         try {
-            # cd into apps\api so the seed picks up .env and uses
-            # the api package's local node_modules.
-            # --env-file: Node 20.6+ loads .env before running the
-            # script. Prisma's CLI loads .env on its own, but a
-            # plain `node seed.js` doesn't, so the seed script's
-            # PrismaClient() can't find DATABASE_URL otherwise.
-            & node --env-file=.env "dist\scripts\seed.js"
+            # Read .env manually and inject vars into the child
+            # process env. Avoids the Node --env-file BOM-parsing
+            # bug entirely -- the file's encoding doesn't matter
+            # because PowerShell's Get-Content strips the BOM.
+            # cd is already apps\api, so .env resolves here.
+            $envLines = Get-Content -LiteralPath ".env" -ErrorAction SilentlyContinue
+            foreach ($line in $envLines) {
+                $trimmed = $line.Trim()
+                if (-not $trimmed -or $trimmed.StartsWith("#")) { continue }
+                $eq = $trimmed.IndexOf("=")
+                if ($eq -le 0) { continue }
+                $key = $trimmed.Substring(0, $eq).Trim()
+                $val = $trimmed.Substring($eq + 1).Trim()
+                # Strip surrounding quotes if the operator quoted it.
+                if (($val.StartsWith('"') -and $val.EndsWith('"')) -or
+                    ($val.StartsWith("'") -and $val.EndsWith("'"))) {
+                    $val = $val.Substring(1, $val.Length - 2)
+                }
+                Set-Item -Path "env:$key" -Value $val
+            }
+            & node "dist\scripts\seed.js"
             if ($LASTEXITCODE -ne 0) { Fail "seed failed." }
         } finally {
             Pop-Location
