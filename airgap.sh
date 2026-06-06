@@ -195,15 +195,34 @@ do_install() {
     fi
 
     stage "Copying repo into ${TARGET}"
-    # If the target already has a built repo from a prior install,
-    # skip the slow rsync. --force-repo-copy overrides.
+    # Skip the rsync if THIS bundle was already applied. Stamp the
+    # bundle's manifest hash into the target as .airgap-installed-from
+    # on success; the next install re-reads and re-copies only when
+    # the bundle changes (e.g. fresh re-pack). --force-repo-copy
+    # overrides.
+    BUNDLE_STAMP=""
+    if [ -f "${SOURCE}/manifest.json" ]; then
+        BUNDLE_STAMP=$(sha256sum "${SOURCE}/manifest.json" | awk '{print $1}')
+    fi
+    INSTALLED_STAMP_FILE="${TARGET}/.airgap-installed-from"
+    INSTALLED_STAMP=""
+    if [ -f "${INSTALLED_STAMP_FILE}" ]; then
+        INSTALLED_STAMP=$(cat "${INSTALLED_STAMP_FILE}" 2>/dev/null | tr -d '[:space:]')
+    fi
     if [ -z "${FORCE_REPO_COPY:-}" ] && \
+       [ -n "${BUNDLE_STAMP}" ] && [ "${BUNDLE_STAMP}" = "${INSTALLED_STAMP}" ] && \
        [ -f "${TARGET}/apps/api/dist/main.js" ] && \
        [ -d "${TARGET}/apps/web/.next" ]; then
-        ok "Repo already at ${TARGET} (skipping copy; pass --force-repo-copy to re-apply)."
+        ok "Same bundle already installed at ${TARGET} (skipping; --force-repo-copy to override)."
     else
+        if [ -z "${FORCE_REPO_COPY:-}" ] && [ -f "${TARGET}/apps/api/dist/main.js" ]; then
+            note "Target has a different bundle installed -- re-copying."
+        fi
         mkdir -p "${TARGET}"
         rsync -a "${SOURCE}/repo/" "${TARGET}/"
+        if [ -n "${BUNDLE_STAMP}" ]; then
+            echo "${BUNDLE_STAMP}" > "${INSTALLED_STAMP_FILE}"
+        fi
         ok "Repo at ${TARGET}"
     fi
 
