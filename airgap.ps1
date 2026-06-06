@@ -532,7 +532,11 @@ Common causes:
         try {
             # cd into apps\api so the seed picks up .env and uses
             # the api package's local node_modules.
-            & node "dist\scripts\seed.js"
+            # --env-file: Node 20.6+ loads .env before running the
+            # script. Prisma's CLI loads .env on its own, but a
+            # plain `node seed.js` doesn't, so the seed script's
+            # PrismaClient() can't find DATABASE_URL otherwise.
+            & node --env-file=.env "dist\scripts\seed.js"
             if ($LASTEXITCODE -ne 0) { Fail "seed failed." }
         } finally {
             Pop-Location
