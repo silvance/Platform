@@ -395,12 +395,13 @@ function Invoke-Install {
             $nodeMsi = Join-Path $Source "installers\node.msi"
             if (-not (Test-Path -LiteralPath $nodeMsi)) { Fail "node.msi missing in bundle." }
             # /L*V <log> records the MSI's internal error so future
-            # 1603s have a paper trail. /qn = quiet. ADDLOCAL omitted
-            # so the MSI's default feature set is used (specifying
-            # ADDLOCAL=ALL can fail on feature-table changes).
+            # 1603s have a paper trail. /qn = quiet. ADDLOCAL=ALL
+            # pulls in npm + corepack explicitly (matches what the
+            # script used before the 1603 fix; only the
+            # already-installed-skip is new behaviour).
             $msiLog = Join-Path $env:TEMP "ci-cyber-lab-node-msi.log"
             $p = Start-Process -FilePath msiexec.exe `
-                -ArgumentList @("/i", "`"$nodeMsi`"", "/qn", "/norestart", "/L*V", "`"$msiLog`"") `
+                -ArgumentList @("/i", "`"$nodeMsi`"", "/qn", "/norestart", "/L*V", "`"$msiLog`"", "ADDLOCAL=ALL") `
                 -Wait -PassThru
             if ($p.ExitCode -ne 0) {
                 Fail @"
