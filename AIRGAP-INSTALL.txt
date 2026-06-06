@@ -1,7 +1,6 @@
-CI Cyber Lab -- Air-gap install instructions
-===========================================
+CI Cyber Lab -- Air-gap install instructions (Windows)
+======================================================
 
-**********************************************************************
 **********************************************************************
 **                                                                  **
 **   READ THIS BEFORE YOU CLONE THE REPO:                           **
@@ -10,75 +9,53 @@ CI Cyber Lab -- Air-gap install instructions
 **                                                                  **
 **   Most USB sticks ship FAT32 or exFAT. Cloning the repo directly **
 **   to a fresh USB will appear to work, then break partway through **
-**   `pnpm install` with confusing rename errors. pnpm uses NTFS    **
-**   symbolic links for its node_modules layout; FAT32 and exFAT    **
-**   do not support them.                                           **
+**   `pnpm install` -- pnpm uses NTFS symbolic links for its        **
+**   node_modules layout; FAT32 and exFAT do not support them.      **
 **                                                                  **
-**   What to do:                                                    **
+**   Recommended: clone to C:\, point -Output at the USB. The       **
+**   bundle on the USB is plain files; exFAT / FAT32 is fine for    **
+**   THAT side. Only the WORKING REPO needs NTFS.                   **
 **                                                                  **
-**   1. (Recommended) Clone to your C:\ drive, then point the       **
-**      pack script's -Output at the USB. The bundle on the USB     **
-**      is just plain files; exFAT / FAT32 is fine for THAT part.   **
+**       cd C:\                                                     **
+**       git clone <repo-url> platform                              **
+**       cd C:\platform                                             **
+**       .\airgap.ps1 -Mode Pack -Output E:\ci-cyber-lab-bundle     **
 **                                                                  **
-**          cd C:\                                                  **
-**          git clone <repo-url> platform                           **
-**          cd C:\platform                                          **
-**          .\airgap.ps1 -Mode Pack -Output E:\ci-cyber-lab-bundle  **
+**   Check a drive's filesystem:                                    **
+**       (Get-Volume -DriveLetter E).FileSystemType                 **
 **                                                                  **
-**   2. Reformat the drive to NTFS (DESTRUCTIVE; back up first):    **
-**          format E: /FS:NTFS /Q                                   **
-**                                                                  **
-**   Check your drive's current filesystem with:                    **
-**          (Get-Volume -DriveLetter E).FileSystemType              **
-**                                                                  **
-**   The script will hard-abort with an on-screen banner if you     **
-**   try to pack from a non-NTFS drive (use -AllowNonNtfs to        **
-**   bypass only if you have set node-linker=hoisted in .npmrc).    **
+**   The script hard-aborts with an on-screen banner if you try to  **
+**   pack from a non-NTFS drive. -AllowNonNtfs bypasses only if     **
+**   you've set node-linker=hoisted in .npmrc.                      **
 **                                                                  **
 **********************************************************************
-**********************************************************************
 
-TL;DR -- two commands, one per box:
 
-  Online (internet) box, from the repo root:
+TL;DR -- two commands, one per box
+----------------------------------
+
+  Online box, from the repo root:
       .\airgap.ps1 -Mode Pack
-      (defaults to <repo-drive>:\ci-cyber-lab-bundle; override with
-       -Output <path> if you want the bundle elsewhere.)
+      (defaults to <repo-drive>:\ci-cyber-lab-bundle; -Output <path>
+       for elsewhere.)
 
   Air-gapped box, elevated PowerShell, from the USB:
-      .\airgap.ps1 -Mode Install -Source E:\ci-cyber-lab-bundle -Target C:\ci-cyber-lab -Seed
+      .\airgap.ps1 -Mode Install -Source E:\ci-cyber-lab-bundle `
+                                 -Target C:\ci-cyber-lab -Seed
 
-  Need a refresher at the console?  .\airgap.ps1  (prints a banner.)
+  Refresher at the console:  .\airgap.ps1  (prints a banner.)
 
-(If you ran .\airgap.ps1 without arguments before this change, you
-saw a "Supply values for the following parameters: Mode:" prompt.
-That was PowerShell's default behaviour for a missing mandatory
-parameter. The script now prints the banner above instead -- type
-Ctrl+C if you're still at that old prompt, then run it again.)
-
-You have two boxes:
-
-  - ONLINE BOX  -- has internet, can pull from GitHub + npm.
-  - OFFLINE BOX -- the air-gapped target where the platform will live.
-
-You will:
-
-  1. Run airgap.ps1 -Mode Pack on the online box to build a USB bundle.
-  2. Carry the USB to the offline box.
-  3. Run airgap.ps1 -Mode Install on the offline box.
-
-Both boxes are Windows. PowerShell 5.1 (built into Windows 10/11) is fine.
+Both boxes are Windows. PowerShell 5.1 (built in to Win 10/11) is fine.
 
 
 --------------------------------------------------------------------
 PHASE 1 -- Build the bundle on the ONLINE box
 --------------------------------------------------------------------
 
-Prereqs on the online box:
+Prereqs:
   - Node.js >= 20.11   (https://nodejs.org)
   - Git                (https://git-scm.com)
-  - PowerShell 5.1+    (built in)
-  - The repo cloned somewhere local
+  - The repo cloned to an NTFS drive (see banner above)
   - A USB drive with at least 5 GB free
 
 Steps:
@@ -91,24 +68,18 @@ Steps:
 
        .\airgap.ps1 -Mode Pack
 
-     The bundle defaults to <repo-drive>:\ci-cyber-lab-bundle --
-     so if you cloned to I:\platform, the bundle lands at
-     I:\ci-cyber-lab-bundle automatically. Pass -Output <path>
-     if you want it somewhere else (e.g. a different USB).
+     What it does:
+       - downloads the Node.js MSI       (~30 MB)
+       - downloads the PostgreSQL EXE    (~300 MB)
+       - runs pnpm install + prisma generate + a production build
+       - copies the repo + node_modules into the bundle directory
+       - writes manifest.json + INSTALL.txt into the bundle root
 
-     The script will:
-       - download the Node.js installer        (~30 MB)
-       - download the PostgreSQL installer     (~300 MB)
-       - run pnpm install + prisma generate + a production build
-       - copy the repo + node_modules to the bundle directory
-       - write manifest.json and INSTALL.txt into the bundle root
-
-     Expect 10-30 minutes depending on disk + connection speed.
+     Expect 10-30 minutes.
 
   4. When you see "Bundle complete", eject the USB.
 
-Optional overrides (defaults are fine for most cases):
-
+Optional overrides:
   -NodeMsiUrl <url>           Newer Node LTS MSI
   -PostgresInstallerUrl <url> Different Postgres major version
 
@@ -117,63 +88,56 @@ Optional overrides (defaults are fine for most cases):
 PHASE 2 -- Install on the OFFLINE box
 --------------------------------------------------------------------
 
-Prereqs on the offline box:
+Prereqs:
   - Local administrator rights
-  - PowerShell 5.1+ (built in)
   - At least 5 GB free under C:\ (or wherever you point -Target)
 
 Steps:
 
   1. Plug the USB in. Note its drive letter (e.g. E:).
 
-  2. Open PowerShell AS ADMINISTRATOR. Right-click PowerShell, choose
-     "Run as administrator". Confirm the title bar shows "Administrator".
+  2. Open PowerShell AS ADMINISTRATOR (right-click PowerShell -> "Run
+     as administrator"; confirm the title bar says "Administrator").
 
-  3. If PowerShell refuses to run unsigned local scripts, allow this
-     session only:
+  3. If PowerShell refuses unsigned local scripts, allow this session:
 
        Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 
-  4. Run the installer. From the USB:
+  4. From the USB:
 
        cd E:\ci-cyber-lab-bundle\repo
-       .\airgap.ps1 -Mode Install -Source E:\ci-cyber-lab-bundle -Target C:\ci-cyber-lab -Seed
+       .\airgap.ps1 -Mode Install -Source E:\ci-cyber-lab-bundle `
+                                  -Target C:\ci-cyber-lab -Seed
 
      What happens, in order:
 
-     a. Node.js installs silently. (Use -SkipNode if it's already there.)
+     a. Node.js installs silently. (-SkipNode if it's already there.)
 
-     b. The PostgreSQL installer opens. It is interactive on purpose:
-        you choose the postgres-user password. Defaults for the rest
-        are fine.
+     b. The PostgreSQL installer opens. It's interactive on purpose:
+        you choose the postgres-user password.
 
         REMEMBER THE POSTGRES PASSWORD. You'll paste it into a
-        DATABASE_URL in the next step.
+        DATABASE_URL in step (d).
 
-        (Use -SkipPostgres if a Postgres server is already running
-        on this machine.)
+        (-SkipPostgres if a Postgres server is already running here.)
 
-     c. The repo copies to C:\ci-cyber-lab (or wherever you pointed
-        -Target). This includes a pre-built node_modules so the
-        offline box doesn't need to resolve any npm packages.
+     c. The repo copies to -Target. This includes a pre-built
+        node_modules, so the offline box never resolves npm packages.
 
      d. The script prompts for DATABASE_URL. Paste something like:
 
           postgresql://postgres:YOUR_PASSWORD@localhost:5432/ci_cyber_lab
 
-        You can change the database name; you'll create the database
-        in step (e) if it doesn't exist.
+        If the database doesn't exist yet, create it in another
+        PowerShell:
 
-     e. Prisma migrations apply. If the database doesn't exist yet,
-        create it first (one-time) -- in a separate PowerShell:
+          & "C:\Program Files\PostgreSQL\16\bin\psql.exe" `
+            -U postgres -c "CREATE DATABASE ci_cyber_lab;"
 
-          & "C:\Program Files\PostgreSQL\16\bin\psql.exe" -U postgres -c "CREATE DATABASE ci_cyber_lab;"
+     e. Prisma migrations apply. Idempotent -- safe to re-run.
 
-        Then re-run the install command. Prisma is idempotent -- it
-        skips already-applied migrations.
-
-     f. If -Seed was passed, the seed script populates the curated
-        challenge catalog. Skip the flag and run it later with:
+     f. If -Seed was passed, the curated challenge catalog is seeded.
+        To seed later instead:
 
           cd C:\ci-cyber-lab
           node apps\api\dist\scripts\seed.js
@@ -183,9 +147,9 @@ Steps:
 PHASE 3 -- Start the platform
 --------------------------------------------------------------------
 
-The script does NOT register Windows services for you (operator
-choice -- you may want NSSM, you may want a scheduled task, you may
-want to run under a service account). For a quick verification:
+The script does NOT register Windows services (operator choice --
+NSSM, scheduled task, or a service account, per your sysadmin
+policy). For a quick verification:
 
   API (port 4000):
       cd C:\ci-cyber-lab\apps\api
@@ -195,26 +159,21 @@ want to run under a service account). For a quick verification:
       cd C:\ci-cyber-lab\apps\web
       node node_modules\next\dist\bin\next start -p 3000
 
-Open http://localhost:3000 in a browser on the same box. You should
-see the login screen.
+Open http://localhost:3000 on the same box -- you should see login.
 
 First admin account:
-  The seed step creates an admin with deterministic default
-  credentials so you don't have to dig through scrollback:
-
       Email:    admin@example.local
       Password: CICyberLab-Admin-1
 
-  CHANGE THE PASSWORD IMMEDIATELY on first login -- this is a
-  known default. Rotate via the admin profile menu in the web
-  app, or from PowerShell:
+CHANGE THE PASSWORD IMMEDIATELY on first login -- this is a known
+default. Rotate via the admin profile menu, or from PowerShell:
 
       cd C:\ci-cyber-lab\apps\api
       node dist\scripts\reset-password.js `
           --email admin@example.local `
           --password '<new-password>'
 
-  Override the seeded defaults at install time:
+Override the seeded defaults at install time:
 
       .\airgap.ps1 -Mode Install ... -AdminEmail you@org.local `
                                      -AdminPassword 'YourPassword123'
@@ -224,22 +183,22 @@ First admin account:
 What the script does NOT automate (intentionally)
 --------------------------------------------------------------------
 
-These are operator decisions that vary too much site-to-site:
+Operator decisions that vary too much site-to-site:
 
-  - Choosing the postgres-user password.
-  - Choosing where Postgres puts its data directory.
-  - Opening Windows Firewall ports if you want other hosts on the
-    LAN to reach the web app. (By default, both services bind to
-    localhost only -- safe for a single-box install.)
+  - The postgres-user password.
+  - Where Postgres puts its data directory.
+  - Windows Firewall rules. By default both services bind to
+    localhost only -- safe for a single-box install. Open ports
+    only if other hosts on the LAN need to reach the web app.
   - Running the API + web as a service (NSSM, scheduled task,
     sc.exe -- pick what your IA / sysadmin policy requires).
-  - TLS termination (none configured by default -- use IIS or
-    Caddy in front of the API + web if you want HTTPS).
-  - Backups of the Postgres data directory and the artifact
-    storage folder under C:\ci-cyber-lab\apps\api\data
-    (or wherever ARTIFACT_STORAGE_ROOT points).
+  - TLS termination (none by default -- IIS or Caddy in front of
+    the API + web if you want HTTPS).
+  - Backups: the Postgres data directory and the artifact storage
+    folder under C:\ci-cyber-lab\apps\api\data (or wherever
+    ARTIFACT_STORAGE_ROOT points).
 
-The README and CLAUDE.md in the repo cover environment variables
+README.md and CLAUDE.md in the repo cover environment variables
 in more depth.
 
 
@@ -248,78 +207,38 @@ Troubleshooting
 --------------------------------------------------------------------
 
 "running scripts is disabled on this system"
-  Run:  Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-  in the same PowerShell window before running airgap.ps1.
-
-"Cannot find module '@prisma/engines'" during install (or any
-"Cannot find module" for a transitive dep)
-  The bundle was packed without -- config.node-linker=hoisted.
-  pnpm's default install uses a .pnpm/ virtual store with symlinks
-  for transitive deps; robocopy dereferences those symlinks during
-  the bundle copy, which breaks resolution from a hoisted package
-  (like `prisma`) back to its sibling deps (like @prisma/engines).
-  The script now passes --config.node-linker=hoisted during pack to
-  produce a flat npm-style node_modules that survives the copy.
-  Re-run pack from a refreshed clone (so node_modules is rebuilt
-  from scratch under the hoisted linker), then re-install.
+  Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+  in the same PowerShell window, then re-run airgap.ps1.
 
 "Node MSI returned 1603" during install
-  1603 is MSI's generic "fatal install error". Common causes:
-    - Node is already installed on this box (most common after
-      iterating on the install). The script now auto-detects an
-      existing `node` on PATH and skips the MSI, but if you hit
-      this on an older script version just pass -SkipNode:
-          .\airgap.ps1 -Mode Install -Source ... -Target ... -SkipNode
-    - A pending Windows reboot from a prior install. Reboot, then
-      re-run.
-    - An MSI custom-action failure. Open the install log at:
-          %TEMP%\ci-cyber-lab-node-msi.log
-      and search for "Return value 3" -- the line just above names
-      the failing action.
+  1603 = MSI's generic fatal-install error. Causes, in order:
+    - Node already installed. The script auto-detects and skips
+      the MSI; if you hit this on an older script version, pass
+      -SkipNode.
+    - A pending Windows reboot. Reboot, then re-run.
+    - An MSI custom-action failure. Open the install log at
+      %TEMP%\ci-cyber-lab-node-msi.log and search "Return value 3" --
+      the line above names the failing action.
 
 "corepack: command not found" during pack
   Reinstall Node.js >= 20.11 from nodejs.org; corepack ships with it.
 
 "The term 'pnpm' is not recognized" during pack
-  The script will now `npm install -g pnpm@9.12.0` automatically
-  if pnpm isn't found on PATH. If that step itself fails, check
-  that `npm config get prefix` returns a directory that's on
-  your PATH (the default %APPDATA%\npm is -- anything else won't
-  be unless you put it there). Then re-run the same Pack command.
-
-"ERR_PNPM_ENOENT" or "no such file or directory, rename" during pack
-  Half-finished state from a prior interrupted install. The script
-  now wipes node_modules before each Pack run, so simply re-run.
-  If it persists, check that your repo lives on an NTFS or ReFS
-  volume -- FAT32 / exFAT (typical for USB sticks) cannot host a
-  pnpm node_modules. Check with:
-      (Get-Volume -DriveLetter I).FileSystemType
-  (substitute your drive letter). If it's not NTFS, clone the
-  repo to C:\ or another NTFS drive and re-run from there.
-
-"EPERM: operation not permitted, symlink" during web build
-  Next.js's standalone-bundle output uses NTFS symlinks, which
-  require admin or Windows Developer Mode. The script now
-  temporarily disables 'output: "standalone"' in
-  apps/web/next.config.js for the duration of the airgap build
-  and restores it afterward -- Install mode uses `next start`
-  against the regular .next/ directory, so the standalone bundle
-  isn't needed anyway. Just re-run the same Pack command. If the
-  failure persists, you can enable Windows Developer Mode
-  (Settings -> Privacy & security -> For developers) which lets
-  non-admin users create symlinks.
+  The script tries `npm install -g pnpm@9.12.0` automatically. If
+  THAT step fails, check `npm config get prefix` returns a directory
+  on your PATH (default %APPDATA%\npm is). Then re-run Pack.
 
 "pnpm install" pulls something during pack and fails
-  You're on the online box but behind a corporate proxy. Set
-  HTTPS_PROXY / HTTP_PROXY before running airgap.ps1.
+  Online box behind a corporate proxy. Set HTTPS_PROXY / HTTP_PROXY
+  before running airgap.ps1.
 
 prisma migrate deploy fails with "database does not exist"
-  Create it once with psql (see Phase 2 step e), then re-run the
-  install with the same -Source and -Target.
+  Create it once with psql (Phase 2 step d), then re-run Install
+  with the same -Source and -Target.
 
 Postgres installer hangs or won't start during install
-  The Bitrock installer is sensitive to weird console states.
-  Run it directly from the bundle:
+  The Bitrock installer is sensitive to weird console states. Run
+  it directly:
       E:\ci-cyber-lab-bundle\installers\postgresql.exe
   then re-run airgap.ps1 with -SkipPostgres.
 
