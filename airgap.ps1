@@ -73,11 +73,13 @@ param(
     # copy in that case to speed up troubleshooting re-runs).
     [switch]$ForceRepoCopy,
 
-    # Pack mode: bypass the NTFS / ReFS filesystem check on the
-    # repo drive. pnpm fundamentally requires NTFS-style symlinks;
-    # this switch only exists for power users who have explicitly
-    # configured `node-linker=hoisted` in .npmrc to work around it.
-    [switch]$AllowNonNtfs
+    # Install mode: ports the printed start commands tell the
+    # operator to bind to. The script does NOT actually start the
+    # services -- these are documentation values, so operators
+    # who change them here also need to use the same port when
+    # they `node dist\main.js`.
+    [int]$ApiPort = 4000,
+    [int]$WebPort = 3000
 )
 
 $ErrorActionPreference = "Stop"
@@ -103,51 +105,31 @@ function Test-IsAdmin {
     return $p.IsInRole([System.Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 
-# Loud banner shown when the repo drive isn't NTFS / ReFS. Most USB
-# sticks ship FAT32 or exFAT, neither of which supports the symlinks
-# pnpm uses, so the operator almost always hits this if they clone
-# straight to a USB. We abort before pnpm install -- silent
-# corruption later is much worse than a hard stop now.
-function Show-NtfsAbort {
-    param([string]$DriveLetter, [string]$FsType)
-    $bar = "*" * 70
-    Write-Host ""
-    Write-Host $bar -ForegroundColor Red
-    Write-Host "*                                                                    *" -ForegroundColor Red
-    Write-Host "*   THE REPO DRIVE MUST BE NTFS.                                     *" -ForegroundColor Red
-    Write-Host "*                                                                    *" -ForegroundColor Red
-    Write-Host ("*   Drive {0}: is {1,-12} -- this WILL break pnpm install.        *" -f $DriveLetter, $FsType) -ForegroundColor Red
-    Write-Host "*                                                                    *" -ForegroundColor Red
-    Write-Host "*   Most USB sticks ship FAT32 or exFAT. pnpm uses NTFS-only         *" -ForegroundColor Red
-    Write-Host "*   symbolic links for its node_modules layout; FAT32 and exFAT      *" -ForegroundColor Red
-    Write-Host "*   silently corrupt the install partway through.                    *" -ForegroundColor Red
-    Write-Host "*                                                                    *" -ForegroundColor Red
-    Write-Host "*   YOUR OPTIONS:                                                    *" -ForegroundColor Red
-    Write-Host "*                                                                    *" -ForegroundColor Red
-    Write-Host "*   1. (Recommended) Clone the repo to C:\ and re-run from there.    *" -ForegroundColor Red
-    Write-Host "*          cd C:\                                                    *" -ForegroundColor Red
-    Write-Host "*          git clone <repo-url> platform                             *" -ForegroundColor Red
-    Write-Host "*          cd C:\platform                                            *" -ForegroundColor Red
-    Write-Host ("*          .\airgap.ps1 -Mode Pack -Output {0}:\bundle              *" -f $DriveLetter) -ForegroundColor Red
-    Write-Host "*                                                                    *" -ForegroundColor Red
-    Write-Host "*      The USB output drive can stay exFAT/FAT32 -- the bundle is    *" -ForegroundColor Red
-    Write-Host "*      just regular files. Only the WORKING REPO needs NTFS.         *" -ForegroundColor Red
-    Write-Host "*                                                                    *" -ForegroundColor Red
-    Write-Host "*   2. Reformat the drive to NTFS (DESTRUCTIVE; back up first):      *" -ForegroundColor Red
-    Write-Host ("*          format {0}: /FS:NTFS /Q                                  *" -f $DriveLetter) -ForegroundColor Red
-    Write-Host "*                                                                    *" -ForegroundColor Red
-    Write-Host "*   3. If you know what you're doing and have configured             *" -ForegroundColor Red
-    Write-Host "*      node-linker=hoisted in .npmrc, re-run with -AllowNonNtfs.     *" -ForegroundColor Red
-    Write-Host "*                                                                    *" -ForegroundColor Red
-    Write-Host $bar -ForegroundColor Red
-    Write-Host ""
+# Resolve a module's bin entry via Node's own resolution from a
+# specific cwd. Returns the absolute path or $null. Used so the
+# install side finds `prisma` / `next` wherever pnpm's hoisted
+# install put them (workspace root vs per-workspace node_modules).
+function Resolve-ModuleBin {
+    param(
+        [Parameter(Mandatory)][string]$Cwd,
+        [Parameter(Mandatory)][string]$RelativePath
+    )
+    Push-Location $Cwd
+    try {
+        $resolved = & node -e "try{console.log(require.resolve('$RelativePath'))}catch{process.exit(2)}" 2>$null
+        if ($LASTEXITCODE -ne 0 -or -not $resolved) { return $null }
+        return $resolved
+    } finally {
+        Pop-Location
+    }
 }
 
-# `corepack enable` + `corepack prepare pnpm@... --activate` creates
-# a pnpm shim, but the directory it lands in may not be on this
-# PowerShell session's PATH (env changes don't propagate to a
-# running session). Try, in order: PATH as-is, PATH refreshed from
-# the registry, then known shim locations.
+# Locate pnpm. Installed via `npm install -g pnpm@<v>` (see
+# Invoke-Pack) which writes a shim to %APPDATA%\npm. That dir is
+# already on PATH after a standard Node install, but the running
+# PowerShell session was started before npm ran, so plain `pnpm`
+# can still miss until PATH refreshes. Try, in order: PATH as-is,
+# PATH refreshed from the registry, then known shim locations.
 function Find-PnpmShim {
     $cmd = Get-Command pnpm -ErrorAction SilentlyContinue
     if ($cmd) { return $cmd.Source }
@@ -172,18 +154,131 @@ function Find-PnpmShim {
     return $null
 }
 
+# Pack: downloads the Node MSI + Postgres EXE into the bundle.
+function Save-PackInstallers {
+    param([string]$InstallersDir)
+    Write-Stage "Downloading Node.js installer"
+    $nodePath = Join-Path $InstallersDir "node.msi"
+    Write-Note "$NodeMsiUrl"
+    Invoke-WebRequest -Uri $NodeMsiUrl -OutFile $nodePath -UseBasicParsing
+    Write-OK "Saved $nodePath ($([math]::Round((Get-Item $nodePath).Length / 1MB, 1)) MB)"
+
+    Write-Stage "Downloading PostgreSQL installer"
+    $pgPath = Join-Path $InstallersDir "postgresql.exe"
+    Write-Note "$PostgresInstallerUrl"
+    Invoke-WebRequest -Uri $PostgresInstallerUrl -OutFile $pgPath -UseBasicParsing
+    Write-OK "Saved $pgPath ($([math]::Round((Get-Item $pgPath).Length / 1MB, 1)) MB)"
+}
+
+# Pack: ensures pnpm is available, returns the absolute shim path.
+function Initialize-PackPnpm {
+    $pnpm = Find-PnpmShim
+    if (-not $pnpm) {
+        Write-Note "pnpm not found -- installing via 'npm install -g pnpm@9.12.0'"
+        & npm install -g "pnpm@9.12.0"
+        if ($LASTEXITCODE -ne 0) { Fail "npm install -g pnpm failed." }
+        $pnpm = Find-PnpmShim
+    }
+    if (-not $pnpm) {
+        Fail @"
+pnpm not found after 'npm install -g pnpm@9.12.0'.
+%APPDATA%\npm should be on PATH after a standard Node install.
+Check that 'npm config get prefix' returns a writable directory
+on PATH, then re-run.
+"@
+    }
+    Write-Note "pnpm at $pnpm"
+    return $pnpm
+}
+
+# Pack: clean install + production builds. Includes the temporary
+# next.config.js standalone-disable so the web build doesn't need
+# admin / Developer Mode for NTFS symlinks. Restores on the way out.
+function Invoke-PackBuilds {
+    param([string]$RepoRoot, [string]$Pnpm)
+
+    # Clear any half-finished state from a prior failed run.
+    # pnpm's "rename to .ignored_<dep>" step fails noisily if a
+    # previous install was interrupted; starting clean avoids it.
+    # The pnpm content-addressable store is elsewhere so we're
+    # not throwing away any download work.
+    $nodeModuleDirs = @(
+        (Join-Path $RepoRoot "node_modules"),
+        (Join-Path $RepoRoot "apps\api\node_modules"),
+        (Join-Path $RepoRoot "apps\web\node_modules"),
+        (Join-Path $RepoRoot "packages\contracts\node_modules")
+    )
+    foreach ($p in $nodeModuleDirs) {
+        if (Test-Path -LiteralPath $p) {
+            Write-Note "Removing $p (clean slate for pnpm install)"
+            # `cmd /c rmdir /s /q` is 5-10x faster than
+            # Remove-Item -Recurse -Force on large directory trees
+            # because it skips PowerShell's per-file provider
+            # marshaling. Stderr suppressed because rmdir is chatty
+            # on locked files; result implicitly verified by the
+            # Test-Path on the next iteration.
+            & cmd /c "rmdir /s /q `"$p`"" 2>$null
+        }
+    }
+
+    # node-linker=hoisted: install in a flat node_modules layout
+    # (npm-style), not pnpm's default .pnpm/ virtual store. This
+    # is the form that survives a robocopy intact -- pnpm's
+    # default layout uses symlinks for transitive-dep resolution,
+    # which break after robocopy dereferences them and lead to
+    # "Cannot find module '@prisma/engines'" at runtime on the
+    # install target.
+    & $Pnpm install --frozen-lockfile --config.node-linker=hoisted
+    if ($LASTEXITCODE -ne 0) { Fail "pnpm install failed." }
+    & $Pnpm --filter "@ci-train/contracts" build
+    if ($LASTEXITCODE -ne 0) { Fail "contracts build failed." }
+    & $Pnpm --filter "@ci-train/api" prisma:generate
+    if ($LASTEXITCODE -ne 0) { Fail "prisma generate failed." }
+    & $Pnpm --filter "@ci-train/api" build
+    if ($LASTEXITCODE -ne 0) { Fail "api build failed." }
+
+    # Next.js's `output: "standalone"` build step creates real
+    # NTFS symlinks under apps/web/.next/standalone/, which
+    # requires admin (or Developer Mode) on Windows. Pack mode
+    # shouldn't need admin, and we don't NEED the standalone
+    # bundle -- Install mode runs `next start` against the
+    # regular .next/ directory. Temporarily disable standalone
+    # for this build and restore the config afterward.
+    $webConfig = Join-Path $RepoRoot "apps\web\next.config.js"
+    $webConfigBackup = "$webConfig.airgap-backup"
+    $standaloneDisabled = $false
+    if (Test-Path -LiteralPath $webConfig) {
+        $original = Get-Content -LiteralPath $webConfig -Raw
+        $patched = $original -replace 'output:\s*["'']standalone["''],?', '// airgap: standalone disabled (Windows symlinks need admin)'
+        if ($patched -ne $original) {
+            Copy-Item -LiteralPath $webConfig -Destination $webConfigBackup -Force
+            Set-Content -LiteralPath $webConfig -Value $patched -Encoding UTF8 -NoNewline
+            $standaloneDisabled = $true
+            Write-Note "Temporarily disabled 'output: standalone' in next.config.js for build."
+        }
+    }
+    try {
+        & $Pnpm --filter "@ci-train/web" build
+        if ($LASTEXITCODE -ne 0) { Fail "web build failed." }
+    } finally {
+        if ($standaloneDisabled -and (Test-Path -LiteralPath $webConfigBackup)) {
+            Move-Item -LiteralPath $webConfigBackup -Destination $webConfig -Force
+            Write-Note "Restored next.config.js."
+        }
+    }
+}
+
 # --- PACK -----------------------------------------------------
 function Invoke-Pack {
-    $repoRoot = (Resolve-Path -LiteralPath $PSScriptRoot).Path
+    $repoRoot = $PSScriptRoot
     if (-not (Test-Path -LiteralPath (Join-Path $repoRoot "package.json"))) {
         Fail "Run this script from the repo root (no package.json found next to airgap.ps1)."
     }
 
     # Default -Output to <repo-drive>:\ci-cyber-lab-bundle so the
-    # common case (cloned the repo to a USB, want the bundle on the
-    # same USB) needs no flags. The bundle drive can be exFAT/FAT32
-    # if it's separate from the repo drive (only the working repo
-    # needs NTFS -- see the NTFS abort banner).
+    # common case (cloned the repo to a USB, want the bundle on
+    # the same USB) needs no flags. The bundle drive can be
+    # exFAT/FAT32 if separate from the repo drive.
     if (-not $Output) {
         $repoDrive = (Get-Item $repoRoot).PSDrive.Name
         $Output = "${repoDrive}:\ci-cyber-lab-bundle"
@@ -207,130 +302,22 @@ function Invoke-Pack {
     $repoDest      = Join-Path $Output "repo"
     New-Item -ItemType Directory -Force -Path $installersDir | Out-Null
 
-    Write-Stage "Downloading Node.js installer"
-    $nodePath = Join-Path $installersDir "node.msi"
-    Write-Note "$NodeMsiUrl"
-    Invoke-WebRequest -Uri $NodeMsiUrl -OutFile $nodePath -UseBasicParsing
-    Write-OK "Saved $nodePath ($([math]::Round((Get-Item $nodePath).Length / 1MB, 1)) MB)"
-
-    Write-Stage "Downloading PostgreSQL installer"
-    $pgPath = Join-Path $installersDir "postgresql.exe"
-    Write-Note "$PostgresInstallerUrl"
-    Invoke-WebRequest -Uri $PostgresInstallerUrl -OutFile $pgPath -UseBasicParsing
-    Write-OK "Saved $pgPath ($([math]::Round((Get-Item $pgPath).Length / 1MB, 1)) MB)"
+    Save-PackInstallers -InstallersDir $installersDir
 
     Write-Stage "Refreshing repo dependencies (pnpm install + Prisma generate)"
     Push-Location $repoRoot
     try {
-        # Originally this used `corepack enable` + `corepack prepare
-        # pnpm@<v> --activate`, but on Windows `corepack enable`
-        # writes shims to `C:\Program Files\nodejs\` which requires
-        # admin; without admin it silently fails and leaves no pnpm
-        # on PATH. `npm install -g` writes to %APPDATA%\npm which is
-        # user-writable AND already on PATH after a standard Node
-        # install -- far more reliable.
-        $pnpm = Find-PnpmShim
-        if (-not $pnpm) {
-            Write-Note "pnpm not found -- installing via 'npm install -g pnpm@9.12.0'"
-            & npm install -g "pnpm@9.12.0"
-            if ($LASTEXITCODE -ne 0) { Fail "npm install -g pnpm failed." }
-            $pnpm = Find-PnpmShim
-        }
-        if (-not $pnpm) {
-            Fail @"
-pnpm not found after 'npm install -g pnpm@9.12.0'.
-%APPDATA%\npm should be on PATH after a standard Node install.
-Check that 'npm config get prefix' returns a writable directory
-on PATH, then re-run.
-"@
-        }
-        Write-Note "pnpm at $pnpm"
-        # Clear any half-finished state from a prior failed run.
-        # pnpm's "rename to .ignored_<dep>" step fails noisily if a
-        # previous install was interrupted; starting clean avoids it.
-        # The pnpm content-addressable store is elsewhere so we're
-        # not throwing away any download work.
-        $repoNm  = Join-Path $repoRoot "node_modules"
-        $apiNm   = Join-Path $repoRoot "apps\api\node_modules"
-        $webNm   = Join-Path $repoRoot "apps\web\node_modules"
-        $cntrNm  = Join-Path $repoRoot "packages\contracts\node_modules"
-        foreach ($p in @($repoNm, $apiNm, $webNm, $cntrNm)) {
-            if (Test-Path -LiteralPath $p) {
-                Write-Note "Removing $p (clean slate for pnpm install)"
-                # `cmd /c rmdir /s /q` is 5-10x faster than
-                # Remove-Item -Recurse -Force on large directory
-                # trees because it skips PowerShell's per-file
-                # provider marshaling. Stderr is suppressed because
-                # rmdir is chatty on locked files; the result is
-                # verified by the Test-Path check on the next loop
-                # iteration anyway.
-                & cmd /c "rmdir /s /q `"$p`"" 2>$null
-            }
-        }
-        # Filesystem sanity check: pnpm requires NTFS-style symlinks
-        # for its node_modules/.pnpm/ layout. FAT32 and exFAT (the
-        # default format on most USB sticks) do NOT support symlinks
-        # and pnpm install will fail in confusing ways. Abort up
-        # front with reformat instructions; -AllowNonNtfs bypasses
-        # for the rare case the operator has wired `node-linker=
-        # hoisted` into .npmrc themselves.
+        $pnpm = Initialize-PackPnpm
+        # Filesystem note: we pass --config.node-linker=hoisted to
+        # pnpm install, so the bundle doesn't depend on NTFS-only
+        # symlinks the way pnpm's default layout did. FAT32/exFAT
+        # bundles work fine. Surface the FS type for awareness only.
         $repoDrive = (Get-Item $repoRoot).PSDrive.Name
         $vol = Get-Volume -DriveLetter $repoDrive -ErrorAction SilentlyContinue
         if ($vol -and $vol.FileSystemType -notin @("NTFS", "ReFS")) {
-            if ($AllowNonNtfs) {
-                Write-Host "WARN: drive ${repoDrive}: filesystem is $($vol.FileSystemType); proceeding because -AllowNonNtfs was set." -ForegroundColor Yellow
-            } else {
-                Show-NtfsAbort -DriveLetter $repoDrive -FsType $vol.FileSystemType
-                Fail "Repo drive ${repoDrive}: is $($vol.FileSystemType). Move the repo to an NTFS drive (e.g. C:\) and re-run, or pass -AllowNonNtfs if you know what you're doing."
-            }
+            Write-Note "Drive ${repoDrive}: is $($vol.FileSystemType). Hoisted node_modules works fine here, but the pnpm content-addressable store still needs NTFS-style hardlinks; if you hit weirdness, move the repo to C:\ and re-run."
         }
-
-        # node-linker=hoisted: install in a flat node_modules layout
-        # (npm-style), not pnpm's default .pnpm/ virtual store. This
-        # is the form that survives a robocopy intact -- pnpm's
-        # default layout uses symlinks for transitive-dep resolution,
-        # which break after robocopy dereferences them and lead to
-        # "Cannot find module '@prisma/engines'" at runtime on the
-        # install target.
-        & $pnpm install --frozen-lockfile --config.node-linker=hoisted
-        if ($LASTEXITCODE -ne 0) { Fail "pnpm install failed." }
-        # Prisma engines land in node_modules during postinstall;
-        # build the contracts + apps so the bundle ships ready-to-run.
-        & $pnpm --filter "@ci-train/contracts" build
-        if ($LASTEXITCODE -ne 0) { Fail "contracts build failed." }
-        & $pnpm --filter "@ci-train/api" prisma:generate
-        if ($LASTEXITCODE -ne 0) { Fail "prisma generate failed." }
-        & $pnpm --filter "@ci-train/api" build
-        if ($LASTEXITCODE -ne 0) { Fail "api build failed." }
-        # Next.js's `output: "standalone"` build step creates real
-        # NTFS symlinks under apps/web/.next/standalone/, which
-        # requires admin (or Developer Mode) on Windows. Pack mode
-        # shouldn't need admin, and we don't NEED the standalone
-        # bundle -- Install mode runs `next start` against the
-        # regular .next/ directory. Temporarily disable standalone
-        # for this build and restore the config afterward.
-        $webConfig = Join-Path $repoRoot "apps\web\next.config.js"
-        $webConfigBackup = "$webConfig.airgap-backup"
-        $standaloneDisabled = $false
-        if (Test-Path -LiteralPath $webConfig) {
-            $original = Get-Content -LiteralPath $webConfig -Raw
-            $patched = $original -replace 'output:\s*["'']standalone["''],?', '// airgap: standalone disabled (Windows symlinks need admin)'
-            if ($patched -ne $original) {
-                Copy-Item -LiteralPath $webConfig -Destination $webConfigBackup -Force
-                Set-Content -LiteralPath $webConfig -Value $patched -Encoding UTF8 -NoNewline
-                $standaloneDisabled = $true
-                Write-Note "Temporarily disabled 'output: standalone' in next.config.js for build."
-            }
-        }
-        try {
-            & $pnpm --filter "@ci-train/web" build
-            if ($LASTEXITCODE -ne 0) { Fail "web build failed." }
-        } finally {
-            if ($standaloneDisabled -and (Test-Path -LiteralPath $webConfigBackup)) {
-                Move-Item -LiteralPath $webConfigBackup -Destination $webConfig -Force
-                Write-Note "Restored next.config.js."
-            }
-        }
+        Invoke-PackBuilds -RepoRoot $repoRoot -Pnpm $pnpm
     } finally {
         Pop-Location
     }
@@ -347,7 +334,9 @@ on PATH, then re-run.
         "/XD", ".git", ".next\cache", "deploy", "out", ".turbo",
         "/XF", ".env", ".env.local", ".env.production"
     )
-    $rcArgs = @($repoRoot, $repoDest, "/MIR", "/R:1", "/W:1",
+    # /MT:8 = 8 parallel copy threads; 5-10x faster on the small-file
+    # trees that dominate node_modules.
+    $rcArgs = @($repoRoot, $repoDest, "/MIR", "/MT:8", "/R:1", "/W:1",
                 "/NFL", "/NDL", "/NP", "/NJH", "/NJS") + $excluded
     & robocopy @rcArgs | Out-Null
     # robocopy exit codes 0-7 are success; >=8 is failure.
@@ -377,7 +366,7 @@ on PATH, then re-run.
     Write-Stage "Bundle complete"
     Write-OK "Bundle: $Output"
     Write-OK "Eject the drive, walk it to the air-gapped box, and run:"
-    Write-Note "    .\airgap.ps1 -Mode Install -Source <bundle-path> -Target C:\ci-cyber-lab"
+    Write-Note "    .\airgap.ps1 -Mode Install -Source $Output -Target C:\ci-cyber-lab -Seed"
 }
 
 # --- INSTALL --------------------------------------------------
@@ -493,7 +482,7 @@ Common causes:
         if (-not (Test-Path -LiteralPath $Target)) {
             New-Item -ItemType Directory -Path $Target | Out-Null
         }
-        $rcArgs = @($repoSrc, $Target, "/MIR", "/R:1", "/W:1",
+        $rcArgs = @($repoSrc, $Target, "/MIR", "/MT:8", "/R:1", "/W:1",
                     "/NFL", "/NDL", "/NP", "/NJH", "/NJS")
         & robocopy @rcArgs | Out-Null
         if ($LASTEXITCODE -ge 8) { Fail "robocopy failed with code $LASTEXITCODE" }
@@ -515,21 +504,22 @@ Common causes:
         # --env-file parser treats as part of the first variable
         # name, breaking DATABASE_URL lookup in the seed script.
         Set-Content -LiteralPath $existingEnv -Value "DATABASE_URL=$dbUrl" -Encoding ASCII
-        Write-OK "Wrote $existingEnv"
+        # Tighten ACLs: the file holds a Postgres password. Strip
+        # inherited permissions and grant only the local
+        # Administrators group + the current user. The API runs as
+        # whoever launches `node dist\main.js`, so they need read.
+        & icacls "$existingEnv" /inheritance:r /grant:r "BUILTIN\Administrators:F" "$env:USERNAME:F" 2>$null | Out-Null
+        Write-OK "Wrote $existingEnv (admin + current user only)"
     }
 
     Write-Stage "Applying Prisma migrations"
-    Push-Location (Join-Path $Target "apps\api")
+    $apiDir = Join-Path $Target "apps\api"
+    $prismaCli = Resolve-ModuleBin -Cwd $apiDir -RelativePath "prisma/build/index.js"
+    if (-not $prismaCli) {
+        Fail "Could not resolve 'prisma/build/index.js' from $apiDir. Did pnpm install run during pack?"
+    }
+    Push-Location $apiDir
     try {
-        # Use Node's own resolution to find the prisma CLI entry,
-        # which is more robust than hardcoding apps/api/node_modules/
-        # /prisma/build/index.js -- pnpm in hoisted mode hoists
-        # workspace dev deps to the workspace root, so prisma may
-        # actually live at $Target/node_modules/prisma instead.
-        $prismaCli = & node -e "try{console.log(require.resolve('prisma/build/index.js'))}catch{process.exit(2)}" 2>$null
-        if ($LASTEXITCODE -ne 0 -or -not $prismaCli) {
-            Fail "Could not resolve 'prisma/build/index.js' from $Target\apps\api. Did pnpm install run during pack?"
-        }
         & node "$prismaCli" migrate deploy
         if ($LASTEXITCODE -ne 0) { Fail "prisma migrate deploy failed." }
     } finally {
@@ -576,17 +566,9 @@ Common causes:
         Write-Note "Skipping seed. Re-run with -Seed if you want to populate the catalog."
     }
 
-    # Resolve next's bin via Node from cwd=apps/web so the printed
-    # start command points at the right path. pnpm hoisted mode in
-    # a workspace hoists `next` to the workspace root, so
-    # apps/web/node_modules/next does NOT exist -- next lives at
-    # $Target\node_modules\next instead.
-    Push-Location (Join-Path $Target "apps\web")
-    try {
-        $nextBin = & node -e "try{console.log(require.resolve('next/dist/bin/next'))}catch{process.exit(2)}" 2>$null
-    } finally {
-        Pop-Location
-    }
+    $nextBin = Resolve-ModuleBin `
+        -Cwd (Join-Path $Target "apps\web") `
+        -RelativePath "next/dist/bin/next"
     if (-not $nextBin) {
         $nextBin = "<could not resolve 'next' bin -- check $Target\node_modules\next>"
     }
@@ -595,13 +577,14 @@ Common causes:
     Write-Host @"
 The platform is installed at $Target.
 
-To start the API (port 4000):
+To start the API (port $ApiPort):
     cd $Target\apps\api
+    `$env:PORT = $ApiPort
     node dist\main.js
 
-To start the web app (port 3000):
+To start the web app (port $WebPort):
     cd $Target\apps\web
-    node "$nextBin" start -p 3000
+    node "$nextBin" start -p $WebPort
 
 See AIRGAP-INSTALL.txt (also copied into the bundle root) for
 how to run these as services, configure HTTPS, and verify the
