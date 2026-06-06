@@ -266,17 +266,17 @@ What netscan doesn't support:
           {
             id: "no-no-payload",
             label:
-              "No. Netscan captures the socket's existence and state at the capture moment; it carries no payload bytes. \"Bytes were sent\" needs full packet capture or an EDR file-transfer event scoped to that process.",
+              "No. Netscan captures the **existence** and **state** of the socket at the capture moment; the kernel's connection table holds no payload bytes. A \"bytes were sent\" claim needs full packet capture from the window, an EDR file-transfer event scoped to that process, or a carve of the process's send/receive buffers from the dump itself.",
           },
           {
             id: "yes-established-means-sent",
             label:
-              "Yes. An ESTABLISHED TCP state means the three-way handshake completed and the connection is now in the data-transfer phase; reaching ESTABLISHED requires application-layer bytes to have crossed the link in both directions, so the socket's existence at that state is itself proof of data exchange.",
+              "Yes. ESTABLISHED means the three-way handshake completed and the connection is in the data-transfer phase; reaching ESTABLISHED requires the SYN / SYN-ACK / ACK exchange in both directions.",
           },
           {
             id: "yes-tcp443-implies-tls",
             label:
-              "Yes. The port-443 destination implies TLS traffic, and a TLS connection always carries content (the handshake itself is encrypted application data, and the session reaching the ESTABLISHED state means at least the ClientHello + ServerHello exchange completed). \"Bytes were sent\" follows from the protocol semantics.",
+              "Yes. Port 443 implies TLS, and an ESTABLISHED TLS session has at minimum the ClientHello + ServerHello + Finished exchange under its belt — that's application data, by protocol definition.",
           },
         ],
         allowMultiple: false,
@@ -438,10 +438,10 @@ What malfind doesn't support:
         type: "confidence",
         weight: 1,
         promptMd:
-          "Confidence (1–5) that PID 4012 is executing injected shellcode, **using only this malfind output**.",
-        expected: { type: "confidence", expectedRange: [3, 4] },
+          "Confidence (1–5) that PID 4012 is **currently executing** injected shellcode, **using only this malfind output**.",
+        expected: { type: "confidence", expectedRange: [2, 3] },
         debriefMd:
-          "**3 or 4.** The RWX region plus a recognisable shellcode prologue is much more specific than RWX alone. It's still not a final verdict — the right finish is to dump and analyse the region, but a defensible interim writeup says \"PID 4012 contains a 256 KB RWX region whose first bytes match common shellcode prologues; recommend immediate containment and dump-and-analyse.\"",
+          "**2 or 3.** The RWX region with a recognisable shellcode prologue is good evidence that injected code is **present** in the process's address space. \"Currently executing\" is a separate claim that needs the process's instruction-pointer state (EIP/RIP landing inside the region), behavioural evidence (the shellcode making a network call, opening a file, spawning a child), or a debugger / live-system observation. Reserve 4+ for cases where those follow-on artifacts confirm active execution; this scenario gives you presence, not activity. A defensible interim writeup: \"PID 4012 contains a 256 KB RWX region whose first bytes match common shellcode prologues; recommend immediate containment and dump-and-analyse.\"",
       },
     ],
   },

@@ -205,14 +205,14 @@ The actual format is what's in the bytes.
         promptMd: "Based on the first bytes, this file is actually:",
         options: [
           { id: "pdf", label: "A PDF — `50 4B` reads as `PK` (Portable-document Kit), which is the prefix on every PDF written by Acrobat's modern engines and any PDF stream that begins with a PDF-1.7 or higher version marker." },
-          { id: "zip", label: "A ZIP-style archive (could be a real .zip, .docx, .xlsx, .jar, etc.)" },
-          { id: "png", label: "A PNG image — the four-byte prefix `50 4B 03 04` is the canonical PNG signature (PK file-header bytes were borrowed from the PNG specification), so the file is a PNG regardless of any extension the file might have been renamed to." },
+          { id: "zip", label: "A ZIP-style archive — `50 4B 03 04` is the ZIP local-file-header magic (`PK\\x03\\x04`). Could be a real `.zip` or any ZIP-based container (`.docx`, `.xlsx`, `.jar`, `.apk`) — the magic identifies the wrapper, not the inner format." },
+          { id: "png", label: "A PNG image — the `50 4B 03 04` sequence appears inside compressed PNG IDAT chunks (PNG embeds zlib streams, which share encoding with ZIP); if the hex view here is offset into the file rather than starting at byte 0, this could be a mid-stream zlib block rather than a file header." },
           { id: "cant-tell", label: "Impossible to tell from this much — four bytes is below the minimum any reliable file-type identification needs; the first 16 bytes are the common cutoff for magic-byte detection, and four bytes simply isn't enough to narrow the format." },
         ],
         allowMultiple: false,
         expected: { type: "multi_choice", correctIds: ["zip"], allowMultiple: false },
         debriefMd:
-          "`50 4B 03 04` = `PK\\x03\\x04`, the ZIP local-file-header magic. Many modern \"document\" formats (.docx, .xlsx, .jar, .apk) are ZIP containers under the hood, so seeing this signature doesn't tell you *which* ZIP-based format — but it does rule out PDF.",
+          "`50 4B 03 04` = `PK\\x03\\x04`, the ZIP local-file-header magic. Many modern \"document\" formats (`.docx`, `.xlsx`, `.jar`, `.apk`) are ZIP containers under the hood, so seeing this signature doesn't tell you *which* ZIP-based format — but it does rule out PDF.\n\nThe **PNG distractor** is a real-world misread you should know about: PNG IDAT chunks contain zlib-compressed streams, and zlib's deflate output shares encoding with ZIP's deflate. A hex dump captured mid-file rather than at offset 0 can show byte sequences that look like a ZIP local-file header but are actually compressed PNG image data. **Always confirm you're reading from offset 0** before identifying by magic.\n\nThe **PDF distractor** leans on `PK` superficially looking like the start of \"Portable-document\". Real PDFs start with `25 50 44 46` (`%PDF`) — see Q2.",
       },
       {
         ordinal: 2,

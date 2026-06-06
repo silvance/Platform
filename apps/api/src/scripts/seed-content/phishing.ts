@@ -609,7 +609,7 @@ the mismatch proves and what it doesn't.
         options: [
           { id: "spoofed", label: "The From header is spoofed using a domain that happens to authenticate cleanly because the attacker is operating on infrastructure that shares an SPF range with the real partner.example mail relays." },
           { id: "compromised", label: "Pat's mailbox at partner.example has been compromised; the attacker is using Pat's account to send the request, which is why the auth checks all pass cleanly on the wire." },
-          { id: "rule-via-reply-to", label: "Someone with mailbox access (legitimately or otherwise) is steering replies to an external address." },
+          { id: "rule-via-reply-to", label: "Someone with mailbox access at partner.example — legitimately, or via account takeover — has set the Reply-To to an external mailbox, so any reply to `Pat` will land outside the partner.example domain instead of in her inbox." },
           { id: "phish-impossible", label: "Auth passed cleanly across all three checks, so phishing as a category is ruled out for this message; the headers establish provenance and the Reply-To is a separate organisational choice that doesn't change the wire-level finding." },
         ],
         allowMultiple: false,
@@ -619,7 +619,7 @@ the mismatch proves and what it doesn't.
           allowMultiple: false,
         },
         debriefMd:
-          "Auth-pass means the message really was sent from partner.example infrastructure — From is **not spoofed** at the wire level. The Reply-To divergence is the actual signal: somebody is configuring replies to land in an external mailbox. That could be Pat themselves doing something legitimate-but-weird, or it could be an account-takeover attacker who set up a forwarding/Reply-To rule. The artifact alone doesn't distinguish those — that's the inference gap.",
+          "Auth-pass means the message really was sent from partner.example infrastructure — From is **not spoofed** at the wire level. The Reply-To divergence is the actual signal: somebody with mailbox access is configuring replies to land in an external mailbox.\n\nThe operational distinction this teaches: **auth-pass + Reply-To-mismatch points at account compromise (or account-takeover), not external spoofing.** A pure external attacker can't make spf/dkim/dmarc all pass for partner.example — they'd need to send from inside that domain's infrastructure. That's either Pat doing something legitimate-but-weird (rare; usually it's the attacker who already has the mailbox). The wire-level artifact doesn't distinguish \"Pat being weird\" from \"attacker using Pat's account,\" but it does cleanly rule out the \"spoofed by an outsider\" reading.",
       },
       {
         ordinal: 2,
@@ -663,10 +663,10 @@ the mismatch proves and what it doesn't.
         type: "confidence",
         weight: 1,
         promptMd:
-          "Confidence (1–5) that this is a CEO-fraud attempt rather than a legitimate (if unusual) request from Pat.",
-        expected: { type: "confidence", expectedRange: [4, 5] },
+          "Confidence (1–5) that this is a CEO-fraud attempt rather than a legitimate (if unusual) request from Pat, **based only on the headers + body**.",
+        expected: { type: "confidence", expectedRange: [3, 4] },
         debriefMd:
-          "High confidence is warranted. Gift-card-for-offsite via email with Reply-To to an external mailbox is the canonical CEO-fraud script. The verification call costs nothing and is the correct next step regardless of confidence.\n\n**Owners.** Unit ISSM owns mail-gateway / DMARC follow-up; the supporting ACI office is involved if attribution links the campaign to a foreign intelligence entity rather than ordinary financial fraud.",
+          "**3 or 4.** The pattern — gift-card request + urgency framing + Reply-To diverging to a personal-mail provider — is a textbook CEO-fraud script, so high confidence on the **pattern match** is defensible. But the headers alone don't *prove* Pat didn't send it; people occasionally do legitimate-but-weird things. Reserve **5** for cases corroborated out-of-band: Pat confirming via voice she didn't send it, or a sudoer-log / account-recovery trail showing the mailbox was accessed by someone else. The verification call costs nothing and is the right next step regardless.\n\n**Owners.** Unit ISSM owns mail-gateway / DMARC follow-up; the supporting ACI office is involved if attribution links the campaign to a foreign intelligence entity rather than ordinary financial fraud.",
       },
     ],
   },
@@ -727,7 +727,7 @@ user is asking whether it's safe to reply.
         options: [
           { id: "from-real-pat", label: "The message is from the real Pat Chen — auth-pass for gmail.com means Gmail's outbound checks confirmed the sender's identity at the account level, which on a personal-email channel is the strongest available signal of who actually sent the message." },
           { id: "from-gmail-user", label: "The message was sent from a Gmail account named `pat.chen.ceo.partner` that successfully completed Gmail's outbound auth." },
-          { id: "domain-spoof-detected", label: "Gmail detected a domain spoof and let it through anyway — pass with notes is Gmail's way of signalling \"the sender domain is forged but the message came from one of our own users,\" which is a unique technical fingerprint of an internal Gmail-account spoofing campaign." },
+          { id: "display-name-verified", label: "Gmail's outbound auth includes a display-name check against the account's profile, so an auth-pass means the `\"Pat Chen, CEO\"` display name matches what Gmail has on file for this account." },
         ],
         allowMultiple: false,
         expected: {
