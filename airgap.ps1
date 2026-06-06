@@ -273,7 +273,14 @@ on PATH, then re-run.
             }
         }
 
-        & $pnpm install --frozen-lockfile
+        # node-linker=hoisted: install in a flat node_modules layout
+        # (npm-style), not pnpm's default .pnpm/ virtual store. This
+        # is the form that survives a robocopy intact -- pnpm's
+        # default layout uses symlinks for transitive-dep resolution,
+        # which break after robocopy dereferences them and lead to
+        # "Cannot find module '@prisma/engines'" at runtime on the
+        # install target.
+        & $pnpm install --frozen-lockfile --config.node-linker=hoisted
         if ($LASTEXITCODE -ne 0) { Fail "pnpm install failed." }
         # Prisma engines land in node_modules during postinstall;
         # build the contracts + apps so the bundle ships ready-to-run.
