@@ -564,6 +564,21 @@ Common causes:
         Write-Note "Skipping seed. Re-run with -Seed if you want to populate the catalog."
     }
 
+    # Resolve next's bin via Node from cwd=apps/web so the printed
+    # start command points at the right path. pnpm hoisted mode in
+    # a workspace hoists `next` to the workspace root, so
+    # apps/web/node_modules/next does NOT exist -- next lives at
+    # $Target\node_modules\next instead.
+    Push-Location (Join-Path $Target "apps\web")
+    try {
+        $nextBin = & node -e "try{console.log(require.resolve('next/dist/bin/next'))}catch{process.exit(2)}" 2>$null
+    } finally {
+        Pop-Location
+    }
+    if (-not $nextBin) {
+        $nextBin = "<could not resolve 'next' bin -- check $Target\node_modules\next>"
+    }
+
     Write-Stage "Done"
     Write-Host @"
 The platform is installed at $Target.
@@ -574,7 +589,7 @@ To start the API (port 4000):
 
 To start the web app (port 3000):
     cd $Target\apps\web
-    node node_modules\next\dist\bin\next start -p 3000
+    node "$nextBin" start -p 3000
 
 See AIRGAP-INSTALL.txt (also copied into the bundle root) for
 how to run these as services, set the admin password, and

@@ -261,6 +261,13 @@ do_install() {
         note "Skipping seed. Re-run with --seed to populate the catalog."
     fi
 
+    # Resolve next's bin so the printed command points where next
+    # actually lives -- pnpm hoisted mode in a workspace hoists
+    # `next` to the workspace root, not apps/web/node_modules.
+    NEXT_BIN=$(cd "${TARGET}/apps/web" && /usr/local/bin/node -e \
+        "try{console.log(require.resolve('next/dist/bin/next'))}catch(e){process.exit(2)}" 2>/dev/null) || \
+        NEXT_BIN="<could not resolve 'next' bin -- check ${TARGET}/node_modules/next>"
+
     stage "Done"
     cat <<EOF
 
@@ -270,7 +277,7 @@ To start the API (port 4000):
     cd ${TARGET}/apps/api && node dist/main.js
 
 To start the web app (port 3000):
-    cd ${TARGET}/apps/web && node node_modules/next/dist/bin/next start -p 3000
+    cd ${TARGET}/apps/web && node ${NEXT_BIN} start -p 3000
 
 See AIRGAP-INSTALL-LINUX.txt (next to this script; also at the
 bundle root) for how to run these as systemd services, set the
