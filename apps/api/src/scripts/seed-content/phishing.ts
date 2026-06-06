@@ -726,7 +726,7 @@ user is asking whether it's safe to reply.
         promptMd: "Auth-results pass for `gmail.com`. What does that prove?",
         options: [
           { id: "from-real-pat", label: "The message is from the real Pat Chen — auth-pass for gmail.com means Gmail's outbound checks confirmed the sender's identity at the account level, which on a personal-email channel is the strongest available signal of who actually sent the message." },
-          { id: "from-gmail-user", label: "The message was sent from a Gmail account named `pat.chen.ceo.partner` that successfully completed Gmail's outbound auth." },
+          { id: "from-gmail-user", label: "The message was sent from a Gmail account whose local-part is `pat.chen.ceo.partner` and that successfully completed Gmail's outbound DKIM/SPF/DMARC — nothing about the sender's claimed identity or the display name was verified by those checks." },
           { id: "display-name-verified", label: "Gmail's outbound auth includes a display-name check against the account's profile, so an auth-pass means the `\"Pat Chen, CEO\"` display name matches what Gmail has on file for this account." },
         ],
         allowMultiple: false,
