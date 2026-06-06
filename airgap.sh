@@ -33,6 +33,15 @@ require_tool() {
     command -v "$1" >/dev/null 2>&1 || fail "$1 not found. $2"
 }
 
+# Resolve a module's bin entry via Node's own resolution from a
+# given cwd. Echoes the absolute path or returns non-zero. Used
+# by install to find prisma/next wherever pnpm's hoisted layout
+# put them (workspace root vs per-workspace).
+resolve_module_bin() {
+    (cd "$1" && /usr/local/bin/node -e \
+        "try{console.log(require.resolve('$2'))}catch(e){process.exit(2)}" 2>/dev/null)
+}
+
 usage() {
     cat <<EOF
 
@@ -191,7 +200,7 @@ do_install() {
         if ! command -v psql >/dev/null 2>&1; then
             fail "psql not found. Install postgresql-client (and a server) before re-running, or pass --skip-postgres-check if you know what you're doing."
         fi
-        ok "Found psql at $(command -v psql)"
+        ok "PostgreSQL already detected (psql at $(command -v psql)) -- skipping install check."
     fi
 
     stage "Copying repo into ${TARGET}"
@@ -235,19 +244,15 @@ do_install() {
         read -r DB_URL
         [ -n "${DB_URL}" ] || fail "DATABASE_URL is required."
         echo "DATABASE_URL=${DB_URL}" > "${ENVFILE}"
-        ok "Wrote ${ENVFILE}"
+        # The file holds a Postgres password. Owner-read/write only.
+        chmod 600 "${ENVFILE}"
+        ok "Wrote ${ENVFILE} (mode 600)"
     fi
 
     stage "Applying Prisma migrations"
-    # Use Node's own resolution to find the prisma CLI -- pnpm
-    # hoisted mode in a workspace hoists workspace dev deps to the
-    # workspace root, so apps/api/node_modules/prisma may not exist
-    # but ${TARGET}/node_modules/prisma does.
-    PRISMA_CLI=$(cd "${TARGET}/apps/api" && /usr/local/bin/node -e \
-        "try{console.log(require.resolve('prisma/build/index.js'))}catch(e){process.exit(2)}" 2>/dev/null) \
+    PRISMA_CLI=$(resolve_module_bin "${TARGET}/apps/api" "prisma/build/index.js") \
         || fail "Could not resolve 'prisma/build/index.js' from ${TARGET}/apps/api. Did pnpm install run during pack?"
-    (cd "${TARGET}/apps/api" && \
-     /usr/local/bin/node "${PRISMA_CLI}" migrate deploy)
+    (cd "${TARGET}/apps/api" && /usr/local/bin/node "${PRISMA_CLI}" migrate deploy)
     ok "Migrations applied."
 
     if [ -n "${SEED:-}" ]; then
@@ -267,11 +272,7 @@ do_install() {
         note "Skipping seed. Re-run with --seed to populate the catalog."
     fi
 
-    # Resolve next's bin so the printed command points where next
-    # actually lives -- pnpm hoisted mode in a workspace hoists
-    # `next` to the workspace root, not apps/web/node_modules.
-    NEXT_BIN=$(cd "${TARGET}/apps/web" && /usr/local/bin/node -e \
-        "try{console.log(require.resolve('next/dist/bin/next'))}catch(e){process.exit(2)}" 2>/dev/null) || \
+    NEXT_BIN=$(resolve_module_bin "${TARGET}/apps/web" "next/dist/bin/next") || \
         NEXT_BIN="<could not resolve 'next' bin -- check ${TARGET}/node_modules/next>"
 
     stage "Done"
@@ -279,11 +280,11 @@ do_install() {
 
 The platform is installed at ${TARGET}.
 
-To start the API (port 4000):
-    cd ${TARGET}/apps/api && node dist/main.js
+To start the API (port ${API_PORT}):
+    cd ${TARGET}/apps/api && PORT=${API_PORT} node dist/main.js
 
-To start the web app (port 3000):
-    cd ${TARGET}/apps/web && node ${NEXT_BIN} start -p 3000
+To start the web app (port ${WEB_PORT}):
+    cd ${TARGET}/apps/web && node ${NEXT_BIN} start -p ${WEB_PORT}
 
 See AIRGAP-INSTALL-LINUX.txt (next to this script; also at the
 bundle root) for how to run these as systemd services, configure
@@ -328,6 +329,8 @@ case "${MODE}" in
         FORCE_REPO_COPY=""
         ADMIN_EMAIL="admin@example.local"
         ADMIN_PASSWORD="CICyberLab-Admin-1"
+        API_PORT="4000"
+        WEB_PORT="3000"
         while [ $# -gt 0 ]; do
             case "$1" in
                 -s|--source) SOURCE="$2"; shift 2 ;;
@@ -338,6 +341,8 @@ case "${MODE}" in
                 --force-repo-copy) FORCE_REPO_COPY="1"; shift ;;
                 --admin-email) ADMIN_EMAIL="$2"; shift 2 ;;
                 --admin-password) ADMIN_PASSWORD="$2"; shift 2 ;;
+                --api-port) API_PORT="$2"; shift 2 ;;
+                --web-port) WEB_PORT="$2"; shift 2 ;;
                 -h|--help) usage; exit 0 ;;
                 *) fail "Unknown install arg: $1 (run './airgap.sh help' for usage)" ;;
             esac
