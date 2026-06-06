@@ -202,7 +202,7 @@ common avoidable error on this artifact family.
           {
             id: "root-compromised",
             label:
-              "`root` was successfully compromised from `203.0.113.44` because three failed attempts followed by a disconnect is the classic post-success signature; the disconnect line is how sshd terminates the existing pre-auth socket immediately after issuing the SSH_MSG_USERAUTH_SUCCESS, and operators can read that as success.",
+              "`root` was successfully compromised from `203.0.113.44`. The three failures + disconnect pattern is sshd's post-success behaviour: after `SSH_MSG_USERAUTH_SUCCESS` the daemon closes the pre-auth socket, and the disconnect line is that close.",
           },
           {
             id: "devops-two-logins",
@@ -217,7 +217,7 @@ common avoidable error on this artifact family.
           {
             id: "admin-account-exists",
             label:
-              "An `admin` account exists on this host and was used for an interactive login from `203.0.113.44`; the btmp entries for `admin` mean the account record was resolved successfully and the credentials were then verified against a real shadow entry on the host before the attempt was rejected.",
+              "An `admin` account exists on this host; the btmp `admin` rows mean PAM resolved the account name against `/etc/shadow` and verified credentials before rejecting the attempt.",
           },
         ],
         allowMultiple: true,
