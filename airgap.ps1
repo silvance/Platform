@@ -460,15 +460,29 @@ Common causes:
     Write-Stage "Copying repo into $Target"
     $repoSrc = Join-Path $Source "repo"
     if (-not (Test-Path -LiteralPath $repoSrc)) { Fail "$repoSrc not found in bundle." }
-    # If the repo is already in place (the installer has been re-run
-    # against the same target for troubleshooting), skip the slow
-    # copy. -ForceRepoCopy overrides for the rare case the operator
-    # explicitly wants the bundle re-applied.
+    # Skip the slow robocopy if the same bundle has already been
+    # applied to this target. We stamp the bundle's manifest hash
+    # into the target as .airgap-installed-from on success; the
+    # next install re-reads it and re-copies only when the bundle
+    # is different (e.g. fresh re-pack). Operator can also force
+    # with -ForceRepoCopy.
     $apiBuiltMarker = Join-Path $Target "apps\api\dist\main.js"
     $webBuiltMarker = Join-Path $Target "apps\web\.next"
-    if ((-not $ForceRepoCopy) -and (Test-Path -LiteralPath $apiBuiltMarker) -and (Test-Path -LiteralPath $webBuiltMarker)) {
-        Write-OK "Repo already at $Target (skipping copy; pass -ForceRepoCopy to re-apply)."
+    $bundleManifest = Join-Path $Source "manifest.json"
+    $bundleStamp = if (Test-Path -LiteralPath $bundleManifest) {
+        (Get-FileHash -LiteralPath $bundleManifest -Algorithm SHA256).Hash
+    } else { "" }
+    $installedStampFile = Join-Path $Target ".airgap-installed-from"
+    $installedStamp = if (Test-Path -LiteralPath $installedStampFile) {
+        (Get-Content -LiteralPath $installedStampFile -Raw -ErrorAction SilentlyContinue).Trim()
+    } else { "" }
+    $bundleMatches = $bundleStamp -and ($bundleStamp -eq $installedStamp)
+    if ((-not $ForceRepoCopy) -and $bundleMatches -and (Test-Path -LiteralPath $apiBuiltMarker) -and (Test-Path -LiteralPath $webBuiltMarker)) {
+        Write-OK "Same bundle already installed at $Target (skipping copy; -ForceRepoCopy to override)."
     } else {
+        if ((-not $ForceRepoCopy) -and (Test-Path -LiteralPath $apiBuiltMarker) -and -not $bundleMatches) {
+            Write-Note "Target has a different bundle installed -- re-copying."
+        }
         if (-not (Test-Path -LiteralPath $Target)) {
             New-Item -ItemType Directory -Path $Target | Out-Null
         }
@@ -476,6 +490,9 @@ Common causes:
                     "/NFL", "/NDL", "/NP", "/NJH", "/NJS")
         & robocopy @rcArgs | Out-Null
         if ($LASTEXITCODE -ge 8) { Fail "robocopy failed with code $LASTEXITCODE" }
+        if ($bundleStamp) {
+            Set-Content -LiteralPath $installedStampFile -Value $bundleStamp -Encoding ASCII
+        }
         Write-OK "Repo at $Target"
     }
 
