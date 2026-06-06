@@ -510,9 +510,16 @@ Common causes:
     Write-Stage "Applying Prisma migrations"
     Push-Location (Join-Path $Target "apps\api")
     try {
-        # node_modules was bundled, so prisma's CLI + engines are
-        # already on disk; no online resolution needed.
-        & node "node_modules\prisma\build\index.js" migrate deploy
+        # Use Node's own resolution to find the prisma CLI entry,
+        # which is more robust than hardcoding apps/api/node_modules/
+        # /prisma/build/index.js -- pnpm in hoisted mode hoists
+        # workspace dev deps to the workspace root, so prisma may
+        # actually live at $Target/node_modules/prisma instead.
+        $prismaCli = & node -e "try{console.log(require.resolve('prisma/build/index.js'))}catch{process.exit(2)}" 2>$null
+        if ($LASTEXITCODE -ne 0 -or -not $prismaCli) {
+            Fail "Could not resolve 'prisma/build/index.js' from $Target\apps\api. Did pnpm install run during pack?"
+        }
+        & node "$prismaCli" migrate deploy
         if ($LASTEXITCODE -ne 0) { Fail "prisma migrate deploy failed." }
     } finally {
         Pop-Location

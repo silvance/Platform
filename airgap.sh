@@ -239,8 +239,15 @@ do_install() {
     fi
 
     stage "Applying Prisma migrations"
+    # Use Node's own resolution to find the prisma CLI -- pnpm
+    # hoisted mode in a workspace hoists workspace dev deps to the
+    # workspace root, so apps/api/node_modules/prisma may not exist
+    # but ${TARGET}/node_modules/prisma does.
+    PRISMA_CLI=$(cd "${TARGET}/apps/api" && /usr/local/bin/node -e \
+        "try{console.log(require.resolve('prisma/build/index.js'))}catch(e){process.exit(2)}" 2>/dev/null) \
+        || fail "Could not resolve 'prisma/build/index.js' from ${TARGET}/apps/api. Did pnpm install run during pack?"
     (cd "${TARGET}/apps/api" && \
-     /usr/local/bin/node "node_modules/prisma/build/index.js" migrate deploy)
+     /usr/local/bin/node "${PRISMA_CLI}" migrate deploy)
     ok "Migrations applied."
 
     if [ -n "${SEED:-}" ]; then
