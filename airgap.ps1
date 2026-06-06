@@ -61,6 +61,11 @@ param(
     # Install mode: run the seed script after migrations.
     [switch]$Seed,
 
+    # Install mode: re-copy the bundle's repo over the target even
+    # if the target already has a built repo (default skips the
+    # copy in that case to speed up troubleshooting re-runs).
+    [switch]$ForceRepoCopy,
+
     # Pack mode: bypass the NTFS / ReFS filesystem check on the
     # repo drive. pnpm fundamentally requires NTFS-style symlinks;
     # this switch only exists for power users who have explicitly
@@ -430,29 +435,49 @@ Common causes:
     }
 
     if (-not $SkipPostgres) {
-        Write-Stage "Running PostgreSQL installer (interactive -- choose the postgres password)"
-        $pgExe = Join-Path $Source "installers\postgresql.exe"
-        if (-not (Test-Path -LiteralPath $pgExe)) { Fail "postgresql.exe missing in bundle." }
-        Write-Note "When the installer asks: remember the postgres-user password --"
-        Write-Note "you'll paste it into DATABASE_URL in a moment."
-        $p = Start-Process -FilePath $pgExe -Wait -PassThru
-        if ($p.ExitCode -ne 0) { Fail "Postgres installer returned $($p.ExitCode)." }
-        Write-OK "PostgreSQL installed."
+        Write-Stage "Installing PostgreSQL"
+        # Auto-detect an existing Postgres install before launching
+        # the interactive installer. Saves operator time on repeated
+        # install runs against the same box (e.g. troubleshooting).
+        $pgService = Get-Service -Name "postgresql*" -ErrorAction SilentlyContinue
+        $pgInstallDir = Get-ChildItem -Path "C:\Program Files\PostgreSQL" -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($pgService -or $pgInstallDir) {
+            $detected = if ($pgInstallDir) { $pgInstallDir.FullName } else { $pgService[0].Name }
+            Write-OK "PostgreSQL already installed ($detected) -- skipping installer."
+        } else {
+            $pgExe = Join-Path $Source "installers\postgresql.exe"
+            if (-not (Test-Path -LiteralPath $pgExe)) { Fail "postgresql.exe missing in bundle." }
+            Write-Note "Running interactive installer -- remember the postgres-user password,"
+            Write-Note "you'll paste it into DATABASE_URL in a moment."
+            $p = Start-Process -FilePath $pgExe -Wait -PassThru
+            if ($p.ExitCode -ne 0) { Fail "Postgres installer returned $($p.ExitCode)." }
+            Write-OK "PostgreSQL installed."
+        }
     } else {
         Write-Note "Skipping Postgres install per -SkipPostgres."
     }
 
     Write-Stage "Copying repo into $Target"
-    if (-not (Test-Path -LiteralPath $Target)) {
-        New-Item -ItemType Directory -Path $Target | Out-Null
-    }
     $repoSrc = Join-Path $Source "repo"
     if (-not (Test-Path -LiteralPath $repoSrc)) { Fail "$repoSrc not found in bundle." }
-    $rcArgs = @($repoSrc, $Target, "/MIR", "/R:1", "/W:1",
-                "/NFL", "/NDL", "/NP", "/NJH", "/NJS")
-    & robocopy @rcArgs | Out-Null
-    if ($LASTEXITCODE -ge 8) { Fail "robocopy failed with code $LASTEXITCODE" }
-    Write-OK "Repo at $Target"
+    # If the repo is already in place (the installer has been re-run
+    # against the same target for troubleshooting), skip the slow
+    # copy. -ForceRepoCopy overrides for the rare case the operator
+    # explicitly wants the bundle re-applied.
+    $apiBuiltMarker = Join-Path $Target "apps\api\dist\main.js"
+    $webBuiltMarker = Join-Path $Target "apps\web\.next"
+    if ((-not $ForceRepoCopy) -and (Test-Path -LiteralPath $apiBuiltMarker) -and (Test-Path -LiteralPath $webBuiltMarker)) {
+        Write-OK "Repo already at $Target (skipping copy; pass -ForceRepoCopy to re-apply)."
+    } else {
+        if (-not (Test-Path -LiteralPath $Target)) {
+            New-Item -ItemType Directory -Path $Target | Out-Null
+        }
+        $rcArgs = @($repoSrc, $Target, "/MIR", "/R:1", "/W:1",
+                    "/NFL", "/NDL", "/NP", "/NJH", "/NJS")
+        & robocopy @rcArgs | Out-Null
+        if ($LASTEXITCODE -ge 8) { Fail "robocopy failed with code $LASTEXITCODE" }
+        Write-OK "Repo at $Target"
+    }
 
     Write-Stage "DATABASE_URL configuration"
     $existingEnv = Join-Path $Target "apps\api\.env"

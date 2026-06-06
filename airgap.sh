@@ -195,9 +195,17 @@ do_install() {
     fi
 
     stage "Copying repo into ${TARGET}"
-    mkdir -p "${TARGET}"
-    rsync -a "${SOURCE}/repo/" "${TARGET}/"
-    ok "Repo at ${TARGET}"
+    # If the target already has a built repo from a prior install,
+    # skip the slow rsync. --force-repo-copy overrides.
+    if [ -z "${FORCE_REPO_COPY:-}" ] && \
+       [ -f "${TARGET}/apps/api/dist/main.js" ] && \
+       [ -d "${TARGET}/apps/web/.next" ]; then
+        ok "Repo already at ${TARGET} (skipping copy; pass --force-repo-copy to re-apply)."
+    else
+        mkdir -p "${TARGET}"
+        rsync -a "${SOURCE}/repo/" "${TARGET}/"
+        ok "Repo at ${TARGET}"
+    fi
 
     stage "DATABASE_URL configuration"
     ENVFILE="${TARGET}/apps/api/.env"
@@ -262,6 +270,7 @@ case "${MODE}" in
         SEED=""
         SKIP_NODE=""
         SKIP_POSTGRES_CHECK=""
+        FORCE_REPO_COPY=""
         while [ $# -gt 0 ]; do
             case "$1" in
                 -s|--source) SOURCE="$2"; shift 2 ;;
@@ -269,6 +278,7 @@ case "${MODE}" in
                 --seed) SEED="1"; shift ;;
                 --skip-node) SKIP_NODE="1"; shift ;;
                 --skip-postgres-check) SKIP_POSTGRES_CHECK="1"; shift ;;
+                --force-repo-copy) FORCE_REPO_COPY="1"; shift ;;
                 -h|--help) usage; exit 0 ;;
                 *) fail "Unknown install arg: $1 (run './airgap.sh help' for usage)" ;;
             esac
