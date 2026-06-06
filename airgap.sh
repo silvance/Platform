@@ -252,7 +252,10 @@ do_install() {
 
     if [ -n "${SEED:-}" ]; then
         stage "Seeding content"
-        (cd "${TARGET}/apps/api" && /usr/local/bin/node "dist/scripts/seed.js")
+        # --env-file: Node 20.6+ loads .env before running the
+        # script. Prisma's CLI handles this on its own for
+        # migrate; a plain `node seed.js` does not.
+        (cd "${TARGET}/apps/api" && /usr/local/bin/node --env-file=.env "dist/scripts/seed.js")
         ok "Seed complete."
     else
         note "Skipping seed. Re-run with --seed to populate the catalog."
