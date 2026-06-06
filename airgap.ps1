@@ -61,6 +61,13 @@ param(
     # Install mode: run the seed script after migrations.
     [switch]$Seed,
 
+    # Install mode: email + password to seed the first admin with
+    # so operators don't have to scrollback for a random password.
+    # MUST be changed on first login. Override either to bake a
+    # different default into your deploy.
+    [string]$AdminEmail = "admin@example.local",
+    [string]$AdminPassword = "CICyberLab-Admin-1",
+
     # Install mode: re-copy the bundle's repo over the target even
     # if the target already has a built repo (default skips the
     # copy in that case to speed up troubleshooting re-runs).
@@ -554,6 +561,11 @@ Common causes:
                 }
                 Set-Item -Path "env:$key" -Value $val
             }
+            # Set deterministic admin creds so operators don't have
+            # to dig through scrollback for a random password. They
+            # MUST change it on first login (the Done banner warns).
+            $env:SEED_ADMIN_EMAIL = $AdminEmail
+            $env:SEED_ADMIN_PASSWORD = $AdminPassword
             & node "dist\scripts\seed.js"
             if ($LASTEXITCODE -ne 0) { Fail "seed failed." }
         } finally {
@@ -592,9 +604,29 @@ To start the web app (port 3000):
     node "$nextBin" start -p 3000
 
 See AIRGAP-INSTALL.txt (also copied into the bundle root) for
-how to run these as services, set the admin password, and
-verify the install.
+how to run these as services, configure HTTPS, and verify the
+install.
 "@ -ForegroundColor Green
+
+    if ($Seed) {
+        $bar = "*" * 70
+        Write-Host ""
+        Write-Host $bar -ForegroundColor Yellow
+        Write-Host "*                                                                    *" -ForegroundColor Yellow
+        Write-Host "*   SIGN IN WITH (change password immediately on first login):       *" -ForegroundColor Yellow
+        Write-Host "*                                                                    *" -ForegroundColor Yellow
+        Write-Host ("*       Email:    {0,-49} *" -f $AdminEmail)    -ForegroundColor Yellow
+        Write-Host ("*       Password: {0,-49} *" -f $AdminPassword) -ForegroundColor Yellow
+        Write-Host "*                                                                    *" -ForegroundColor Yellow
+        Write-Host "*   This is a known default for the air-gap installer. After your    *" -ForegroundColor Yellow
+        Write-Host "*   first sign-in, rotate the password via the admin profile menu    *" -ForegroundColor Yellow
+        Write-Host "*   or:                                                              *" -ForegroundColor Yellow
+        Write-Host "*       node dist\scripts\reset-password.js \\                        *" -ForegroundColor Yellow
+        Write-Host "*           --email <email> --password '<new-password>'              *" -ForegroundColor Yellow
+        Write-Host "*                                                                    *" -ForegroundColor Yellow
+        Write-Host $bar -ForegroundColor Yellow
+        Write-Host ""
+    }
 }
 
 function Show-Usage {

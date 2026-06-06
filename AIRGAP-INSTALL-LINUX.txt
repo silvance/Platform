@@ -143,8 +143,25 @@ For a quick verification:
 Open http://localhost:3000 in a browser on the same box.
 
 First admin account:
-  The seed step prints default admin credentials to stdout --
-  capture them and change the password on first login.
+  The seed step creates an admin with deterministic default
+  credentials so you don't have to dig through scrollback:
+
+      Email:    admin@example.local
+      Password: CICyberLab-Admin-1
+
+  CHANGE THE PASSWORD IMMEDIATELY on first login -- this is a
+  known default. Rotate via the admin profile menu in the web
+  app, or from the shell:
+
+      cd /opt/ci-cyber-lab/apps/api
+      node dist/scripts/reset-password.js \
+          --email admin@example.local \
+          --password '<new-password>'
+
+  Override the seeded defaults at install time:
+
+      sudo ./airgap.sh install ... --admin-email you@org.local \
+                                    --admin-password 'YourPassword123'
 
 To run as systemd services (recommended for anything beyond a
 quick test), create two unit files under /etc/systemd/system/:

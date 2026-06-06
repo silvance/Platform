@@ -255,7 +255,13 @@ do_install() {
         # --env-file: Node 20.6+ loads .env before running the
         # script. Prisma's CLI handles this on its own for
         # migrate; a plain `node seed.js` does not.
-        (cd "${TARGET}/apps/api" && /usr/local/bin/node --env-file=.env "dist/scripts/seed.js")
+        # Deterministic admin creds so operators don't have to
+        # scrollback for a random password. The Done banner warns
+        # them to rotate it on first login.
+        (cd "${TARGET}/apps/api" && \
+         SEED_ADMIN_EMAIL="${ADMIN_EMAIL}" \
+         SEED_ADMIN_PASSWORD="${ADMIN_PASSWORD}" \
+         /usr/local/bin/node --env-file=.env "dist/scripts/seed.js")
         ok "Seed complete."
     else
         note "Skipping seed. Re-run with --seed to populate the catalog."
@@ -280,10 +286,23 @@ To start the web app (port 3000):
     cd ${TARGET}/apps/web && node ${NEXT_BIN} start -p 3000
 
 See AIRGAP-INSTALL-LINUX.txt (next to this script; also at the
-bundle root) for how to run these as systemd services, set the
-admin password, and verify the install.
+bundle root) for how to run these as systemd services, configure
+HTTPS, and verify the install.
 
 EOF
+    if [ -n "${SEED:-}" ]; then
+        BAR=$(printf '*%.0s' $(seq 1 70))
+        printf '\n\033[33m%s\033[0m\n' "$BAR"
+        printf '\033[33m*   SIGN IN WITH (change password immediately on first login):       *\033[0m\n'
+        printf '\033[33m*\033[0m       Email:    %-49s \033[33m*\033[0m\n' "${ADMIN_EMAIL}"
+        printf '\033[33m*\033[0m       Password: %-49s \033[33m*\033[0m\n' "${ADMIN_PASSWORD}"
+        printf '\033[33m*   This is a known default for the air-gap installer. After your    *\033[0m\n'
+        printf '\033[33m*   first sign-in, rotate the password in the admin profile menu     *\033[0m\n'
+        printf '\033[33m*   or run:                                                          *\033[0m\n'
+        printf '\033[33m*       node dist/scripts/reset-password.js \\                        *\033[0m\n'
+        printf "\033[33m*           --email <email> --password '<new-password>'              *\033[0m\n"
+        printf '\033[33m%s\033[0m\n\n' "$BAR"
+    fi
 }
 
 # --- argument parsing ----------------------------------------
@@ -307,6 +326,8 @@ case "${MODE}" in
         SKIP_NODE=""
         SKIP_POSTGRES_CHECK=""
         FORCE_REPO_COPY=""
+        ADMIN_EMAIL="admin@example.local"
+        ADMIN_PASSWORD="CICyberLab-Admin-1"
         while [ $# -gt 0 ]; do
             case "$1" in
                 -s|--source) SOURCE="$2"; shift 2 ;;
@@ -315,6 +336,8 @@ case "${MODE}" in
                 --skip-node) SKIP_NODE="1"; shift ;;
                 --skip-postgres-check) SKIP_POSTGRES_CHECK="1"; shift ;;
                 --force-repo-copy) FORCE_REPO_COPY="1"; shift ;;
+                --admin-email) ADMIN_EMAIL="$2"; shift 2 ;;
+                --admin-password) ADMIN_PASSWORD="$2"; shift 2 ;;
                 -h|--help) usage; exit 0 ;;
                 *) fail "Unknown install arg: $1 (run './airgap.sh help' for usage)" ;;
             esac

@@ -199,9 +199,25 @@ Open http://localhost:3000 in a browser on the same box. You should
 see the login screen.
 
 First admin account:
-  An admin account is created by the seed step. The default
-  credentials are printed to stdout by the seed script -- capture
-  them from the seed output and change the password on first login.
+  The seed step creates an admin with deterministic default
+  credentials so you don't have to dig through scrollback:
+
+      Email:    admin@example.local
+      Password: CICyberLab-Admin-1
+
+  CHANGE THE PASSWORD IMMEDIATELY on first login -- this is a
+  known default. Rotate via the admin profile menu in the web
+  app, or from PowerShell:
+
+      cd C:\ci-cyber-lab\apps\api
+      node dist\scripts\reset-password.js `
+          --email admin@example.local `
+          --password '<new-password>'
+
+  Override the seeded defaults at install time:
+
+      .\airgap.ps1 -Mode Install ... -AdminEmail you@org.local `
+                                     -AdminPassword 'YourPassword123'
 
 
 --------------------------------------------------------------------
