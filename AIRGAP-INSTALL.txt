@@ -235,6 +235,20 @@ Troubleshooting
   Run:  Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
   in the same PowerShell window before running airgap.ps1.
 
+"Node MSI returned 1603" during install
+  1603 is MSI's generic "fatal install error". Common causes:
+    - Node is already installed on this box (most common after
+      iterating on the install). The script now auto-detects an
+      existing `node` on PATH and skips the MSI, but if you hit
+      this on an older script version just pass -SkipNode:
+          .\airgap.ps1 -Mode Install -Source ... -Target ... -SkipNode
+    - A pending Windows reboot from a prior install. Reboot, then
+      re-run.
+    - An MSI custom-action failure. Open the install log at:
+          %TEMP%\ci-cyber-lab-node-msi.log
+      and search for "Return value 3" -- the line just above names
+      the failing action.
+
 "corepack: command not found" during pack
   Reinstall Node.js >= 20.11 from nodejs.org; corepack ships with it.
 

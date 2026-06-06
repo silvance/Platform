@@ -376,17 +376,47 @@ function Invoke-Install {
 
     if (-not $SkipNode) {
         Write-Stage "Installing Node.js (silent)"
-        $nodeMsi = Join-Path $Source "installers\node.msi"
-        if (-not (Test-Path -LiteralPath $nodeMsi)) { Fail "node.msi missing in bundle." }
-        # ADDLOCAL=ALL pulls in npm + corepack; /qn = quiet.
-        $p = Start-Process -FilePath msiexec.exe `
-            -ArgumentList @("/i", "`"$nodeMsi`"", "/qn", "/norestart", "ADDLOCAL=ALL") `
-            -Wait -PassThru
-        if ($p.ExitCode -ne 0) { Fail "Node MSI returned $($p.ExitCode)." }
-        Write-OK "Node installed."
-        # PATH won't have refreshed for this session; reach into the
-        # standard install path so subsequent commands resolve.
-        $env:Path = "$env:ProgramFiles\nodejs;$env:Path"
+        # If Node is already installed (likely from a prior install
+        # attempt on this same machine), skip the MSI -- reinstalling
+        # the same version is the classic MSI 1603 cause.
+        $existingNode = Get-Command node -ErrorAction SilentlyContinue
+        if (-not $existingNode) {
+            # Refresh PATH from registry in case Node was installed
+            # before this PowerShell session started.
+            $env:Path = `
+                [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + `
+                [Environment]::GetEnvironmentVariable("Path", "User")
+            $existingNode = Get-Command node -ErrorAction SilentlyContinue
+        }
+        if ($existingNode) {
+            $ver = (& node --version 2>$null)
+            Write-OK "Node already installed at $($existingNode.Source) ($ver) -- skipping MSI."
+        } else {
+            $nodeMsi = Join-Path $Source "installers\node.msi"
+            if (-not (Test-Path -LiteralPath $nodeMsi)) { Fail "node.msi missing in bundle." }
+            # /L*V <log> records the MSI's internal error so future
+            # 1603s have a paper trail. /qn = quiet. ADDLOCAL omitted
+            # so the MSI's default feature set is used (specifying
+            # ADDLOCAL=ALL can fail on feature-table changes).
+            $msiLog = Join-Path $env:TEMP "ci-cyber-lab-node-msi.log"
+            $p = Start-Process -FilePath msiexec.exe `
+                -ArgumentList @("/i", "`"$nodeMsi`"", "/qn", "/norestart", "/L*V", "`"$msiLog`"") `
+                -Wait -PassThru
+            if ($p.ExitCode -ne 0) {
+                Fail @"
+Node MSI returned $($p.ExitCode). Full install log at:
+    $msiLog
+
+Common causes:
+  - Node is already installed (re-run with -SkipNode).
+  - A pending Windows reboot. Reboot, then re-run.
+  - 1603 specifically: MSI hit a fatal error; the .log above
+    will name the failed action (search for 'Return value 3').
+"@
+            }
+            Write-OK "Node installed."
+            $env:Path = "$env:ProgramFiles\nodejs;$env:Path"
+        }
     } else {
         Write-Note "Skipping Node install per -SkipNode."
     }
