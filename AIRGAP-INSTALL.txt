@@ -3,18 +3,19 @@ CI Cyber Lab -- Air-gap install instructions (Windows)
 
 **********************************************************************
 **                                                                  **
-**   READ THIS BEFORE YOU CLONE THE REPO:                           **
+**   PREFER NTFS FOR THE WORKING REPO.                              **
 **                                                                  **
-**   THE WORKING COPY OF THE REPO MUST LIVE ON AN NTFS DRIVE.       **
+**   Clone the repo to your C:\ drive (or another NTFS / ReFS       **
+**   volume) before running airgap.ps1 -Mode Pack. FAT32 / exFAT    **
+**   will probably work -- the script passes                        **
+**   --config.node-linker=hoisted so the BUNDLE doesn't need        **
+**   symlinks -- but pnpm's content-addressable store still uses    **
+**   NTFS hardlinks under the hood, so half-finished installs on    **
+**   a USB stick remain a common failure mode. The script will      **
+**   surface a warning (not an abort) if it sees one.               **
 **                                                                  **
-**   Most USB sticks ship FAT32 or exFAT. Cloning the repo directly **
-**   to a fresh USB will appear to work, then break partway through **
-**   `pnpm install` -- pnpm uses NTFS symbolic links for its        **
-**   node_modules layout; FAT32 and exFAT do not support them.      **
-**                                                                  **
-**   Recommended: clone to C:\, point -Output at the USB. The       **
-**   bundle on the USB is plain files; exFAT / FAT32 is fine for    **
-**   THAT side. Only the WORKING REPO needs NTFS.                   **
+**   The BUNDLE (-Output) can live on any filesystem; only the      **
+**   working repo matters for this.                                 **
 **                                                                  **
 **       cd C:\                                                     **
 **       git clone <repo-url> platform                              **
@@ -23,10 +24,6 @@ CI Cyber Lab -- Air-gap install instructions (Windows)
 **                                                                  **
 **   Check a drive's filesystem:                                    **
 **       (Get-Volume -DriveLetter E).FileSystemType                 **
-**                                                                  **
-**   The script hard-aborts with an on-screen banner if you try to  **
-**   pack from a non-NTFS drive. -AllowNonNtfs bypasses only if     **
-**   you've set node-linker=hoisted in .npmrc.                      **
 **                                                                  **
 **********************************************************************
 
@@ -177,6 +174,62 @@ Override the seeded defaults at install time:
 
       .\airgap.ps1 -Mode Install ... -AdminEmail you@org.local `
                                      -AdminPassword 'YourPassword123'
+
+
+--------------------------------------------------------------------
+Parameter reference
+--------------------------------------------------------------------
+
+Every parameter airgap.ps1 takes, grouped by which mode uses it.
+
+COMMON
+  -Mode <Pack|Install|Help>
+      What to do. Omitted -> the script prints a banner and exits
+      (no interactive prompt).
+
+PACK MODE   (online box)
+  -Output <path>
+      Where to write the bundle.
+      Default: <repo-drive>:\ci-cyber-lab-bundle
+  -NodeMsiUrl <url>
+      Override the Node.js Windows-x64 MSI to download. Default is
+      the LTS line the repo's "engines" field requires (>=20.11).
+      Bump if you want a newer LTS.
+  -PostgresInstallerUrl <url>
+      Override the PostgreSQL Windows-x64 installer to download.
+      Default is PostgreSQL 16.4. Bump if you want a different
+      major version.
+
+INSTALL MODE   (air-gapped box, elevated PowerShell)
+  -Source <path>          REQUIRED. Where the bundle lives (USB root).
+  -Target <path>          REQUIRED. Where the platform should live
+                          on disk.
+  -SkipNode               Skip the silent Node MSI. Use when Node is
+                          already installed.
+  -SkipPostgres           Skip the Postgres installer. Use when a
+                          Postgres server is already running here --
+                          you'll still be prompted for DATABASE_URL.
+  -Seed                   Run the seed script after migrations apply.
+                          The curated challenge catalog lands in the DB.
+  -ForceRepoCopy          Re-copy the bundle's repo over -Target even
+                          if -Target already has a built repo. Default
+                          skips the copy on re-runs (faster
+                          troubleshooting).
+  -AdminEmail <email>     Email for the seeded admin account.
+                          Default: admin@example.local
+  -AdminPassword <pw>     Password for the seeded admin account.
+                          Default: CICyberLab-Admin-1
+                          Both are seed-time only -- changing them
+                          AFTER first login goes through the web UI or
+                          reset-password.js (see Phase 3).
+  -ApiPort <int>          Port the printed start command tells you to
+                          bind the API to. Default 4000.
+  -WebPort <int>          Same idea for the web server. Default 3000.
+
+                          DOCUMENTATION ONLY -- the script does not
+                          start services, so if you pass these you also
+                          have to use the same port when you run
+                          `node dist\main.js` / `next start`.
 
 
 --------------------------------------------------------------------
