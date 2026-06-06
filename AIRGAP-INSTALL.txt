@@ -235,6 +235,18 @@ Troubleshooting
   Run:  Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
   in the same PowerShell window before running airgap.ps1.
 
+"Cannot find module '@prisma/engines'" during install (or any
+"Cannot find module" for a transitive dep)
+  The bundle was packed without -- config.node-linker=hoisted.
+  pnpm's default install uses a .pnpm/ virtual store with symlinks
+  for transitive deps; robocopy dereferences those symlinks during
+  the bundle copy, which breaks resolution from a hoisted package
+  (like `prisma`) back to its sibling deps (like @prisma/engines).
+  The script now passes --config.node-linker=hoisted during pack to
+  produce a flat npm-style node_modules that survives the copy.
+  Re-run pack from a refreshed clone (so node_modules is rebuilt
+  from scratch under the hoisted linker), then re-install.
+
 "Node MSI returned 1603" during install
   1603 is MSI's generic "fatal install error". Common causes:
     - Node is already installed on this box (most common after

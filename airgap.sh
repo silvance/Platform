@@ -106,7 +106,13 @@ do_pack() {
     fi
     note "pnpm at $(command -v pnpm)"
 
-    pnpm install --frozen-lockfile
+    # node-linker=hoisted: install in flat node_modules layout (npm-style),
+    # not pnpm's default .pnpm/ virtual store with symlinks. This is the
+    # form that survives a file-copy / robocopy intact -- pnpm's default
+    # layout uses symlinks for transitive-dep resolution, which break
+    # after dereferencing during the bundle copy and lead to
+    # "Cannot find module '@prisma/engines'" at runtime on the target.
+    pnpm install --frozen-lockfile --config.node-linker=hoisted
     pnpm --filter "@ci-train/contracts" build
     pnpm --filter "@ci-train/api" prisma:generate
     pnpm --filter "@ci-train/api" build
