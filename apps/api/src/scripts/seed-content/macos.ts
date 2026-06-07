@@ -1001,7 +1001,7 @@ unified-log launchd entries for the suspect window.
           {
             id: "verifies-cert",
             label:
-              "Opens an HTTPS connection to `https://203.0.113.91/beacon` with normal certificate verification; `_create_unverified_context()` only suppresses HSTS pinning warnings in CPython 3.13+, not the actual cert chain check.",
+              "Opens an HTTPS connection to `https://203.0.113.91/beacon` with normal certificate verification — Python's `urlopen()` defers actual chain validation to macOS's Secure Transport, so the `context=ctx` argument only affects optional Python-side checks (CRL fetch, OCSP staple), not the OS-level cert chain.",
           },
           {
             id: "writes-to-disk",
@@ -1011,7 +1011,7 @@ unified-log launchd entries for the suspect window.
           {
             id: "does-nothing",
             label:
-              "Nothing meaningful — `urllib.request.urlopen` only opens the TCP socket; without an explicit `.read()` flush invoked on the response object the OS-level send does not complete, so no data is transmitted.",
+              "Nothing meaningful — `urlopen(url, context=ctx)` only OPENS the TCP+TLS connection (handshake completes); the HTTP GET request itself isn't sent until something calls `.read()` on the response object, and the script never does.",
           },
         ],
         allowMultiple: false,
@@ -1032,14 +1032,14 @@ unified-log launchd entries for the suspect window.
         options: [
           { id: "endpoint-flow", label: "Endpoint flow records or pfctl logs showing outbound connections from python3 (uid 501) to `203.0.113.91:443`." },
           { id: "tcp-conntrack", label: "Live `lsof -i` / `nettop` showing an ESTABLISHED connection to `203.0.113.91:443` matched to a python3 PID." },
-          { id: "es-network-events", label: "Endpoint Security (`com.apple.endpointsecurity`) `ES_EVENT_TYPE_NOTIFY_KEXTLOAD`-class events for python3 around the 5-minute cadence (if the deployed EDR subscribes to network-create events)." },
+          { id: "edr-netext-events", label: "EDR per-process network telemetry (CrowdStrike, Jamf Protect, SentinelOne) showing python3 outbound at the 5-minute cadence — these vendors hook `NetworkExtension`, since Endpoint Security has no network event class." },
           { id: "upstream-flow", label: "Upstream switch/firewall flow logs for the host's IP showing periodic 5-minute outbound bursts to `203.0.113.91/32`." },
           { id: "launchd-log-only", label: "The launchd log line `launching for StartInterval` (proves the **job** was scheduled, not that the network call succeeded)." },
         ],
         allowMultiple: true,
         expected: {
           type: "multi_choice",
-          correctIds: ["endpoint-flow", "tcp-conntrack", "es-network-events", "upstream-flow"],
+          correctIds: ["endpoint-flow", "tcp-conntrack", "edr-netext-events", "upstream-flow"],
           allowMultiple: true,
         },
         debriefMd: [
@@ -1297,7 +1297,7 @@ Each record carries:
           {
             id: "metadata-only",
             label:
-              "Only directory metadata changed (e.g., \"a file inside was touched\"); the `ItemIsFile` flag in this context is a default-on bit that does not necessarily mean a file event, and the `Created|Modified` pair indicates a directory inode bump rather than an actual file write.",
+              "Only directory metadata changed — a child file's create-then-modify bumps the parent directory's inode (Create on the directory) and stamps `Modified` on its mtime, so the row reflects the parent directory's own metadata churn rather than a separate write to file content.",
           },
           {
             id: "two-files",
@@ -1605,7 +1605,7 @@ provenance + Gatekeeper status of each file.
           {
             id: "chrome-only",
             label:
-              "Only Chrome could have written that xattr; the `com.google.Chrome` agent string is signed and validated by `LSQuarantine` against the bundle's code-signing identity, so any non-Chrome process attempting to write `com.apple.quarantine` with that agent string would be rejected by the OS.",
+              "Only Chrome could have written that xattr — the `com.apple.quarantine` namespace is restricted by the kernel's xattr API to the process whose bundle identifier matches the agent string field, so a non-Chrome process couldn't claim to be Chrome without a system entitlement.",
           },
           {
             id: "any-app-can-write",
@@ -1615,12 +1615,12 @@ provenance + Gatekeeper status of each file.
           {
             id: "only-lsquarantine-aware-apps",
             label:
-              "Only apps registered with `LSQuarantine` (Apple-maintained allowlist of browsers, mail clients, AirDrop) can write the quarantine xattr; the OS rejects writes from non-allowlisted apps and so the agent string is reliable evidence of which app downloaded the file.",
+              "Only LaunchServices-registered apps that link the `LSQuarantine` framework will populate the xattr at all — non-aware tools simply skip it. So the presence of the xattr means the writer was an LSQuarantine-aware app (browsers, mail clients, AirDrop), and the agent string can be trusted.",
           },
           {
             id: "kmd-cannot-be-forged",
             label:
-              "`kMDItemWhereFroms` cannot be forged because it's set by Spotlight from in-memory download state, not by the app; the URL there is authoritative provenance even if the agent string is unreliable.",
+              "`kMDItemWhereFroms` is extracted by Spotlight from inside the file's content (PDF metadata, ZIP comments, EXIF) rather than set by the app, so the URL there is authoritative provenance even if the agent string is unreliable.",
           },
         ],
         allowMultiple: false,
@@ -1642,8 +1642,8 @@ provenance + Gatekeeper status of each file.
           { id: "chrome-history", label: "Chrome's `History` and `Downloads` SQLite tables for `carla`'s profile." },
           { id: "tls-sni-pcap", label: "Network capture / DNS / TLS-SNI from `carla`'s endpoint for the 08:31 UTC-08:31 window showing connections to `cdn.example.net`." },
           { id: "lsquarantine-tail", label: "Other recent `QuarantineEventsV2` rows around the same time (sibling downloads can confirm the source app's session behaviour)." },
-          { id: "etc-passwd", label: "`/etc/passwd` (lists local accounts but has no bearing on download provenance)." },
-          { id: "kernel-version", label: "`uname -a` output (irrelevant to download provenance)." },
+          { id: "quicklook-thumbs", label: "QuickLook thumbnail cache under `~/Library/Caches/com.apple.QuickLook.thumbnailcache/` for the window — would show whether the user previewed `payload.zip` after the download." },
+          { id: "homebrew-receipt", label: "Homebrew's install receipt (`brew list --versions payload`) — would show whether `payload.zip` arrived as a brew formula install rather than a Chrome download." },
         ],
         allowMultiple: true,
         expected: {
@@ -1654,7 +1654,7 @@ provenance + Gatekeeper status of each file.
         debriefMd: [
           "Chrome's own SQLite tables are the authoritative app-side record. Network captures independently confirm the download event. Adjacent QuarantineEvents rows give surrounding context.",
           "",
-          "`/etc/passwd` and `uname -a` are unrelated to download provenance.",
+          "QuickLook thumbs only fire on user-initiated preview AFTER a download (and don't recurse into ZIP contents), so they're a downstream signal at best, not provenance. Homebrew receipts wouldn't carry a quarantine xattr in the first place — if the file got one, it didn't come from `brew install`.",
         ].join("\n"),
       },
       {
@@ -1972,7 +1972,7 @@ treating any one surface as authoritative.
           { id: "fseventsd", label: "FSEvents records under `/Users/p.singh/Desktop/projects-other/` for the window." },
           { id: "endpoint-security", label: "Endpoint Security `ES_EVENT_TYPE_NOTIFY_OPEN` events captured by the deployed EDR." },
           { id: "tcc-fda", label: "TCC `kTCCServiceSystemPolicyAllFiles` grants for apps active in the window (rules out / confirms which apps could read /Users/p.singh/.../)." },
-          { id: "asl-flat", label: "Legacy ASL flat logs (`/var/log/asl/*.asl`) — deprecated, sparse on Sonoma, unlikely to add anything." },
+          { id: "asl-flat", label: "Legacy ASL flat logs (`/var/log/asl/*.asl`) — capture per-process `open()` syscall lines for the window." },
         ],
         allowMultiple: true,
         expected: {
@@ -1983,7 +1983,7 @@ treating any one surface as authoritative.
         debriefMd: [
           "Unified log + EndpointSecurity capture opens directly. FSEvents covers directory-level activity. TCC tells you which apps had the privilege to read.",
           "",
-          "Legacy ASL is mostly empty on modern macOS.",
+          "ASL is not macOS's auditd — it was syslog-style application message storage, never a syscall log; the unified log replaced it from Sierra onward. The distractor models the misread of treating ASL as a per-process syscall trace.",
         ].join("\n"),
       },
       {

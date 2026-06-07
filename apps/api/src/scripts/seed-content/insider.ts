@@ -1036,7 +1036,7 @@ The two channels are complementary, not duplicative.
           {
             id: "block-and-forget",
             label:
-              "Block the sender domain at the mail gateway and close the ticket; the user clicked through and the credentials are already rotated, so there's no operational urgency left. Spear phishing follow-ups generally use the same channel, so blocking the originating domain takes the sender out of play and removes the need for additional handling.",
+              "Block the sender domain at the mail gateway and close the ticket — credentials are rotated, so there's no live exposure left to handle.",
           },
         ],
         allowMultiple: true,
@@ -1308,7 +1308,7 @@ need-to-know.
           {
             id: "polygraph-now",
             label:
-              "Schedule a counterintelligence polygraph immediately on the strength of the access-pattern alone — the six-month escalation, the cross-team scope, and the share-link activity together are enough articulable suspicion to justify the request, and a polygraph result resolves the ambiguity faster than any data review.",
+              "Schedule a counterintelligence polygraph immediately on the access-pattern alone — the six-month escalation gives articulable suspicion enough to justify it.",
           },
         ],
         allowMultiple: true,
@@ -1562,7 +1562,7 @@ accounts.
           {
             id: "lock-and-walk-away",
             label:
-              "Disable the account immediately, leave the account in a locked state until the next IT review cycle, and consider the matter closed once the attacker can no longer authenticate as m.santos. The active session being severed removes the immediate threat and the matter can be handled administratively from there without further investigation steps.",
+              "Disable the account and consider the matter closed once the attacker can no longer authenticate as m.santos — the active session is severed, so the immediate threat is gone.",
           },
         ],
         allowMultiple: true,
