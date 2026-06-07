@@ -850,22 +850,22 @@ host-side process attribution and destination identification.
           {
             id: "destination-known",
             label:
-              "The host-resolved hostname for 198.51.100.77 can be read from the PCAP — the SNI extension in the TLS ClientHello includes the destination's intended hostname, so any beaconing process that uses TLS leaves its destination name in the packet stream regardless of whether DNS was consulted.",
+              "The host-resolved hostname for 198.51.100.77 can be read from the PCAP — the SNI extension in the TLS ClientHello carries it directly, so DNS isn't needed for destination attribution.",
           },
           {
             id: "user-attribution",
             label:
-              "The PCAP includes the local process and user that owned the beacon socket. Modern OS-level packet capture writes the originating process id and the username into the per-packet metadata, so user attribution is one of the fields a triage analyst can read off directly without needing host-side correlation.",
+              "The PCAP includes the local process and user that owned the beacon socket — modern OS-level capture writes PID + username into per-packet metadata, so user attribution comes off the wire directly.",
           },
           {
             id: "encrypted-content",
             label:
-              "Application-layer content of the beacon packets is encrypted (TLS application-data record header observed); the PCAP doesn't carry plaintext.",
+              "Application-layer content of the beacon packets is encrypted — TLS application-data records are observed, and the PCAP can describe their length and timing but not their plaintext payload.",
           },
           {
             id: "shape-only",
             label:
-              "The PCAP supports describing the **shape** of the traffic (cadence, size, destination IP) but is not by itself an attribution to a process, user, or destination identity.",
+              "The PCAP supports describing the **shape** of the traffic — cadence, packet size, destination IP — but is not by itself an attribution to a process, user, or destination identity.",
           },
         ],
         allowMultiple: true,
@@ -1604,7 +1604,7 @@ party app phone-home" one.
           {
             id: "c2-confirmed",
             label:
-              "This is C2 traffic to an adversary-controlled server. Open an active-compromise incident.",
+              "This is C2 traffic to an adversary-controlled server — cadence + uniform payload + repeated destination is the textbook signature, and the vendor branding is the standard cover identity attackers register to look legitimate. Open an active-compromise incident.",
           },
           {
             id: "beacon-shape-unknown-intent",
@@ -1614,12 +1614,12 @@ party app phone-home" one.
           {
             id: "benign-vendor",
             label:
-              "The destination is registered to a real software vendor and the process is signed; close the alert as a benign vendor heartbeat with no further action.",
+              "The destination domain is registered to a real software vendor and the process is signed by that vendor's developer certificate — both controls are validated before deployment, so close as a benign vendor heartbeat.",
           },
           {
             id: "exfil-confirmed",
             label:
-              "Bytes are leaving the host on a regular cadence, so this is exfiltration.",
+              "Bytes are leaving the host on a regular cadence with predictable size — that's the canonical low-and-slow exfiltration shape; flag as exfil and route to DLP.",
           },
         ],
         allowMultiple: false,
@@ -1646,17 +1646,17 @@ party app phone-home" one.
           {
             id: "more-netflow",
             label:
-              "Pull another 48 hours of NetFlow to see whether the cadence drifts. A real C2 beacon will jitter its cadence over time to evade detection, while a legitimate SaaS heartbeat will stay locked to its programmed interval; a longer NetFlow window distinguishes the two on shape alone, without needing certificate or vendor checks.",
+              "Pull another 48 hours of NetFlow to see whether the cadence drifts — more shape data over a longer window is the most decisive test, since beacon vs heartbeat have characteristic long-window behaviour.",
           },
           {
             id: "rebuild-host",
             label:
-              "Reimage the workstation from known-good media. A reimage resolves the question by removing whatever was generating the alert in the first place — if the alert stops after the reimage, the original process was the implant; if it returns, the implant is being introduced by a fresh user action that can then be traced.",
+              "Reimage the workstation from known-good media. If the alert stops, the original process was the implant; if it returns, a fresh user action is reintroducing it, and that's traceable.",
           },
           {
             id: "block-ip",
             label:
-              "Block `198.51.100.220` at the firewall and observe what breaks on the host. If the user reports that a vendor application stops working, the destination was legitimate; if nothing breaks, the destination was extraneous and the alert was correct to flag it. The block is reversible if needed.",
+              "Block `198.51.100.220` at the firewall and observe what breaks on the host — a real vendor app would fail user-visibly, confirming the destination was legitimate. The block is reversible.",
           },
         ],
         allowMultiple: false,
