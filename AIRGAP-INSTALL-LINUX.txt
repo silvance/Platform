@@ -1,32 +1,23 @@
 CI Cyber Lab -- Air-gap install instructions (Linux)
 ====================================================
 
-TL;DR -- two commands, one per box:
+TL;DR -- two commands, one per box
+----------------------------------
 
   Online (internet) Linux box, from the repo root:
       ./airgap.sh pack
-      (defaults to <parent-of-repo>/ci-cyber-lab-bundle; override
-       with -o <path> if you want the bundle elsewhere.)
+      (defaults to <parent-of-repo>/ci-cyber-lab-bundle; -o <path>
+       for elsewhere.)
 
   Air-gapped Linux box, from the bundle, as root/sudo:
-      sudo ./airgap.sh install -s /path/to/bundle -t /opt/ci-cyber-lab --seed
+      sudo ./airgap.sh install -s /path/to/bundle \
+                               -t /opt/ci-cyber-lab --seed
 
-  Need a refresher at the console?  ./airgap.sh help
-
-You have two boxes:
-
-  - ONLINE BOX  -- has internet, can pull from GitHub + npm.
-  - OFFLINE BOX -- the air-gapped target where the platform will live.
-
-You will:
-
-  1. Run ./airgap.sh pack on the online box to build a portable bundle.
-  2. Carry the bundle to the offline box (USB, tarball over removable
-     media, scp through a one-way data diode -- whatever your IA
-     policy allows).
-  3. Run ./airgap.sh install on the offline box.
+  Refresher at the console:  ./airgap.sh help
 
 Both boxes are Linux x86_64. Bash 4+ is fine (any modern distro).
+Move the bundle between boxes however your IA policy allows: USB,
+tarball over removable media, scp through a one-way data diode, etc.
 
 
 --------------------------------------------------------------------
@@ -46,21 +37,17 @@ Steps:
   2. Run:
 
        ./airgap.sh pack
+       ./airgap.sh pack -o /media/usb/ci-cyber-lab-bundle   # custom path
 
-     The bundle defaults to <parent-of-repo>/ci-cyber-lab-bundle.
-     Override with -o:
+     What it does:
+       - downloads the Node.js Linux x64 tarball  (~30 MB)
+       - installs pnpm globally via npm (no admin needed for
+         nvm-managed Node; needs sudo if Node is in a system path)
+       - runs pnpm install + prisma generate + a production build
+       - copies the repo + node_modules into the bundle directory
+       - writes manifest.json + INSTALL.txt into the bundle root
 
-       ./airgap.sh pack -o /media/usb/ci-cyber-lab-bundle
-
-     The script will:
-       - download the Node.js Linux x64 tarball              (~30 MB)
-       - install pnpm globally via npm (no admin needed for nvm-managed
-         Node; needs sudo if Node is in a system path)
-       - run pnpm install + prisma generate + a production build
-       - copy the repo + node_modules to the bundle directory
-       - write manifest.json and INSTALL.txt into the bundle root
-
-     Expect 5-20 minutes depending on disk + connection speed.
+     Expect 5-20 minutes.
 
   3. When you see "Bundle complete", the bundle is ready to carry.
 
@@ -206,6 +193,58 @@ Create the service user, fix ownership, enable both:
     chown -R ci-cyber-lab:ci-cyber-lab /opt/ci-cyber-lab
     systemctl daemon-reload
     systemctl enable --now ci-cyber-lab-api ci-cyber-lab-web
+
+
+--------------------------------------------------------------------
+Parameter reference
+--------------------------------------------------------------------
+
+Every parameter airgap.sh takes, grouped by which mode uses it.
+Long form (--name) and short form (-x) work interchangeably.
+
+COMMON
+  pack | install | help
+      First positional argument. What the script should do. With no
+      argument the script prints a banner and exits.
+  -h, --help
+      Print usage. Same effect as `help`.
+
+PACK MODE   (online box)
+  -o, --output <path>
+      Where to write the bundle.
+      Default: <parent-of-repo>/ci-cyber-lab-bundle
+
+INSTALL MODE   (air-gapped box, run as root/sudo)
+  -s, --source <path>     REQUIRED. Where the bundle lives.
+  -t, --target <path>     REQUIRED. Where the platform should live
+                          on disk.
+  --seed                  Run the seed script after migrations apply.
+                          The curated challenge catalog lands in the
+                          DB.
+  --skip-node             Skip the Node.js extract+symlink step. Use
+                          when Node >= 20.11 is already on the box.
+  --skip-postgres-check   Skip the `which psql` precheck. Use when
+                          Postgres lives on a different host (remote
+                          DATABASE_URL).
+  --force-repo-copy       Re-copy the bundle's repo over -t even if
+                          -t already has a built repo. Default skips
+                          the copy on re-runs (faster troubleshooting).
+  --admin-email <email>   Email for the seeded admin account.
+                          Default: admin@example.local
+  --admin-password <pw>   Password for the seeded admin account.
+                          Default: CICyberLab-Admin-1
+                          Both are seed-time only -- change AFTER
+                          first login via the web UI or
+                          reset-password.js (see Phase 3).
+  --api-port <int>        Port the printed start command tells you to
+                          bind the API to. Default 4000.
+  --web-port <int>        Same idea for the web server. Default 3000.
+
+                          DOCUMENTATION ONLY -- the script does not
+                          start services, so if you pass these you
+                          also have to use the same port when you
+                          run `node dist/main.js` / `next start` (or
+                          in the systemd unit's ExecStart).
 
 
 --------------------------------------------------------------------
