@@ -50,7 +50,7 @@ PHASE 1 -- Build the bundle on the ONLINE box
 --------------------------------------------------------------------
 
 Prereqs:
-  - Node.js >= 20.11   (https://nodejs.org)
+  - Node.js >= 22.12   (https://nodejs.org)
   - Git                (https://git-scm.com)
   - The repo cloned to an NTFS drive (see banner above)
   - A USB drive with at least 5 GB free
@@ -193,8 +193,10 @@ PACK MODE   (online box)
       Default: <repo-drive>:\ci-cyber-lab-bundle
   -NodeMsiUrl <url>
       Override the Node.js Windows-x64 MSI to download. Default is
-      the LTS line the repo's "engines" field requires (>=20.11).
-      Bump if you want a newer LTS.
+      Node v22.12.0, the first LTS where `require(esm)` is on by
+      default -- the seed step needs it because @ci-train/contracts
+      is ESM. Bump only if you want a newer LTS; do NOT downgrade
+      below 22.12.
   -PostgresInstallerUrl <url>
       Override the PostgreSQL Windows-x64 installer to download.
       Default is PostgreSQL 16.4. Bump if you want a different
@@ -274,7 +276,37 @@ Troubleshooting
       the line above names the failing action.
 
 "corepack: command not found" during pack
-  Reinstall Node.js >= 20.11 from nodejs.org; corepack ships with it.
+  Reinstall Node.js >= 22.12 from nodejs.org; corepack ships with it.
+
+"Node vXX.YY.Z is too old" during install
+  The script aborts before migrations apply if the Node on PATH is
+  older than 22.12.0. ci-cyber-lab requires Node 22.12+ because
+  @ci-train/contracts is ESM and the seed step requires it from
+  CommonJS -- only Node 22.12+ has `require(esm)` on by default;
+  earlier Node aborts seed.js with ERR_REQUIRE_ESM.
+
+  To fix on the air-gapped box:
+
+    1. Install Node from the bundle (overwrites C:\Program Files\nodejs\):
+
+         Start-Process msiexec.exe -ArgumentList @(
+           '/i', 'E:\ci-cyber-lab-bundle\installers\node.msi',
+           '/qn', '/norestart', 'ADDLOCAL=ALL') -Wait
+
+    2. Open a FRESH PowerShell so PATH picks up the new node,
+       confirm with:  node --version
+
+    3. Re-run airgap.ps1. Migrations are idempotent; seed will retry.
+       If migrations had already applied on a previous failed run,
+       add -SkipNode (the bundled node is now first on PATH).
+
+  Or uninstall the old Node via Add/Remove Programs first and
+  re-run airgap.ps1 without -SkipNode.
+
+"ERR_REQUIRE_ESM" / "require() of ES Module" during seed
+  Same root cause as above. The pre-flight version check should
+  catch this before migrations run, but if you somehow get here
+  (e.g. an older script version), the recovery is identical.
 
 "The term 'pnpm' is not recognized" during pack
   The script tries `npm install -g pnpm@9.12.0` automatically. If

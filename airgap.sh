@@ -66,8 +66,11 @@ EOF
 }
 
 # --- default tuning ------------------------------------------
-NODE_TARBALL="node-v20.18.0-linux-x64.tar.xz"
-NODE_URL_DEFAULT="https://nodejs.org/dist/v20.18.0/${NODE_TARBALL}"
+# Node 22.12+: first LTS where `require(esm)` is on by default.
+# @ci-train/contracts is ESM and the seed step requires it from
+# CommonJS, so older Node aborts with ERR_REQUIRE_ESM.
+NODE_TARBALL="node-v22.12.0-linux-x64.tar.xz"
+NODE_URL_DEFAULT="https://nodejs.org/dist/v22.12.0/${NODE_TARBALL}"
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -247,6 +250,35 @@ do_install() {
         # The file holds a Postgres password. Owner-read/write only.
         chmod 600 "${ENVFILE}"
         ok "Wrote ${ENVFILE} (mode 600)"
+    fi
+
+    # Pre-flight: verify the node that will run seed.js is >= 22.12
+    # BEFORE migrations apply. @ci-train/contracts is ESM, the seed
+    # uses require(), so older Node aborts with ERR_REQUIRE_ESM and
+    # leaves the operator with a migrated schema and no content.
+    NODE_VER=$(/usr/local/bin/node --version 2>/dev/null || true)
+    if [ -n "${NODE_VER}" ]; then
+        NODE_MAJOR=$(echo "${NODE_VER}" | sed -E 's/^v([0-9]+)\..*/\1/')
+        NODE_MINOR=$(echo "${NODE_VER}" | sed -E 's/^v[0-9]+\.([0-9]+)\..*/\1/')
+        if [ "${NODE_MAJOR}" -lt 22 ] || { [ "${NODE_MAJOR}" -eq 22 ] && [ "${NODE_MINOR}" -lt 12 ]; }; then
+            fail "$(cat <<EOF
+node at /usr/local/bin/node is ${NODE_VER}; ci-cyber-lab requires
+>= 22.12.0 for the seed step (@ci-train/contracts is ESM, the seed
+uses require()). Stopping before migrations apply so the box doesn't
+end up in a half-installed state.
+
+If you passed --skip-node, re-run without it so the bundled Node 22
+gets installed. Otherwise extract the bundle's Node tarball manually:
+
+  tar -xf ${SOURCE}/installers/node-*-linux-x64.tar.* -C /opt/
+  ln -sf /opt/node-v22.*-linux-x64/bin/node /usr/local/bin/node
+  ln -sf /opt/node-v22.*-linux-x64/bin/npm /usr/local/bin/npm
+  ln -sf /opt/node-v22.*-linux-x64/bin/npx /usr/local/bin/npx
+
+Then re-run this install command.
+EOF
+)"
+        fi
     fi
 
     stage "Applying Prisma migrations"

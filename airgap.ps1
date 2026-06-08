@@ -42,9 +42,11 @@ param(
     [string]$Target,
 
     # Pack mode: Node.js Windows-x64 MSI URL. Defaults to the
-    # LTS line the repo's engines field requires (>=20.11).
-    # Override if you want a newer LTS.
-    [string]$NodeMsiUrl = "https://nodejs.org/dist/v20.18.0/node-v20.18.0-x64.msi",
+    # LTS line where `require(esm)` is on by default (>=22.12 --
+    # the platform's contracts package is ESM, and the seed step
+    # requires it from CommonJS, so older Node aborts with
+    # ERR_REQUIRE_ESM).
+    [string]$NodeMsiUrl = "https://nodejs.org/dist/v22.12.0/node-v22.12.0-x64.msi",
 
     # Pack mode: PostgreSQL Windows-x64 installer URL.
     # Override if you want a different major version.
@@ -398,6 +400,39 @@ function Invoke-Install {
         }
         if ($existingNode) {
             $ver = (& node --version 2>$null)
+            # `require(esm)` was made on-by-default in Node 22.12.
+            # @ci-train/contracts is ESM; the seed step requires it
+            # from CommonJS, so anything older aborts seed.js with
+            # ERR_REQUIRE_ESM. Catch it here rather than after the
+            # (irreversible) DB migrations run.
+            $verNum = $null
+            if ($ver -match '^v(\d+\.\d+\.\d+)') { $verNum = [version]$Matches[1] }
+            $minVer = [version]"22.12.0"
+            if ($verNum -and ($verNum -lt $minVer)) {
+                $bundledMsi = Join-Path $Source "installers\node.msi"
+                Fail @"
+Node $ver is too old. ci-cyber-lab requires >= 22.12.0
+(@ci-train/contracts is ESM and the seed step uses require(),
+which is only enabled by default on Node 22.12+).
+
+To recover on this box:
+
+  1. Install Node from the bundle (overwrites C:\Program Files\nodejs\):
+       Start-Process msiexec.exe -ArgumentList @(
+         '/i', '$bundledMsi',
+         '/qn', '/norestart', 'ADDLOCAL=ALL') -Wait
+
+  2. Open a FRESH PowerShell so PATH picks up the new node,
+     confirm with:  node --version
+
+  3. Re-run the install with -SkipNode (migrations are idempotent;
+     seed will retry):
+       .\airgap.ps1 -Mode Install -Source $Source -Target $Target -Seed -SkipNode
+
+Or uninstall the old Node via "Add/Remove Programs" first and
+re-run without -SkipNode.
+"@
+            }
             Write-OK "Node already installed at $($existingNode.Source) ($ver) -- skipping MSI."
         } else {
             $nodeMsi = Join-Path $Source "installers\node.msi"
@@ -510,6 +545,33 @@ Common causes:
         # whoever launches `node dist\main.js`, so they need read.
         & icacls "$existingEnv" /inheritance:r /grant:r "BUILTIN\Administrators:F" "$env:USERNAME:F" 2>$null | Out-Null
         Write-OK "Wrote $existingEnv (admin + current user only)"
+    }
+
+    # Pre-flight: verify Node on PATH is >= 22.12 before touching
+    # the DB. Catches the -SkipNode-with-old-Node case (Node 16/18
+    # already installed, operator passes -SkipNode) BEFORE migrations
+    # apply -- otherwise migrate succeeds, seed bombs on
+    # ERR_REQUIRE_ESM, and the operator is left in a half-installed
+    # state with a populated schema and no content.
+    $effectiveVer = (& node --version 2>$null)
+    $effectiveVerNum = $null
+    if ($effectiveVer -match '^v(\d+\.\d+\.\d+)') { $effectiveVerNum = [version]$Matches[1] }
+    $minVer = [version]"22.12.0"
+    if ($effectiveVerNum -and ($effectiveVerNum -lt $minVer)) {
+        Fail @"
+Node on PATH is $effectiveVer; ci-cyber-lab requires >= 22.12.0
+for the seed step (@ci-train/contracts is ESM, the seed uses
+require()). Stopping before migrations apply so you don't end
+up in a half-installed state.
+
+Install Node from the bundle:
+    Start-Process msiexec.exe -ArgumentList @(
+      '/i', '$(Join-Path $Source "installers\node.msi")',
+      '/qn', '/norestart', 'ADDLOCAL=ALL') -Wait
+
+Then open a fresh PowerShell, confirm with `node --version`,
+and re-run this install command.
+"@
     }
 
     Write-Stage "Applying Prisma migrations"
