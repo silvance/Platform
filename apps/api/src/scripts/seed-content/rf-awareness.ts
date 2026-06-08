@@ -190,9 +190,9 @@ language that collapses that distinction.
         options: [
           { id: "band-limit", label: "**Band coverage** — only 25 MHz to 6 GHz was assessed; anything outside that window is invisible to this equipment." },
           { id: "time-limit", label: "**Duration** — only a 90-minute window was observed; a duty-cycled emitter that doesn't transmit during the window doesn't appear." },
-          { id: "ambient-wifi", label: "Wi-Fi and Bluetooth traffic was observed at expected levels — the presence of normal background traffic in the consumer bands means the room's spectrum is being actively used as expected and any covert emitter would have been audible against that baseline." },
-          { id: "carrier-cellular", label: "Background cellular activity was nominal — clean carrier emissions in the room mean there's no signal-injection or stand-in transmitter masking other activity, so the unanimous absence of anomalies during the window can stand as a clean reading." },
-          { id: "no-anomaly", label: "No persistent signals outside known carrier / Wi-Fi / BT profiles were detected during the window, which is the operational definition of \"no anomalous emissions\" the TSCM SOP uses for sweeping a room as clear." },
+          { id: "ambient-wifi", label: "Wi-Fi and Bluetooth traffic was observed at expected levels — normal consumer-band activity means any covert emitter would have stood out against the active baseline." },
+          { id: "carrier-cellular", label: "Background cellular activity was nominal — clean carrier emissions mean no signal-injection transmitter is masking other activity in the window." },
+          { id: "no-anomaly", label: "No persistent signals outside the known carrier / Wi-Fi / BT profiles were detected during the window — that's the operational threshold for declaring a room clear." },
         ],
         allowMultiple: true,
         expected: {
@@ -269,8 +269,8 @@ language should say and what the operational next step is.
         weight: 1,
         promptMd: "Which sentence is the right finding for the field report?",
         options: [
-          { id: "definitive-bug", label: "A clandestine surveillance device was operating during the event. The narrowband emitter on an unregistered frequency, persistent through the sensitive portion, and unmatched to any event transmitter is sufficient to identify the signal as hostile RF collection targeting the event." },
-          { id: "definitive-not-bug", label: "No anomaly observed. The single narrowband emitter could be any number of mundane RF sources in the venue's broader spectrum (an unrelated commercial transmitter, a building HVAC controller, a nearby cellular small-cell), and absent confirmation by a TSCM team the observation is not strong enough to enter the field report at all." },
+          { id: "definitive-bug", label: "A clandestine surveillance device was operating during the event — the narrowband emitter on an unregistered frequency, persistent through the sensitive portion, is sufficient to identify the signal as hostile RF collection." },
+          { id: "definitive-not-bug", label: "No anomaly observed. The single narrowband emitter could be any of the mundane RF sources in the venue's broader spectrum, and without TSCM confirmation it doesn't enter the field report." },
           { id: "calibrated-finding", label: "A persistent narrowband signal was observed that does not correspond to the published event infrastructure. The observation does not identify the signal's source. Recommend escalation to qualified TSCM personnel for assessment." },
         ],
         allowMultiple: false,
@@ -947,17 +947,17 @@ None of these is by itself proof. They're escalation prompts.
           {
             id: "att-tether",
             label:
-              "An `ATT-1A2B` SSID at low signal strength on the AT&T Mobility OUI — guest-phone tether pattern. This is the canonical fingerprint of an attacker-controlled rogue AP because guest phones routinely auto-join SSIDs they've seen before and the SSID was specifically named to attract trusted devices.",
+              "An `ATT-1A2B` SSID at -78 dBm on the AT&T Mobility OUI — guest tether at the meeting room boundary, could indicate a positioned operator phone if it persists past the principal's arrival.",
           },
           {
             id: "esp32-hidden",
             label:
-              "A hidden SSID on an Espressif OUI at -83 dBm. Hidden ESP32 SSIDs at low signal in a hotel are the textbook signature of a long-running covert beacon and should be the highest-priority flag on the list.",
+              "A hidden SSID on an Espressif OUI at -83 dBm — hidden SSID + IoT chip + weak signal could indicate a long-running covert sensor planted in advance of the meeting.",
           },
           {
             id: "jbl-headphones",
             label:
-              "`JBL Charge 5` Bluetooth speaker at -68 dBm — consumer audio gear in a hotel ballroom is the most common rogue-AP cover for a packet sniffer and warrants escalation by default.",
+              "`JBL Charge 5` Bluetooth speaker at -68 dBm — consumer audio in a meeting room is unusual; could be cover for a sniffer or recording device with modified firmware.",
           },
         ],
         allowMultiple: true,
@@ -975,9 +975,9 @@ None of these is by itself proof. They're escalation prompts.
           "",
           "**Not worth escalating (ordinary hotel noise):**",
           "",
-          "- *ATT-1A2B*: weak-signal AT&T-OUI personal hotspot — guest tether, not a rogue AP. The \"named to attract trusted devices\" framing is fiction; the SSID is just AT&T's default tether name.",
+          "- *ATT-1A2B*: weak-signal AT&T-OUI personal hotspot — guest tether, not a rogue AP. A hotel WiFi scan picks up dozens of these per room; \"could indicate a positioned operator phone\" overreaches without persistence past the principal's arrival.",
           "- *Hidden ESP32 at -83 dBm*: weak-signal IoT device — hotels are full of these (door lock controllers, BLE bridges, lighting). Default device class on Espressif silicon; not a TSCM concern in isolation.",
-          "- *JBL Charge 5*: consumer Bluetooth speaker. Sniffer cover stories don't make consumer electronics suspicious.",
+          "- *JBL Charge 5*: consumer Bluetooth speaker. Cover-story reasoning doesn't make consumer electronics suspicious without a more specific signal (e.g. signal strength tracking to a non-attendee location, or paired-with-recording-host fingerprint).",
         ].join("\n"),
       },
       {
@@ -990,17 +990,17 @@ None of these is by itself proof. They're escalation prompts.
           {
             id: "tplink-tscm",
             label:
-              "The TP-Link `Grand Hotel WiFi` evil-twin candidate — the venue plan specifies Ruckus, the TP-Link AP can intercept guest credentials and is potentially attributable to a positioned actor; this is exactly the call TSCM (and venue IT) should make before the principal enters the room.",
+              "The TP-Link `Grand Hotel WiFi` evil-twin candidate — the venue plan specifies Ruckus; the TP-Link AP can intercept guest credentials before the principal enters.",
           },
           {
             id: "av-tscm",
             label:
-              "The undocumented `Vendor-AV-Room-Link` plus the matching-OUI BT receiver — this is the highest-priority flag because AV truck back-channels carry meeting audio by design, and an unauthorised one is a direct audio-exfiltration risk.",
+              "The undocumented `Vendor-AV-Room-Link` plus the matching-OUI BT receiver — AV back-channels carry meeting audio by design, so an unauthorised one is a direct exfiltration risk.",
           },
           {
             id: "voicememo-local",
             label:
-              "The `VoiceMemoXR-22` BT device — handle locally with a walk-around to identify whose device it is; if it can't be attributed in five minutes, escalate.",
+              "The `VoiceMemoXR-22` BT device — handle locally with a walk-around to identify whose device it is; escalate to TSCM only if it can't be attributed in five minutes.",
           },
           {
             id: "all-three",

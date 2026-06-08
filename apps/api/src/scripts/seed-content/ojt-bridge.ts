@@ -115,17 +115,17 @@ The two are not the same thing.
           {
             id: "no-absence-not-proof",
             label:
-              "No. \"The parser surfaced zero SMS\" is not the same as \"zero SMS ever existed.\" The parser might not cover this device's SMS store, the messages might have been deleted and overwritten, or the source image might not include the SMS partition.",
+              "No. \"The parser surfaced zero SMS\" is not the same as \"zero SMS ever existed.\" The parser might not cover this device's SMS store version, deleted messages might have been overwritten, or the acquisition image might not include the SMS partition at all.",
           },
           {
             id: "yes-zero-means-zero",
             label:
-              "Yes. A zero count from a forensic parser means zero records existed in the source corpus. The parser walks the SMS store comprehensively and reports what it finds; a zero result is therefore a complete statement of the underlying data and not an artifact of the parser's coverage.",
+              "Yes. A zero count from a forensic parser means zero records existed in the source corpus — the parser walks the SMS store comprehensively, so a zero result is a complete statement of the underlying data.",
           },
           {
             id: "yes-tool-is-complete",
             label:
-              "Yes. Forensic parsers are validated to surface every message in their target format, so a zero count is a reliable statement of the device's actual SMS history. The validation step the tool went through to be certified for forensic use is exactly what underwrites the completeness claim.",
+              "Yes. Forensic parsers are validated to surface every message in their target format, so a zero count is a reliable statement of the device's actual SMS history.",
           },
         ],
         allowMultiple: false,
@@ -209,17 +209,17 @@ errors*. It doesn't say what's in the image.
           {
             id: "image-clean",
             label:
-              "The image was captured cleanly: every sector of the source was read once, written to the image, and the two SHA-256 hashes match.",
+              "The image was captured cleanly: every sector of the source was read once, written to the image, and the source and image SHA-256 hashes match.",
           },
           {
             id: "evidence-found",
             label:
-              "The image contains evidence of the activity under investigation. \"COMPLETE — no read errors\" is the acquisition tool's confirmation that the imaging operation captured the case-relevant material the analyst requested; once the line appears the case folder can move into examination with the evidentiary content already implied.",
+              "The image contains evidence of the activity under investigation — a successful, error-free acquisition is what unlocks the case proceeding to examination, so this line means the evidentiary content is in hand.",
           },
           {
             id: "device-malware-free",
             label:
-              "The source device is free of malware. The acquisition tool scans for malicious patterns as it reads each sector and reports \"COMPLETE — no read errors\" only when both the read succeeded and the scan turned up no infections during the image-creation pass.",
+              "The source device is free of malware — reading every sector cleanly means the tool touched every byte of the disk, and no infections triggered the read errors that compromised sectors usually surface as.",
           },
         ],
         allowMultiple: false,
@@ -337,17 +337,17 @@ per-user.
           {
             id: "exe-ran",
             label:
-              "`notepad.exe` was executed on this Windows host at least seven times between the first and last run timestamps.",
+              "`notepad.exe` was executed on this Windows host at least seven times between the first-run and last-run timestamps recorded in the Prefetch entry.",
           },
           {
             id: "user-opened",
             label:
-              "The suspect personally opened `notepad.exe` seven times. Prefetch records GUI-launched programs and counts each user-initiated launch as a separate run, so the seven runs are seven discrete user actions by the account on this workstation.",
+              "The suspect personally opened `notepad.exe` seven times — Prefetch counts each user-initiated launch, so the seven runs map to seven discrete user actions by the suspect's account on this workstation.",
           },
           {
             id: "user-read",
             label:
-              "The user read sensitive documents in `notepad.exe`. Each Prefetch run reflects a session in which the user actively had a document open, which is the canonical use case for `notepad.exe` on a workstation.",
+              "The user read sensitive documents in `notepad.exe` — Prefetch runs reflect document-open sessions, and `notepad.exe` is overwhelmingly used for reading and editing files rather than as a launcher.",
           },
         ],
         allowMultiple: false,
@@ -369,17 +369,17 @@ per-user.
           {
             id: "userassist",
             label:
-              "The user's `UserAssist` registry entries (per-user, records GUI-launched programs).",
+              "The user's `UserAssist` registry entries — per-user under `NTUSER.DAT`, tracks GUI-launched programs with last-used time and run count for that account.",
           },
           {
             id: "more-prefetch",
             label:
-              "More Prefetch entries on the same host, scoped to the same window — additional .pf files corroborate the execution count and let the analyst correlate the timing pattern back to a specific user session that overlaps the run-count signal.",
+              "More Prefetch entries on the same host, scoped to the same window — additional `.pf` files corroborate the execution count and let the analyst correlate the timing pattern back to a user session.",
           },
           {
             id: "antivirus-log",
             label:
-              "The host's antivirus log, scoped to the relevant binary and time window — an AV scan event includes the user context the process was running under, so the AV log effectively names the responsible account at scan-time.",
+              "The host's antivirus log scoped to the binary and time window — AV on-access scan events name the user account that triggered the scan, so the log effectively attributes execution.",
           },
         ],
         allowMultiple: false,
@@ -509,12 +509,12 @@ including writes to a USB volume.
           {
             id: "more-usbstor",
             label:
-              "More USBSTOR records from other workstations in the unit to confirm whether this specific device serial has been mounted elsewhere; a cross-host hit shows the device's history of contact with unit systems and is the strongest evidence that files moved through it.",
+              "More USBSTOR records from other workstations in the unit — confirms whether this device serial has been mounted elsewhere, showing the device's history of contact with unit systems.",
           },
           {
             id: "device-photograph",
             label:
-              "A photograph of the recovered device after it was seized, with the storage capacity and any visible labels documented; the photograph paired with the USBSTOR record physically ties the device to the host and is what a reviewer or counsel will need to follow the evidence trail.",
+              "A photograph of the recovered device, with capacity and visible labels documented — pairs with the USBSTOR record to physically tie the device to the host for chain-of-custody.",
           },
         ],
         allowMultiple: false,
@@ -596,17 +596,17 @@ disk untouched. Those are separate artifacts.
           {
             id: "saved",
             label:
-              "`util-x.exe` was saved to `m.wong`'s Downloads folder around 2026-09-03 14:08 UTC and the download completed without error.",
+              "`util-x.exe` was saved to `m.wong`'s Downloads folder around 2026-09-03 14:08 UTC and the download completed without error — the row records the transfer outcome, nothing about what happened to the file afterward.",
           },
           {
             id: "executed",
             label:
-              "The user executed `util-x.exe` after the download finished. The `State: Completed` value on the download row is the browser's confirmation that the binary not only landed on disk but was opened by the user once the transfer wrapped up — that's what the completion state means in browser-history schemas.",
+              "The user executed `util-x.exe` after the download finished — `State: Completed` means the download lifecycle (transfer → save → open) finished, marking the end of the whole user action including the launch.",
           },
           {
             id: "intentional",
             label:
-              "The user knowingly chose to download a malicious file. The presence of a clean download entry with no browser warning or quarantine action means the user actively dismissed any security prompt that would otherwise have flagged the file, which is consistent with deliberate intent on their part.",
+              "The user knowingly chose to download a malicious file — a clean download row with no browser warning means the user must have dismissed any quarantine prompt, which evidences deliberate intent.",
           },
         ],
         allowMultiple: false,
