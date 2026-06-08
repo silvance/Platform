@@ -25,7 +25,7 @@ PHASE 1 -- Build the bundle on the ONLINE box
 --------------------------------------------------------------------
 
 Prereqs on the online box:
-  - Node.js >= 20.11    (https://nodejs.org)
+  - Node.js >= 22.12    (https://nodejs.org)
   - Git
   - curl, tar, rsync    (universal; reinstall via apt/dnf if missing)
   - The repo cloned somewhere local
@@ -222,7 +222,9 @@ INSTALL MODE   (air-gapped box, run as root/sudo)
                           The curated challenge catalog lands in the
                           DB.
   --skip-node             Skip the Node.js extract+symlink step. Use
-                          when Node >= 20.11 is already on the box.
+                          when Node >= 22.12 is already on the box.
+                          The script will hard-abort before migrations
+                          run if the node on PATH is older.
   --skip-postgres-check   Skip the `which psql` precheck. Use when
                           Postgres lives on a different host (remote
                           DATABASE_URL).
@@ -281,6 +283,23 @@ Troubleshooting
   Create it manually with:
       sudo -u postgres psql -c "CREATE DATABASE ci_cyber_lab;"
   then re-run install -- it's idempotent.
+
+"node at /usr/local/bin/node is vXX.YY.Z; ci-cyber-lab requires
+>= 22.12.0" -- the script aborted before migrations
+  ci-cyber-lab needs Node 22.12+ for the seed step
+  (@ci-train/contracts is ESM, the seed uses require(), and only
+  Node 22.12+ has `require(esm)` on by default; earlier Node aborts
+  seed.js with ERR_REQUIRE_ESM).
+
+  If you passed --skip-node, re-run without it -- the bundled
+  Node 22 will be extracted and symlinked into /usr/local/bin/.
+
+  Otherwise extract the bundle's Node tarball manually:
+      tar -xf /path/to/bundle/installers/node-*-linux-x64.tar.* -C /opt/
+      ln -sf /opt/node-v22.*-linux-x64/bin/node /usr/local/bin/node
+      ln -sf /opt/node-v22.*-linux-x64/bin/npm /usr/local/bin/npm
+      ln -sf /opt/node-v22.*-linux-x64/bin/npx /usr/local/bin/npx
+  Then re-run install.
 
 Web app build fails with native-module errors mid-install on the
 target box
