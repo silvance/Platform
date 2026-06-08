@@ -314,6 +314,36 @@ Troubleshooting
       sudo -u postgres psql -c "CREATE DATABASE ci_cyber_lab;"
   then re-run install -- it's idempotent.
 
+"EADDRINUSE" / web app refuses to start on the default port
+  Something else on the box is already listening on 3000
+  (a NAS admin UI, a stale next.js process from a prior install
+  attempt, a dev tool). Three ways to fix it:
+
+  1. (Fastest) Run start.sh with a different port for THIS launch:
+
+         cd /opt/ci-cyber-lab
+         WEB_PORT=9300 ./start.sh
+
+     Then browse to http://localhost:9300. start.sh keeps the
+     install-time default; this only changes the current run.
+
+  2. (Persistent) Re-run the install with a new --web-port.
+     Migrations and seed are idempotent, so this just rewrites
+     start.sh with the new default baked in:
+
+         sudo ./airgap.sh install \
+             -s /path/to/bundle \
+             -t /opt/ci-cyber-lab \
+             --seed --web-port 9300 --auto-start
+
+  3. (Free the port) Find what's holding port 3000 and stop it:
+
+         sudo ss -ltnp 'sport = :3000'
+         sudo kill <pid-from-above>
+
+     Useful only if the holder is a stale process and not a
+     service you depend on.
+
 "node at /usr/local/bin/node is vXX.YY.Z; ci-cyber-lab requires
 >= 22.12.0" -- the script aborted before migrations
   ci-cyber-lab needs Node 22.12+ for the seed step

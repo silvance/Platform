@@ -353,6 +353,36 @@ prisma migrate deploy fails with "database does not exist"
   Create it once with psql (Phase 2 step d), then re-run Install
   with the same -Source and -Target.
 
+"EADDRINUSE :::3000" / web app refuses to start on the default port
+  Something else on the box is already listening on 3000 (a NAS
+  admin UI, a stale next.js process from a prior install attempt,
+  a dev tool). Three ways to fix it:
+
+  1. (Fastest) Run start.ps1 with a different port for THIS launch:
+
+         cd C:\ci-cyber-lab
+         .\start.ps1 -WebPort 9300
+
+     Then browse to http://localhost:9300. start.ps1 keeps the
+     install-time default; this only changes the current run.
+
+  2. (Persistent) Re-run the install with a new -WebPort. The
+     migrations and seed are idempotent, so this just rewrites
+     start.ps1 with the new default baked in:
+
+         .\airgap.ps1 -Mode Install -Source E:\ci-cyber-lab-bundle `
+                                    -Target C:\ci-cyber-lab `
+                                    -Seed -WebPort 9300 -AutoStart
+
+  3. (Free the port) Find what's holding port 3000 and stop it:
+
+         Get-NetTCPConnection -LocalPort 3000 -State Listen |
+             Format-Table -AutoSize OwningProcess
+         Stop-Process -Id <pid-from-above> -Force
+
+     Useful only if the holder is actually a stale process and
+     not a service you depend on (a NAS web UI generally is).
+
 Postgres installer hangs or won't start during install
   The Bitrock installer is sensitive to weird console states. Run
   it directly:
