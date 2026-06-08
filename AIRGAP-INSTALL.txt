@@ -144,12 +144,40 @@ Steps:
 PHASE 3 -- Start the platform
 --------------------------------------------------------------------
 
-The script does NOT register Windows services (operator choice --
-NSSM, scheduled task, or a service account, per your sysadmin
-policy). For a quick verification:
+The easiest path: the install writes a start.ps1 helper into
+-Target. It launches both services in their own PowerShell
+windows, baking the install-time ports as defaults:
+
+      cd C:\ci-cyber-lab
+      .\start.ps1
+      # or, override the ports for THIS run:
+      .\start.ps1 -ApiPort 4000 -WebPort 9300
+
+Pass -AutoStart on the install itself to launch them immediately
+after the install completes (no manual start needed for the first
+run):
+
+      .\airgap.ps1 -Mode Install -Source ... -Target ... -Seed -AutoStart
+
+The two new PowerShell windows survive after the install command
+exits, so you can close the parent and the services keep running.
+Stop them by closing the new windows.
+
+PORT CONFLICTS: if the default port 3000 is already in use on the
+target box (NAS web UI, dev tools, etc.), pass -WebPort to bind
+the web app somewhere else. The setting flows through to start.ps1.
+
+      .\airgap.ps1 -Mode Install -Source ... -Target ... -Seed -WebPort 9300
+
+For production-style deployment (running as a service, surviving
+logoff, auto-restart on crash) the script does NOT register
+Windows services -- that's an operator policy choice (NSSM,
+scheduled task, or a service account). For a manual quick
+verification:
 
   API (port 4000):
       cd C:\ci-cyber-lab\apps\api
+      $env:PORT = 4000
       node dist\main.js
 
   Web (port 3000):
@@ -224,14 +252,18 @@ INSTALL MODE   (air-gapped box, elevated PowerShell)
                           Both are seed-time only -- changing them
                           AFTER first login goes through the web UI or
                           reset-password.js (see Phase 3).
-  -ApiPort <int>          Port the printed start command tells you to
-                          bind the API to. Default 4000.
+  -ApiPort <int>          Port the API binds to. Default 4000.
+                          Flows through to: the printed start commands,
+                          the generated start.ps1's default, and the
+                          auto-start spawn if -AutoStart is set.
   -WebPort <int>          Same idea for the web server. Default 3000.
-
-                          DOCUMENTATION ONLY -- the script does not
-                          start services, so if you pass these you also
-                          have to use the same port when you run
-                          `node dist\main.js` / `next start`.
+                          Override if the default conflicts with
+                          another service on the box (NAS web UI, etc.).
+  -AutoStart              After the install completes, immediately
+                          launch the API + web in their own PowerShell
+                          windows via the generated start.ps1. Without
+                          this, start.ps1 still gets written -- the
+                          operator just has to run it manually.
 
 
 --------------------------------------------------------------------
