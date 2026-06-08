@@ -76,12 +76,17 @@ param(
     [switch]$ForceRepoCopy,
 
     # Install mode: ports the printed start commands tell the
-    # operator to bind to. The script does NOT actually start the
-    # services -- these are documentation values, so operators
-    # who change them here also need to use the same port when
-    # they `node dist\main.js`.
+    # operator to bind to, AND the defaults baked into the
+    # generated start.ps1 helper.
     [int]$ApiPort = 4000,
-    [int]$WebPort = 3000
+    [int]$WebPort = 3000,
+
+    # Install mode: spawn the API + web in their own PowerShell
+    # windows immediately after the Done banner, so the operator
+    # doesn't have to start them manually. Without this, the
+    # install just writes start.ps1 into -Target and prints the
+    # commands.
+    [switch]$AutoStart
 )
 
 $ErrorActionPreference = "Stop"
@@ -344,6 +349,24 @@ function Invoke-Pack {
     # robocopy exit codes 0-7 are success; >=8 is failure.
     if ($LASTEXITCODE -ge 8) { Fail "robocopy failed with code $LASTEXITCODE" }
     Write-OK "Repo copied to $repoDest"
+
+    # Strip `output: "standalone"` from the bundle's copy of
+    # next.config.js. The source repo's config has it restored
+    # (so the operator's dev environment isn't disturbed), but
+    # the bundle's BUILD was made without standalone, and shipping
+    # a config-vs-build mismatch causes Next to print
+    #     "next start does not work with output: standalone"
+    # at runtime on the air-gapped box. Patch the bundle's copy
+    # to match what was actually built.
+    $bundleWebConfig = Join-Path $repoDest "apps\web\next.config.js"
+    if (Test-Path -LiteralPath $bundleWebConfig) {
+        $cfg = Get-Content -LiteralPath $bundleWebConfig -Raw
+        $patchedCfg = $cfg -replace 'output:\s*["'']standalone["''],?', '// airgap: standalone disabled (build does not emit .next/standalone/)'
+        if ($patchedCfg -ne $cfg) {
+            Set-Content -LiteralPath $bundleWebConfig -Value $patchedCfg -Encoding UTF8 -NoNewline
+            Write-Note "Stripped 'output: standalone' from bundle next.config.js (matches the built artifacts)."
+        }
+    }
 
     Write-Stage "Writing manifest + INSTALL.txt"
     $manifest = [pscustomobject]@{
@@ -635,16 +658,96 @@ and re-run this install command.
         $nextBin = "<could not resolve 'next' bin -- check $Target\node_modules\next>"
     }
 
+    # Write a start.ps1 helper into -Target so the operator can
+    # re-launch both services any time without typing the two
+    # cd + node commands by hand. Defaults to the install-time
+    # ports; override at runtime with -ApiPort / -WebPort.
+    $startScript = Join-Path $Target "start.ps1"
+    $startScriptBody = @"
+# CI Cyber Lab -- launch the API + web in their own PowerShell windows.
+# Written by airgap.ps1 at install time. Re-run any time to bring the
+# services back up after a reboot or after the operator closed the
+# windows.
+#
+# For production-style deployment (running as a service, surviving
+# logoff, auto-restart on crash), see AIRGAP-INSTALL.txt Phase 3.
+#
+# Defaults bake in the install-time ports (-ApiPort / -WebPort on
+# airgap.ps1 -Mode Install). Override at runtime:
+#   .\start.ps1 -ApiPort 4000 -WebPort 9300
+
+[CmdletBinding()]
+param(
+    [int]`$ApiPort = $ApiPort,
+    [int]`$WebPort = $WebPort
+)
+
+`$ErrorActionPreference = "Stop"
+
+`$repo = `$PSScriptRoot
+`$apiDir = Join-Path `$repo "apps\api"
+`$webDir = Join-Path `$repo "apps\web"
+`$nextBin = Join-Path `$repo "node_modules\next\dist\bin\next"
+if (-not (Test-Path -LiteralPath `$nextBin)) {
+    `$nextBin = Join-Path `$webDir "node_modules\next\dist\bin\next"
+}
+
+if (-not (Test-Path -LiteralPath (Join-Path `$apiDir "dist\main.js"))) {
+    Write-Host "ERR: `$apiDir\dist\main.js not found. Was the bundle built?" -ForegroundColor Red
+    exit 1
+}
+if (-not (Test-Path -LiteralPath `$nextBin)) {
+    Write-Host "ERR: next binary not found at `$nextBin." -ForegroundColor Red
+    exit 1
+}
+
+Write-Host ""
+Write-Host "Starting API on port `$ApiPort (in its own PowerShell window)..." -ForegroundColor Cyan
+Start-Process powershell -ArgumentList @(
+    "-NoExit", "-Command",
+    "Set-Location -LiteralPath '`$apiDir'; ```$env:PORT = '`$ApiPort'; node dist\main.js"
+)
+
+Start-Sleep -Seconds 2
+
+Write-Host "Starting web on port `$WebPort (in its own PowerShell window)..." -ForegroundColor Cyan
+Start-Process powershell -ArgumentList @(
+    "-NoExit", "-Command",
+    "Set-Location -LiteralPath '`$webDir'; node '`$nextBin' start -p `$WebPort"
+)
+
+Write-Host ""
+Write-Host "Started." -ForegroundColor Green
+Write-Host "  API: http://localhost:`$ApiPort/v1/healthz"
+Write-Host "  Web: http://localhost:`$WebPort"
+Write-Host ""
+Write-Host "To stop, close both new PowerShell windows."
+"@
+    Set-Content -LiteralPath $startScript -Value $startScriptBody -Encoding UTF8
+    Write-Note "Wrote start.ps1 helper to $startScript"
+
     Write-Stage "Done"
     Write-Host @"
 The platform is installed at $Target.
 
-To start the API (port $ApiPort):
+EASIEST WAY TO RUN IT (now and after reboot):
+
+    cd $Target
+    .\start.ps1
+
+That launches the API + web in their own PowerShell windows, each
+on the install-time port ($ApiPort and $WebPort). Override either
+at the moment of launch:
+    .\start.ps1 -ApiPort 4000 -WebPort 9300
+
+If you'd rather start each manually:
+
+    # API (port $ApiPort)
     cd $Target\apps\api
     `$env:PORT = $ApiPort
     node dist\main.js
 
-To start the web app (port $WebPort):
+    # Web (port $WebPort)
     cd $Target\apps\web
     node "$nextBin" start -p $WebPort
 
@@ -671,6 +774,12 @@ install.
         Write-Host "*                                                                    *" -ForegroundColor Yellow
         Write-Host $bar -ForegroundColor Yellow
         Write-Host ""
+    }
+
+    if ($AutoStart) {
+        Write-Stage "Auto-starting services (-AutoStart)"
+        Write-Note "Invoking $startScript -- two PowerShell windows will open."
+        & $startScript -ApiPort $ApiPort -WebPort $WebPort
     }
 }
 

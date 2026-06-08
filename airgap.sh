@@ -53,7 +53,7 @@ Usage:
         On the online Linux box. Default -o is
         <parent-of-repo>/ci-cyber-lab-bundle.
 
-    ./airgap.sh install -s /path/to/bundle -t /install/path [--seed] [--skip-node] [--skip-postgres-check]
+    ./airgap.sh install -s /path/to/bundle -t /install/path [--seed] [--skip-node] [--skip-postgres-check] [--auto-start]
         On the air-gapped Linux box (run with sudo).
 
     ./airgap.sh help
@@ -307,15 +307,82 @@ EOF
     NEXT_BIN=$(resolve_module_bin "${TARGET}/apps/web" "next/dist/bin/next") || \
         NEXT_BIN="<could not resolve 'next' bin -- check ${TARGET}/node_modules/next>"
 
+    # Write a start.sh helper into ${TARGET} so the operator can
+    # re-launch both services any time without remembering the
+    # two commands. Backgrounds both, writes PIDs + logs under
+    # ${TARGET}/logs/. For production use systemd units instead
+    # (see AIRGAP-INSTALL-LINUX.txt Phase 3).
+    START_SH="${TARGET}/start.sh"
+    cat > "${START_SH}" <<EOF_START
+#!/usr/bin/env bash
+# CI Cyber Lab -- launch API + web. Written by airgap.sh at install
+# time. Re-run any time. For production use systemd units (see
+# AIRGAP-INSTALL-LINUX.txt Phase 3).
+#
+# Defaults bake in the install-time ports (--api-port / --web-port
+# passed to airgap.sh install). Override at runtime via env:
+#   API_PORT=4000 WEB_PORT=9300 ./start.sh
+
+set -euo pipefail
+
+API_PORT="\${API_PORT:-${API_PORT}}"
+WEB_PORT="\${WEB_PORT:-${WEB_PORT}}"
+
+REPO="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
+LOGDIR="\${REPO}/logs"
+mkdir -p "\${LOGDIR}"
+
+API_BIN="\${REPO}/apps/api/dist/main.js"
+WEB_BIN="\${REPO}/node_modules/next/dist/bin/next"
+[ -f "\${WEB_BIN}" ] || WEB_BIN="\${REPO}/apps/web/node_modules/next/dist/bin/next"
+
+[ -f "\${API_BIN}" ] || { echo "ERR: \${API_BIN} not found." >&2; exit 1; }
+[ -f "\${WEB_BIN}" ] || { echo "ERR: next binary not found." >&2; exit 1; }
+
+(cd "\${REPO}/apps/api" && PORT="\${API_PORT}" \\
+    /usr/local/bin/node "\${API_BIN}" \\
+    > "\${LOGDIR}/api.log" 2>&1) &
+API_PID=\$!
+echo "\${API_PID}" > "\${LOGDIR}/api.pid"
+
+sleep 2
+
+(cd "\${REPO}/apps/web" && \\
+    /usr/local/bin/node "\${WEB_BIN}" start -p "\${WEB_PORT}" \\
+    > "\${LOGDIR}/web.log" 2>&1) &
+WEB_PID=\$!
+echo "\${WEB_PID}" > "\${LOGDIR}/web.pid"
+
+echo ""
+echo "Started."
+echo "  API: http://localhost:\${API_PORT}/v1/healthz  (pid \${API_PID})"
+echo "  Web: http://localhost:\${WEB_PORT}             (pid \${WEB_PID})"
+echo ""
+echo "Logs: \${LOGDIR}/api.log  \${LOGDIR}/web.log"
+echo "Stop: kill \\\$(cat \${LOGDIR}/api.pid) \\\$(cat \${LOGDIR}/web.pid)"
+EOF_START
+    chmod +x "${START_SH}"
+    note "Wrote start.sh helper to ${START_SH}"
+
     stage "Done"
     cat <<EOF
 
 The platform is installed at ${TARGET}.
 
-To start the API (port ${API_PORT}):
-    cd ${TARGET}/apps/api && PORT=${API_PORT} node dist/main.js
+EASIEST WAY TO RUN IT (now and after reboot):
 
-To start the web app (port ${WEB_PORT}):
+    cd ${TARGET}
+    ./start.sh
+
+That backgrounds the API + web on the install-time ports
+(${API_PORT} and ${WEB_PORT}), writes PIDs to ${TARGET}/logs/,
+and streams output to ${TARGET}/logs/api.log + web.log.
+Override at runtime:
+    API_PORT=4000 WEB_PORT=9300 ./start.sh
+
+If you'd rather start each manually:
+
+    cd ${TARGET}/apps/api && PORT=${API_PORT} node dist/main.js
     cd ${TARGET}/apps/web && node ${NEXT_BIN} start -p ${WEB_PORT}
 
 See AIRGAP-INSTALL-LINUX.txt (next to this script; also at the
@@ -335,6 +402,12 @@ EOF
         printf '\033[33m*       node dist/scripts/reset-password.js \\                        *\033[0m\n'
         printf "\033[33m*           --email <email> --password '<new-password>'              *\033[0m\n"
         printf '\033[33m%s\033[0m\n\n' "$BAR"
+    fi
+
+    if [ -n "${AUTO_START:-}" ]; then
+        stage "Auto-starting services (--auto-start)"
+        note "Invoking ${START_SH}"
+        "${START_SH}"
     fi
 }
 
@@ -359,6 +432,7 @@ case "${MODE}" in
         SKIP_NODE=""
         SKIP_POSTGRES_CHECK=""
         FORCE_REPO_COPY=""
+        AUTO_START=""
         ADMIN_EMAIL="admin@example.local"
         ADMIN_PASSWORD="CICyberLab-Admin-1"
         API_PORT="4000"
@@ -371,6 +445,7 @@ case "${MODE}" in
                 --skip-node) SKIP_NODE="1"; shift ;;
                 --skip-postgres-check) SKIP_POSTGRES_CHECK="1"; shift ;;
                 --force-repo-copy) FORCE_REPO_COPY="1"; shift ;;
+                --auto-start) AUTO_START="1"; shift ;;
                 --admin-email) ADMIN_EMAIL="$2"; shift 2 ;;
                 --admin-password) ADMIN_PASSWORD="$2"; shift 2 ;;
                 --api-port) API_PORT="$2"; shift 2 ;;

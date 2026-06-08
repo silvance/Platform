@@ -117,11 +117,38 @@ Steps:
 PHASE 3 -- Start the platform
 --------------------------------------------------------------------
 
-For a quick verification:
+The easiest path: the install writes a start.sh helper into
+-t. It backgrounds the API + web on the install-time ports,
+streams output to <target>/logs/, and writes PIDs there:
+
+      cd /opt/ci-cyber-lab
+      ./start.sh
+
+Override at runtime:
+      API_PORT=4000 WEB_PORT=9300 ./start.sh
+
+Pass --auto-start on the install itself to launch them
+immediately after the install completes (no manual start
+needed for the first run):
+
+      sudo ./airgap.sh install -s /bundle -t /opt/ci-cyber-lab --seed --auto-start
+
+PORT CONFLICTS: if the default port 3000 is already in use on
+the target box (a NAS web UI, dev tools, another service), pass
+--web-port at install time to bind elsewhere. The value flows
+through to start.sh's default.
+
+      sudo ./airgap.sh install -s /bundle -t /opt/ci-cyber-lab --seed --web-port 9300
+
+For production-style deployment (auto-restart, surviving
+reboot, structured logging), use systemd units instead -- see
+the section below.
+
+For a manual quick verification:
 
   API (port 4000):
       cd /opt/ci-cyber-lab/apps/api
-      node dist/main.js
+      PORT=4000 node dist/main.js
 
   Web (port 3000):
       cd /opt/ci-cyber-lab/apps/web
@@ -238,15 +265,18 @@ INSTALL MODE   (air-gapped box, run as root/sudo)
                           Both are seed-time only -- change AFTER
                           first login via the web UI or
                           reset-password.js (see Phase 3).
-  --api-port <int>        Port the printed start command tells you to
-                          bind the API to. Default 4000.
+  --api-port <int>        Port the API binds to. Default 4000.
+                          Flows through to: the printed start commands,
+                          the generated start.sh's default, and the
+                          auto-start spawn if --auto-start is set.
   --web-port <int>        Same idea for the web server. Default 3000.
-
-                          DOCUMENTATION ONLY -- the script does not
-                          start services, so if you pass these you
-                          also have to use the same port when you
-                          run `node dist/main.js` / `next start` (or
-                          in the systemd unit's ExecStart).
+                          Override if the default conflicts with
+                          another service on the box (NAS web UI, etc.).
+  --auto-start            After the install completes, immediately
+                          launch the API + web in the background via
+                          the generated start.sh. Without this,
+                          start.sh still gets written -- the operator
+                          just has to run it manually.
 
 
 --------------------------------------------------------------------
