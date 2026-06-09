@@ -364,6 +364,7 @@ function labelFor(area: SkillArea): string {
     macos_artifacts: "macOS Artifacts",
     malware_analysis: "Malware Analysis",
     anti_forensics: "Anti-Forensics",
+    cloud_forensics: "Cloud Forensics",
     network_logs: "Network Logs",
     account_compromise: "Account Compromise",
     rf_awareness: "Signals Awareness",

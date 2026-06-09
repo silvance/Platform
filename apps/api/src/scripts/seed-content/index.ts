@@ -10,6 +10,7 @@ import { LINUX_FORENSICS_SCENARIOS } from "./linux";
 import { MACOS_FORENSICS_SCENARIOS } from "./macos";
 import { MALWARE_ANALYSIS_SCENARIOS } from "./malware";
 import { ANTI_FORENSICS_SCENARIOS } from "./anti-forensics";
+import { CLOUD_FORENSICS_SCENARIOS } from "./cloud-forensics";
 import { INSIDER_SCENARIOS } from "./insider";
 import { RF_AWARENESS_SCENARIOS } from "./rf-awareness";
 import { REPORT_WRITING_SCENARIOS } from "./report-writing";
@@ -50,6 +51,7 @@ export const SCENARIOS: ScenarioSeed[] = [
   ...MALWARE_ANALYSIS_SCENARIOS,
   ...ANTI_FORENSICS_SCENARIOS,
   ...MOBILE_FORENSICS_SCENARIOS,
+  ...CLOUD_FORENSICS_SCENARIOS,
   ...RF_AWARENESS_SCENARIOS,
   ...EVIDENCE_HANDLING_SCENARIOS,
   ...REPORT_WRITING_SCENARIOS,

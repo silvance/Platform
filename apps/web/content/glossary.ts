@@ -421,6 +421,95 @@ export const GLOSSARY: GlossaryTerm[] = [
     skillAreas: ["df_artifacts"],
   },
 
+  // ─── Cloud ─────────────────────────────────────────────────────
+  {
+    id: "cloudtrail",
+    term: "CloudTrail",
+    definition:
+      "AWS's per-account audit log of API calls. Every event records who made the call (`userIdentity`), what API was invoked (`eventName`), against what resource, from which source IP and user-agent. Trails are per-region by default; multi-region trails are an opt-in. Default retention is short (Management Events are free for 90 days in Event History); long-term retention requires writing to an S3 trail destination. Data Events (per-S3-object reads, per-Lambda invocations) are OFF by default and won't be in the trail unless someone enabled them.",
+    lanes: ["cloud_forensics"],
+    skillAreas: ["cloud_forensics", "df_artifacts"],
+  },
+  {
+    id: "iam",
+    term: "IAM",
+    aliases: ["identity and access management"],
+    definition:
+      "Each cloud's identity layer. **AWS IAM**: users (with long-lived access keys), roles (assumed via STS, temp credentials), and policies. **Azure / Entra ID**: users, groups, service principals, managed identities. **GCP**: users, service accounts, IAM policies. Almost every cloud-forensic question is an IAM question — which identity did this action, what permissions did that identity actually have, and what trust relationships let it move laterally.",
+    lanes: ["cloud_forensics"],
+    skillAreas: ["cloud_forensics", "account_compromise"],
+  },
+  {
+    id: "assume-role",
+    term: "AssumeRole / STS",
+    aliases: ["sts:assumerole", "sts"],
+    definition:
+      "AWS Security Token Service. `sts:AssumeRole` exchanges a long-lived IAM-user credential for short-lived credentials scoped to a target role. The CloudTrail event for the assume names the original principal in its `userIdentity`; the subsequent actions under the temporary credentials have `userIdentity.type=AssumedRole` and identify the role + a session name, NOT the original principal. The session name is set by the caller (`aws sts assume-role --role-session-name foo`) and is only as trustworthy as whoever set it.",
+    lanes: ["cloud_forensics"],
+    skillAreas: ["cloud_forensics", "df_artifacts"],
+  },
+  {
+    id: "access-keys",
+    term: "Access keys (long-lived vs temporary)",
+    aliases: ["aws access keys", "akia", "asia"],
+    definition:
+      "AWS credentials come in two flavours. **Long-lived** (`AKIA...`) are tied to an IAM user, don't expire, and are the classic credential-compromise risk (leaked via GitHub, stolen laptops, phishing kits). **Temporary** (`ASIA...`) are returned by STS calls (`AssumeRole`, `GetSessionToken`, etc.), carry an explicit expiration timestamp, and rotate naturally. CloudTrail's `userIdentity.accessKeyId` distinguishes them by prefix.",
+    lanes: ["cloud_forensics"],
+    skillAreas: ["cloud_forensics", "account_compromise"],
+  },
+  {
+    id: "vpc-flow-logs",
+    term: "VPC Flow Logs",
+    definition:
+      "AWS VPC's per-ENI network-flow telemetry. Captures source/dest IP, source/dest port, protocol, packet + byte counts, accept/reject action, per 5-minute aggregation window. Like NetFlow but tenancy-side. No payload. Off by default per-VPC; enable on the VPCs you care about. The complementary signal to CloudTrail for cloud-host workloads — CloudTrail says \"which API was called,\" VPC Flow Logs say \"which TCP/IP flows the EC2 instance made.\"",
+    lanes: ["cloud_forensics", "network_logs"],
+    skillAreas: ["cloud_forensics", "network_logs"],
+  },
+  {
+    id: "imds",
+    term: "IMDS",
+    aliases: ["instance metadata service", "imdsv2"],
+    definition:
+      "Instance Metadata Service. The link-local 169.254.169.254 endpoint that EC2 / Azure VM / GCE instances expose to themselves to fetch credentials for their attached role / identity. Classic abuse: a SSRF vulnerability in a web app on the instance causes the instance to fetch creds from IMDS and exfil them, giving the attacker the role's credentials. **IMDSv2** mitigates this with a session-token requirement; IMDSv1 is the dangerous one. Cloud-forensic signal: CloudTrail events from outside the VPC using credentials that should only exist on a specific instance.",
+    lanes: ["cloud_forensics"],
+    skillAreas: ["cloud_forensics", "account_compromise"],
+  },
+  {
+    id: "azure-activity-log",
+    term: "Azure Activity Log",
+    definition:
+      "Azure's subscription-level audit log: every Azure resource-management API call (write, delete, action) gets a record. Captures the caller (`identity`), the operation (`operationName`), the resource, and the result. Retention is 90 days by default; pump to Log Analytics / Event Hub / Storage for longer. **Distinct from sign-in logs and audit logs in Entra**, which cover the identity side rather than the resource side.",
+    lanes: ["cloud_forensics"],
+    skillAreas: ["cloud_forensics", "df_artifacts"],
+  },
+  {
+    id: "entra-id",
+    term: "Entra ID",
+    aliases: ["azure ad", "azure active directory", "microsoft entra id"],
+    definition:
+      "Microsoft's cloud identity provider. Renamed from \"Azure AD\" to \"Microsoft Entra ID\" in 2023; documentation and tooling still mix both names. Carries users, groups, applications, service principals, conditional-access policies, and the sign-in + audit log streams. Distinct license tiers (Free / P1 / P2) gate which detection + protection features are active.",
+    lanes: ["cloud_forensics"],
+    skillAreas: ["cloud_forensics", "account_compromise"],
+  },
+  {
+    id: "signin-logs",
+    term: "Sign-in Logs",
+    aliases: ["entra signinlogs", "azure ad sign-in logs"],
+    definition:
+      "Microsoft Entra ID's record of user authentication events. Each row: user, IP, geo, application, auth method (password / TOTP / FIDO2 / cert), Conditional Access policies evaluated + verdict, risk-detection signal. Successful + failed sign-ins both land here. The geo column is best-effort, IP-database driven, and not authoritative — VPN egress IPs and mobile carrier NAT can swap a user's apparent country.",
+    lanes: ["cloud_forensics"],
+    skillAreas: ["cloud_forensics", "account_compromise"],
+  },
+  {
+    id: "conditional-access",
+    term: "Conditional Access",
+    aliases: ["ca", "ca policy"],
+    definition:
+      "Microsoft Entra ID's policy engine. Each policy is `(conditions) => (controls)`: when the conditions match (user, app, location, device state, sign-in risk), the controls apply (require MFA, block, require compliant device, etc.). **Risk-based CA** (block on \"high sign-in risk\", \"high user risk\") requires Entra ID P2. On P1 the risk signals appear in logs but no enforcement action is taken. Common gap: a country-block policy that uses a named list which doesn't include the country an attacker happens to be in.",
+    lanes: ["cloud_forensics"],
+    skillAreas: ["cloud_forensics", "account_compromise"],
+  },
+
   // ─── Discipline / Process ─────────────────────────────────────
   {
     id: "chain-of-custody",

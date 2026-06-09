@@ -601,6 +601,81 @@ iOS version" — not that the user never used Signal.
   layers (Keychain, Keystore, FBE) the tools have to navigate
 `,
 
+  cloud_forensics: `
+# Cloud Forensics
+
+CDTI cases increasingly land on cloud tenancies — AWS accounts,
+Azure subscriptions, GCP projects. The artifacts look nothing
+like host triage. There's no MFT, no Prefetch, no LNK. There's
+an audit log (per cloud) and an IAM identity store, and almost
+every question is *who actually did this, and what does the log
+prove vs imply.*
+
+## What you'll see
+
+- **AWS CloudTrail** — per-region audit log of API calls. Every
+  event has a \`userIdentity\` describing who made the call. The
+  \`AssumeRole\` chain is the workhorse pattern: actions appear
+  under an assumed-role session, and the trail traces back to the
+  original IAM user via the \`AssumeRole\` event itself.
+- **Azure Activity Log + Entra Sign-in Logs** — Azure's
+  equivalents. Activity log covers Azure resource management;
+  sign-in logs cover identity. \`Microsoft.Insights.activityLogs\`
+  is where Azure-side API calls land; \`AuditLogs\` +
+  \`SignInLogs\` are where identity events land.
+- **GCP Cloud Audit Logs** — Admin Activity, Data Access (off by
+  default!), and System Event streams. Per-project + per-resource
+  scoping.
+- **IAM** in every cloud — long-lived credentials (access keys,
+  service-account keys), short-lived credentials (\`sts:AssumeRole\`,
+  Azure Managed Identities, GCP service-account impersonation),
+  and the policies that govern what each can do.
+- **Sign-in logs** — Entra ID's \`SignInLogs\` table, AWS
+  console-sign-in events in CloudTrail, GCP's Cloud Identity
+  audit. Impossible-travel detection lives here.
+
+## What's hard
+
+The recurring traps:
+
+- **\`eventName\` is not the action.** A CloudTrail event named
+  \`AssumeRole\` is the *issuance* of a session; the *action* the
+  attacker performed using that session is in a later, separate
+  event under that assumed-role identity. Reading one in isolation
+  misses the chain.
+- **\`sourceIPAddress\` lies (in a specific way).** For AssumeRole
+  events, the source IP is the IP that *initiated the assume*. For
+  the subsequent actions using the temp credentials, it's the IP
+  *using* the credentials. The two don't have to match — and
+  often won't, in legitimate workflows.
+- **Data Access logging is OFF BY DEFAULT.** AWS CloudTrail Data
+  Events for S3, GCP Data Access logs, Azure Storage diagnostic
+  logs — all off out of the box. A tenancy that didn't enable
+  them can't reconstruct what was read.
+- **Log delay.** CloudTrail can take 5–15 minutes to land. The
+  attacker's actions complete in seconds; the trail you triage
+  isn't real-time.
+- **Region scope.** A query against us-east-1 misses events in
+  us-west-2. CloudTrail trails are per-region by default unless
+  the operator enabled multi-region.
+- **Sign-in geo is best-effort.** The IP-to-geo database powers
+  impossible-travel; VPN egress, mobile carrier NAT, and known
+  edge proxies can flip a legitimate sign-in into a "Lagos to
+  Frankfurt" pattern that isn't compromise.
+
+## Where to read more
+
+- **AWS Security Reference Architecture** + **CloudTrail user
+  guide** — the authoritative AWS docs
+- **Microsoft Entra ID monitoring + Identity Protection** docs —
+  for sign-in log schema and risk-engine behaviour
+- **GCP "Detective controls" + Cloud Audit Logs** docs
+- **DFIR Report's cloud incident writeups** (thedfirreport.com)
+  for real-incident pattern-language
+- **MITRE ATT&CK for Cloud** — the technique taxonomy your
+  writeups will reference (T1078.004, T1098.001, T1525, etc.)
+`,
+
   rf_awareness: `
 # Signals Awareness
 

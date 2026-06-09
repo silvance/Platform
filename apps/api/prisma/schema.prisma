@@ -31,6 +31,7 @@ enum SkillArea {
   macos_artifacts
   malware_analysis
   anti_forensics
+  cloud_forensics
   network_logs
   account_compromise
   rf_awareness
@@ -55,6 +56,7 @@ enum Lane {
   malware_analysis
   anti_forensics
   mobile_forensics
+  cloud_forensics
   rf_awareness
   evidence_handling
   report_writing
