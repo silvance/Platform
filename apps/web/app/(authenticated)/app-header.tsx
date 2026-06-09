@@ -24,7 +24,7 @@ const NAV_ITEMS: Array<{
   external?: boolean;
 }> = [
   { href: "/scenarios", label: "Challenges" },
-  { href: "/me/progress", label: "Progress" },
+  { href: "/me", label: "Stats" },
   { href: "/me/security", label: "Security" },
   { href: "https://codeworld.codes", label: "Reference", external: true },
   { href: "/admin", label: "Admin", admin: true },

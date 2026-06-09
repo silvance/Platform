@@ -36,6 +36,7 @@ import {
   LoginResponse,
   MeProgressResponse,
   MeResponse,
+  MeStatsResponse,
   ParsedEmlPayload,
   ScenarioDetail,
   ScenarioListQuery,
@@ -252,6 +253,8 @@ export const api = {
   stats: {
     get: async (token: string): Promise<AdminStatsResponse> =>
       parse(AdminStatsResponse, await request("/admin/stats", { token })),
+    me: async (token: string): Promise<MeStatsResponse> =>
+      parse(MeStatsResponse, await request("/me/stats", { token })),
   },
   analytics: {
     get: async (token: string): Promise<AnalyticsResponse> =>
