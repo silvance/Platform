@@ -10,6 +10,8 @@ import {
   isAwarenessOnly,
   type ScenarioListItem,
 } from "@ci-train/contracts";
+import { LANE_INTROS } from "@/content/lane-intros";
+import { LaneIntro } from "@/components/lane-intro";
 
 export const dynamic = "force-dynamic";
 
@@ -74,6 +76,10 @@ export default async function LanePage({ params }: Props) {
           </p>
         </div>
       </header>
+
+      {LANE_INTROS[lane] && (
+        <LaneIntro lane={lane} source={LANE_INTROS[lane]!.trim()} />
+      )}
 
       {scenarios.length === 0 ? (
         <div className="card" style={{ marginTop: "1rem" }}>
