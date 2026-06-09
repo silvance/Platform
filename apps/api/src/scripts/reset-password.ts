@@ -140,7 +140,7 @@ async function main(): Promise<void> {
   try {
     const user = await prisma.user.findUnique({
       where: { email: args.email },
-      select: { id: true, email: true },
+      select: { id: true, email: true, approvedAt: true },
     });
     if (!user) {
       // eslint-disable-next-line no-console
@@ -151,11 +151,22 @@ async function main(): Promise<void> {
       process.exit(1);
     }
 
+    // Self-heal approvedAt for accounts created on pre-M17 builds.
+    // An operator running a recovery password reset against their
+    // own admin account expects to be able to sign in afterwards;
+    // leaving approvedAt null silently still blocks them at the
+    // M17 login gate, which is the exact failure mode this script
+    // exists to recover from.
+    const approveNow = user.approvedAt === null;
+
     const passwordHash = await hash(plain, ARGON_OPTS);
     const result = await prisma.$transaction(async (tx) => {
       await tx.user.update({
         where: { id: user.id },
-        data: { passwordHash },
+        data: {
+          passwordHash,
+          ...(approveNow ? { approvedAt: new Date() } : {}),
+        },
       });
       const revoked = await tx.session.updateMany({
         where: { userId: user.id, revokedAt: null },
@@ -167,7 +178,8 @@ async function main(): Promise<void> {
     // eslint-disable-next-line no-console
     console.log(
       `OK — password for ${user.email} updated; ` +
-        `${result.revoked} active session(s) revoked.`,
+        `${result.revoked} active session(s) revoked` +
+        (approveNow ? "; approvedAt set (was null)." : "."),
     );
   } finally {
     await prisma.$disconnect();
