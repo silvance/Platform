@@ -4,12 +4,34 @@ import { revalidatePath } from "next/cache";
 import { api, ApiError } from "@/lib/api";
 import { readToken } from "@/lib/session";
 import {
+  type CalibrationStats,
   QuestionResponse,
   ScenarioReviewStatus,
   SubmitAnswerRequest,
   SubmitFeedbackRequest,
   type SubmitAnswerResponse,
 } from "@ci-train/contracts";
+
+// Used by the per-question calibration meter to show the running
+// in-range tally after a confidence question completes. Returns
+// just the calibration block from /v1/me/stats so the client
+// component doesn't pull the rest of the stats payload it doesn't
+// need.
+export async function getMyCalibrationAction(): Promise<
+  { ok: true; calibration: CalibrationStats } | { ok: false; error: string }
+> {
+  const token = await readToken();
+  if (!token) return { ok: false, error: "Not signed in." };
+  try {
+    const stats = await api.stats.me(token);
+    return { ok: true, calibration: stats.calibration };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof ApiError ? err.message : "Could not load stats.",
+    };
+  }
+}
 
 export type SubmitResult =
   | { ok: true; result: SubmitAnswerResponse }
