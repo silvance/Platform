@@ -130,7 +130,7 @@ function TermCard({ term }: { term: GlossaryTerm }) {
         ) : null}
       </div>
       <div style={{ fontSize: ".9rem" }}>
-        <Markdown source={term.definition} />
+        <Markdown source={term.definition} noGlossary />
       </div>
       {(term.lanes && term.lanes.length > 0) ||
       (term.skillAreas && term.skillAreas.length > 0) ? (
