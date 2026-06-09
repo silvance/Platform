@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { readToken, requireUser } from "@/lib/session";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { SKILL_AREA_LABELS } from "@ci-train/contracts";
 import type {
   CalibrationStats,
@@ -12,15 +12,30 @@ import type {
 
 export const dynamic = "force-dynamic";
 
+// Tolerate one or both of /me/stats and /me/daily being unavailable
+// on the deployed API. Both endpoints landed in separate PRs and
+// the operator may not have re-deployed the API since; rather than
+// crashing the entire Stats page with a Next.js server-side
+// exception, fetch each independently and render whatever came back.
+async function safeFetch<T>(
+  fn: () => Promise<T>,
+): Promise<{ ok: true; data: T } | { ok: false; status: number | null; message: string }> {
+  try {
+    return { ok: true, data: await fn() };
+  } catch (err) {
+    if (err instanceof ApiError) {
+      return { ok: false, status: err.status, message: err.message };
+    }
+    return { ok: false, status: null, message: err instanceof Error ? err.message : "Request failed." };
+  }
+}
+
 export default async function MeStatsPage() {
   const user = await requireUser();
   const token = await readToken();
-  // Stats + daily pick fetched in parallel -- daily depends on the
-  // same skill-area aggregation but the API computes it
-  // independently and we don't need to coordinate them client-side.
-  const [stats, daily]: [MeStatsResponse, MeDailyResponse] = await Promise.all([
-    api.stats.me(token!),
-    api.stats.daily(token!),
+  const [statsResult, dailyResult] = await Promise.all([
+    safeFetch(() => api.stats.me(token!)),
+    safeFetch(() => api.stats.daily(token!)),
   ]);
 
   return (
@@ -30,10 +45,30 @@ export default async function MeStatsPage() {
         {user.displayName}, here's how you're tracking across the catalog.
       </p>
 
-      <DailyCard daily={daily} />
+      {dailyResult.ok ? (
+        <DailyCard daily={dailyResult.data} />
+      ) : (
+        <UnavailableCard
+          label="Today's challenge"
+          status={dailyResult.status}
+          message={dailyResult.message}
+          hint="This card needs the /me/daily API endpoint (added recently). If the deployed API server is older, re-pack and re-deploy it."
+        />
+      )}
 
-      <HeaderTiles stats={stats} />
-      <SkillAreaGrid rows={stats.skillAreaProgress} />
+      {statsResult.ok ? (
+        <>
+          <HeaderTiles stats={statsResult.data} />
+          <SkillAreaGrid rows={statsResult.data.skillAreaProgress} />
+        </>
+      ) : (
+        <UnavailableCard
+          label="Profile statistics"
+          status={statsResult.status}
+          message={statsResult.message}
+          hint="This page needs the /me/stats API endpoint. If the deployed API server is older, re-pack and re-deploy it."
+        />
+      )}
 
       <div style={{ marginTop: "2rem" }}>
         <Link href="/me/progress" className="admin-btn admin-btn-ghost">
@@ -41,6 +76,52 @@ export default async function MeStatsPage() {
         </Link>
       </div>
     </main>
+  );
+}
+
+// Inline "this section couldn't load" card. Used when one of the
+// dashboard's two endpoints is missing on the deployed API.
+function UnavailableCard({
+  label,
+  status,
+  message,
+  hint,
+}: {
+  label: string;
+  status: number | null;
+  message: string;
+  hint: string;
+}) {
+  return (
+    <section
+      className="card"
+      style={{
+        margin: "0 0 1.25rem",
+        padding: "1rem 1.25rem",
+        background: "var(--bg-elevated)",
+        borderLeft: "3px solid rgba(255, 196, 0, 0.6)",
+      }}
+    >
+      <div
+        style={{
+          fontSize: ".75rem",
+          textTransform: "uppercase",
+          letterSpacing: ".05em",
+          color: "var(--muted)",
+          marginBottom: ".25rem",
+        }}
+      >
+        {label} — unavailable
+      </div>
+      <p style={{ margin: ".25rem 0", fontSize: ".9rem" }}>
+        {status === 404
+          ? "The API endpoint isn't available on this deployment."
+          : `${status ?? ""} ${message}`.trim()}
+      </p>
+      <p style={{ margin: ".25rem 0 0", fontSize: ".8rem", color: "var(--muted)" }}>
+        {hint}
+      </p>
+    </section>
   );
 }
 
