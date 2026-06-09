@@ -25,6 +25,7 @@ const NAV_ITEMS: Array<{
 }> = [
   { href: "/scenarios", label: "Challenges" },
   { href: "/me", label: "Stats" },
+  { href: "/glossary", label: "Glossary" },
   { href: "/me/security", label: "Security" },
   { href: "https://codeworld.codes", label: "Reference", external: true },
   { href: "/admin", label: "Admin", admin: true },
