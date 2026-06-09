@@ -14,6 +14,7 @@ import { MultiChoiceForm } from "./multi-choice-question";
 import { ConfidenceForm } from "./confidence-question";
 import { SelectIndicatorsForm } from "./select-indicators-question";
 import { TextMatchForm } from "./text-match-question";
+import { CalibrationFeedback } from "./calibration-feedback";
 
 interface Props {
   scenarioSlug: string;
@@ -149,6 +150,17 @@ export function QuestionCard({ scenarioSlug, question, initialState }: Props) {
             <Markdown source={answerKey.debriefMd} />
           </div>
         </details>
+      ) : null}
+
+      {isCompleted &&
+      answerKey &&
+      question.type === "confidence" &&
+      answerKey.expected.type === "confidence" &&
+      lastResponse?.type === "confidence" ? (
+        <CalibrationFeedback
+          submittedValue={lastResponse.data.value}
+          expectedRange={answerKey.expected.expectedRange}
+        />
       ) : null}
     </>
   );
