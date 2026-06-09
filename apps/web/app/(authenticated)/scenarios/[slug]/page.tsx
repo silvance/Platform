@@ -13,6 +13,7 @@ import {
 } from "@ci-train/contracts";
 import { InlineReviewPanel } from "./inline-review-panel";
 import { FeedbackWidget } from "./feedback-widget";
+import { ScenarioOrientationLink } from "@/components/scenario-orientation-link";
 
 export const dynamic = "force-dynamic";
 
@@ -91,6 +92,8 @@ export default async function ScenarioWorkspacePage({ params }: Props) {
       </div>
 
       <h1>{scenario.title}</h1>
+
+      <ScenarioOrientationLink lane={scenario.lane} />
 
       <div style={{ marginBottom: "1rem" }}>
         {scenario.skillAreas.map((a) => (
