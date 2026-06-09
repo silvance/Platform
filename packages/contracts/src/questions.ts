@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { SkillArea } from "./scenarios.js";
 
 // Keep in sync with `enum QuestionType` in apps/api/prisma/schema.prisma.
 //
@@ -243,6 +244,75 @@ export const MeProgressResponse = z.object({
   }),
 });
 export type MeProgressResponse = z.infer<typeof MeProgressResponse>;
+
+// ─── /v1/me/stats ───────────────────────────────────────────────
+// Profile dashboard payload. Aggregates the signed-in user's
+// activity across scenarios into a small set of intrinsic-
+// motivation metrics — skill-area progress, calibration grade,
+// streak. No schema changes; everything is computed from
+// ScenarioProgress + QuestionResponse + the question/scenario
+// catalog. Recomputed per request.
+
+export const SkillAreaProgress = z.object({
+  skillArea: SkillArea,
+  // Distinct questions in published scenarios tagged with this
+  // skill area that the user has answered correctly. A question
+  // in a scenario tagged with N skill areas counts toward EACH
+  // skill area's totals -- this matches how the UI presents
+  // skill-area chips (one scenario, many overlapping skills).
+  questionsCorrect: z.number().int().nonnegative(),
+  questionsTotal: z.number().int().nonnegative(),
+  percentComplete: z.number().min(0).max(100),
+});
+export type SkillAreaProgress = z.infer<typeof SkillAreaProgress>;
+
+export const CalibrationStats = z.object({
+  // How many confidence-type questions the user has answered.
+  // Zero -> grade is "—" (not enough data to grade).
+  totalConfidenceQuestions: z.number().int().nonnegative(),
+  // Of those, how many fell inside the question's expectedRange.
+  // Confidence questions test calibration discipline: the user's
+  // estimated confidence is "right" iff it lands in the question's
+  // expected range.
+  withinRange: z.number().int().nonnegative(),
+  percentInRange: z.number().min(0).max(100),
+  grade: z.enum(["A", "A-", "B", "B-", "C", "D", "F", "—"]),
+});
+export type CalibrationStats = z.infer<typeof CalibrationStats>;
+
+export const StreakStats = z.object({
+  // Consecutive UTC calendar days with at least one question-
+  // response activity, counting back from today. Today + yesterday
+  // both count as "active today" -- streaks don't reset at the
+  // local-midnight rollover relative to UTC.
+  currentDays: z.number().int().nonnegative(),
+  // Longest run of consecutive active days in the user's history.
+  longestDays: z.number().int().nonnegative(),
+  // Most recent UTC date with any activity (YYYY-MM-DD), or null
+  // if the user has never submitted anything.
+  lastActiveOn: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .nullable(),
+});
+export type StreakStats = z.infer<typeof StreakStats>;
+
+export const MeStatsResponse = z.object({
+  totals: z.object({
+    scenariosStarted: z.number().int().nonnegative(),
+    scenariosCompleted: z.number().int().nonnegative(),
+    questionsAnswered: z.number().int().nonnegative(),
+    questionsCorrect: z.number().int().nonnegative(),
+  }),
+  // One row per SkillArea enum value, even when the user has zero
+  // activity in that area (so the UI can render a stable grid).
+  skillAreaProgress: z.array(SkillAreaProgress),
+  calibration: CalibrationStats,
+  streak: StreakStats,
+});
+export type MeStatsResponse = z.infer<typeof MeStatsResponse>;
+
+// ────────────────────────────────────────────────────────────────
 
 // Whole-scenario progress for one user. Returned by
 // GET /v1/scenarios/:slug/progress.

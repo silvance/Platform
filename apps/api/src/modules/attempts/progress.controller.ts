@@ -11,11 +11,13 @@ import {
 } from "@nestjs/common";
 import {
   MeProgressResponse,
+  MeStatsResponse,
   ScenarioProgressPayload,
   SubmitAnswerRequest,
   SubmitAnswerResponse,
 } from "@ci-train/contracts";
 import { ProgressService } from "./progress.service";
+import { MeStatsService } from "./me-stats.service";
 import { ScenarioSlugPipe } from "../../common/scenario-slug.pipe";
 import { ZodValidationPipe } from "../../common/zod-validation.pipe";
 import { CurrentSession } from "../auth/decorators/current-user.decorator";
@@ -23,7 +25,10 @@ import type { SessionContext } from "../auth/auth.service";
 
 @Controller()
 export class ProgressController {
-  constructor(private readonly progress: ProgressService) {}
+  constructor(
+    private readonly progress: ProgressService,
+    private readonly stats: MeStatsService,
+  ) {}
 
   // GET /v1/me/progress — caller's per-scenario summary.
   @Get("me/progress")
@@ -32,6 +37,15 @@ export class ProgressController {
   ): Promise<MeProgressResponse> {
     if (!session) throw new UnauthorizedException();
     return this.progress.listMyProgress(session.user.id);
+  }
+
+  // GET /v1/me/stats — caller's profile-dashboard aggregates.
+  @Get("me/stats")
+  async myStats(
+    @CurrentSession() session: SessionContext | undefined,
+  ): Promise<MeStatsResponse> {
+    if (!session) throw new UnauthorizedException();
+    return this.stats.compute(session.user.id);
   }
 
   // GET /v1/scenarios/:slug/progress — caller's per-question state.
