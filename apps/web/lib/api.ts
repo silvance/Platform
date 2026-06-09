@@ -34,6 +34,7 @@ import {
   RegisterRequest,
   RegisterResponse,
   LoginResponse,
+  MeDailyResponse,
   MeProgressResponse,
   MeResponse,
   MeStatsResponse,
@@ -255,6 +256,8 @@ export const api = {
       parse(AdminStatsResponse, await request("/admin/stats", { token })),
     me: async (token: string): Promise<MeStatsResponse> =>
       parse(MeStatsResponse, await request("/me/stats", { token })),
+    daily: async (token: string): Promise<MeDailyResponse> =>
+      parse(MeDailyResponse, await request("/me/daily", { token })),
   },
   analytics: {
     get: async (token: string): Promise<AnalyticsResponse> =>

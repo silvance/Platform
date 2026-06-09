@@ -312,6 +312,36 @@ export const MeStatsResponse = z.object({
 });
 export type MeStatsResponse = z.infer<typeof MeStatsResponse>;
 
+// ─── /v1/me/daily ───────────────────────────────────────────────
+// "Today's challenge" recommendation. Picks one scenario the user
+// hasn't completed yet, weighted toward their weakest skill areas
+// per /me/stats. Deterministic per (userId, UTC date) so a refresh
+// during the day returns the same pick.
+
+export const MeDailySuggestion = z.object({
+  scenarioSlug: z.string(),
+  scenarioTitle: z.string(),
+  laneSlug: z.string(),
+  laneLabel: z.string(),
+  // Short human-readable explanation of why the picker chose this
+  // scenario today (e.g. "from your weakest skill area: macOS
+  // Artifacts"). Drives the "why this one?" copy on the card.
+  reason: z.string(),
+});
+export type MeDailySuggestion = z.infer<typeof MeDailySuggestion>;
+
+export const MeDailyResponse = z.object({
+  // null when the picker has nothing to offer (user has completed
+  // everything in the catalog, or only drafts remain). The UI
+  // shows a "you're caught up" empty-state.
+  suggestion: MeDailySuggestion.nullable(),
+  // The UTC date the suggestion is keyed against (YYYY-MM-DD).
+  // The UI can use this to label the card and to know when the
+  // pick will refresh (next UTC midnight).
+  forDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+});
+export type MeDailyResponse = z.infer<typeof MeDailyResponse>;
+
 // ────────────────────────────────────────────────────────────────
 
 // Whole-scenario progress for one user. Returned by

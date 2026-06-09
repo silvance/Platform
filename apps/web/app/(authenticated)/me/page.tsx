@@ -4,6 +4,7 @@ import { api } from "@/lib/api";
 import { SKILL_AREA_LABELS } from "@ci-train/contracts";
 import type {
   CalibrationStats,
+  MeDailyResponse,
   MeStatsResponse,
   SkillAreaProgress,
   StreakStats,
@@ -14,7 +15,13 @@ export const dynamic = "force-dynamic";
 export default async function MeStatsPage() {
   const user = await requireUser();
   const token = await readToken();
-  const stats: MeStatsResponse = await api.stats.me(token!);
+  // Stats + daily pick fetched in parallel -- daily depends on the
+  // same skill-area aggregation but the API computes it
+  // independently and we don't need to coordinate them client-side.
+  const [stats, daily]: [MeStatsResponse, MeDailyResponse] = await Promise.all([
+    api.stats.me(token!),
+    api.stats.daily(token!),
+  ]);
 
   return (
     <main>
@@ -22,6 +29,8 @@ export default async function MeStatsPage() {
       <p style={{ color: "var(--muted)", marginTop: 0 }}>
         {user.displayName}, here's how you're tracking across the catalog.
       </p>
+
+      <DailyCard daily={daily} />
 
       <HeaderTiles stats={stats} />
       <SkillAreaGrid rows={stats.skillAreaProgress} />
@@ -32,6 +41,83 @@ export default async function MeStatsPage() {
         </Link>
       </div>
     </main>
+  );
+}
+
+// ─── Daily card ───────────────────────────────────────────────
+
+function DailyCard({ daily }: { daily: MeDailyResponse }) {
+  if (daily.suggestion === null) {
+    return (
+      <section
+        className="card"
+        style={{
+          margin: "0 0 1.25rem",
+          padding: "1rem 1.25rem",
+          background: "var(--bg-elevated)",
+          borderLeft: "3px solid var(--accent)",
+        }}
+      >
+        <div
+          style={{
+            fontSize: ".75rem",
+            textTransform: "uppercase",
+            letterSpacing: ".05em",
+            color: "var(--muted)",
+          }}
+        >
+          Today's challenge
+        </div>
+        <p style={{ margin: ".4rem 0 0" }}>
+          You're caught up — every published scenario has been completed.
+          Nice run.
+        </p>
+      </section>
+    );
+  }
+  const s = daily.suggestion;
+  return (
+    <section
+      className="card"
+      style={{
+        margin: "0 0 1.25rem",
+        padding: "1rem 1.25rem",
+        background: "var(--bg-elevated)",
+        borderLeft: "3px solid var(--accent)",
+      }}
+    >
+      <div
+        style={{
+          fontSize: ".75rem",
+          textTransform: "uppercase",
+          letterSpacing: ".05em",
+          color: "var(--muted)",
+          marginBottom: ".25rem",
+        }}
+      >
+        Today's challenge
+      </div>
+      <Link
+        href={`/scenarios/${encodeURIComponent(s.scenarioSlug)}`}
+        style={{
+          fontSize: "1.1rem",
+          fontWeight: 600,
+          color: "var(--fg)",
+          textDecoration: "none",
+        }}
+      >
+        {s.scenarioTitle} →
+      </Link>
+      <div
+        style={{
+          marginTop: ".25rem",
+          fontSize: ".85rem",
+          color: "var(--muted)",
+        }}
+      >
+        {s.laneLabel} · {s.reason}
+      </div>
+    </section>
   );
 }
 

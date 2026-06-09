@@ -10,6 +10,7 @@ import {
   UnauthorizedException,
 } from "@nestjs/common";
 import {
+  MeDailyResponse,
   MeProgressResponse,
   MeStatsResponse,
   ScenarioProgressPayload,
@@ -46,6 +47,15 @@ export class ProgressController {
   ): Promise<MeStatsResponse> {
     if (!session) throw new UnauthorizedException();
     return this.stats.compute(session.user.id);
+  }
+
+  // GET /v1/me/daily — today's recommended scenario for the caller.
+  @Get("me/daily")
+  async myDaily(
+    @CurrentSession() session: SessionContext | undefined,
+  ): Promise<MeDailyResponse> {
+    if (!session) throw new UnauthorizedException();
+    return this.stats.computeDaily(session.user.id);
   }
 
   // GET /v1/scenarios/:slug/progress — caller's per-question state.
