@@ -11,8 +11,9 @@ import type { ScenarioSeed } from "./types";
 //
 // First slice: 3 scenarios covering CloudTrail AssumeRole chains,
 // compromised long-lived AWS access keys, and Azure AD
-// impossible-travel sign-ins. GCP equivalents and a multi-cloud
-// pivot are queued for follow-up.
+// impossible-travel sign-ins. Follow-up slice adds GCP Cloud
+// Audit Logs (service-account key abuse) and a cloud
+// anti-forensics scenario where CloudTrail itself is tampered.
 
 export const CLOUD_FORENSICS_SCENARIOS: ScenarioSeed[] = [
   // ─── 1. CloudTrail AssumeRole chain ─────────────────────────
@@ -692,6 +693,647 @@ Read the sign-in log. Decide what's proven and what's not.
         expected: { type: "confidence", expectedRange: [4, 5] },
         debriefMd:
           "**4 or 5.** Two MFA-passing sign-ins, 14 minutes apart, on different continents, with three prior failed-password attempts from one of them — this is account compromise. The unresolved question is **which side** is the attacker (Lagos or the Frankfurt account that may have been brute-forced first), not whether there's an attacker.",
+      },
+    ],
+  },
+
+  // ─── 4. GCP service-account key abuse ───────────────────────
+  {
+    slug: "cloud-forensics-gcp-service-account-key-001",
+    title: "GCP Audit Logs: Service-Account JSON Key Used From Outside the Project",
+    summary:
+      "A leaked service-account JSON key gets used from an unfamiliar IP to read BigQuery and add new IAM bindings. Read the Cloud Audit Logs and separate proven attacker actions from collateral noise.",
+    skillAreas: ["cloud_forensics", "account_compromise", "df_artifacts", "inference_discipline"],
+    difficulty: 3,
+    estimatedMinutes: 18,
+    tags: ["cloud_forensics", "gcp", "audit_logs", "service_account", "iam"],
+    lane: "cloud_forensics",
+    module: "GCP audit triage",
+    sequence: 1,
+    brief: `
+# Brief
+
+Google Cloud's audit story is split across **three log
+streams**, and which one a given action lands in changes what
+you can and cannot prove from a trail:
+
+- **Admin Activity** — IAM bindings, resource creation /
+  deletion, project metadata changes. **Always on**, can't be
+  disabled, retained 400 days by default. The trail that always
+  exists.
+- **Data Access** — reads and writes of *user data* (BigQuery
+  queries, GCS object reads, Pub/Sub message reads). **Off by
+  default** for everything except BigQuery DATA_READ /
+  DATA_WRITE. If Data Access logging wasn't turned on, the read
+  *happened* but you cannot prove it from logs alone.
+- **System Event** — Google-initiated actions (autoscaling,
+  internal scheduling). Rarely useful for investigation.
+
+GCP's "principal" model also differs from AWS / Azure: a
+\`serviceAccount:foo@project.iam.gserviceaccount.com\` is a
+first-class identity, and any holder of a **service-account
+JSON key** can authenticate as that service account from any
+network. Service-account keys don't expire; they don't rotate;
+they're persistent credentials of exactly the kind that should
+not exist at all but always do.
+
+A leaked service-account key looks, in the trail, like the
+service account itself doing the thing — which it is. Reading
+the trail is then about whether the IP, user-agent, region, and
+**timing** are consistent with the workload the service account
+was created for, or with a human (or attacker) using the key
+out of band.
+
+Read the audit logs. Decide what's proven.
+`.trim(),
+    artifacts: [
+      {
+        ordinal: 1,
+        displayName: "admin-activity.json",
+        kind: "json",
+        mimeType: "application/json; charset=utf-8",
+        bytes: utf8(
+          JSON.stringify(
+            [
+              {
+                logName: "projects/acme-data-prod/logs/cloudaudit.googleapis.com%2Factivity",
+                timestamp: "2025-08-22T18:41:09Z",
+                protoPayload: {
+                  serviceName: "iam.googleapis.com",
+                  methodName: "SetIamPolicy",
+                  resourceName: "projects/acme-data-prod",
+                  authenticationInfo: {
+                    principalEmail:
+                      "etl-loader@acme-data-prod.iam.gserviceaccount.com",
+                    serviceAccountKeyName:
+                      "projects/acme-data-prod/serviceAccounts/etl-loader@acme-data-prod.iam.gserviceaccount.com/keys/3f9ac21b8e",
+                  },
+                  requestMetadata: {
+                    callerIp: "45.142.x.x",
+                    callerSuppliedUserAgent: "google-cloud-sdk/473.0.0 (gcloud) Darwin/24.0.0",
+                  },
+                  request: {
+                    policy: {
+                      bindings: [
+                        {
+                          role: "roles/owner",
+                          members: ["serviceAccount:etl-loader@acme-data-prod.iam.gserviceaccount.com"],
+                        },
+                      ],
+                    },
+                  },
+                },
+              },
+              {
+                logName: "projects/acme-data-prod/logs/cloudaudit.googleapis.com%2Factivity",
+                timestamp: "2025-08-22T18:42:01Z",
+                protoPayload: {
+                  serviceName: "iam.googleapis.com",
+                  methodName: "CreateServiceAccountKey",
+                  resourceName:
+                    "projects/acme-data-prod/serviceAccounts/etl-loader@acme-data-prod.iam.gserviceaccount.com",
+                  authenticationInfo: {
+                    principalEmail:
+                      "etl-loader@acme-data-prod.iam.gserviceaccount.com",
+                    serviceAccountKeyName:
+                      "projects/acme-data-prod/serviceAccounts/etl-loader@acme-data-prod.iam.gserviceaccount.com/keys/3f9ac21b8e",
+                  },
+                  requestMetadata: {
+                    callerIp: "45.142.x.x",
+                    callerSuppliedUserAgent: "google-cloud-sdk/473.0.0 (gcloud) Darwin/24.0.0",
+                  },
+                },
+              },
+            ],
+            null,
+            2,
+          ),
+        ),
+      },
+      {
+        ordinal: 2,
+        displayName: "data-access-bigquery.json",
+        kind: "json",
+        mimeType: "application/json; charset=utf-8",
+        bytes: utf8(
+          JSON.stringify(
+            [
+              {
+                logName: "projects/acme-data-prod/logs/cloudaudit.googleapis.com%2Fdata_access",
+                timestamp: "2025-08-22T18:38:14Z",
+                protoPayload: {
+                  serviceName: "bigquery.googleapis.com",
+                  methodName: "google.cloud.bigquery.v2.JobService.InsertJob",
+                  authenticationInfo: {
+                    principalEmail:
+                      "etl-loader@acme-data-prod.iam.gserviceaccount.com",
+                    serviceAccountKeyName:
+                      "projects/acme-data-prod/serviceAccounts/etl-loader@acme-data-prod.iam.gserviceaccount.com/keys/3f9ac21b8e",
+                  },
+                  requestMetadata: {
+                    callerIp: "45.142.x.x",
+                    callerSuppliedUserAgent: "google-cloud-sdk/473.0.0 (gcloud) Darwin/24.0.0",
+                  },
+                  metadata: {
+                    jobChange: {
+                      job: {
+                        jobConfig: {
+                          queryConfig: {
+                            query:
+                              "SELECT customer_id, email, ssn_last4, plaintext_token FROM `acme-data-prod.warehouse.customers` LIMIT 50000",
+                            destinationTable:
+                              "acme-data-prod:scratch.tmp_2025_08_22_extract",
+                          },
+                        },
+                        jobStats: {
+                          totalProcessedBytes: "4_812_993_104",
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            ],
+            null,
+            2,
+          ),
+        ),
+      },
+      {
+        ordinal: 3,
+        displayName: "service-account-context.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "Service account context (out-of-band)",
+            "-------------------------------------",
+            "",
+            "Service account : etl-loader@acme-data-prod.iam.gserviceaccount.com",
+            "Created          : 2023-06-04 (by SRE during ETL pipeline migration)",
+            "Documented purpose : Nightly ETL — read Cloud Storage staging bucket,",
+            "                     write BigQuery tables in `warehouse` dataset.",
+            "Documented runtime : Cloud Run job, region us-central1.",
+            "Documented IAM    : roles/bigquery.dataEditor on `warehouse` dataset,",
+            "                    roles/storage.objectViewer on staging bucket.",
+            "Documented schedule : nightly 02:00 UTC.",
+            "",
+            "Key audit (gcloud iam service-accounts keys list):",
+            "  KEY_ID            CREATED_AT            DISABLED",
+            "  3f9ac21b8e        2024-11-18 14:02 UTC  False",
+            "  a08e7c4d12        2023-06-04 18:11 UTC  False  (Cloud Run mount)",
+            "",
+            "Source-IP context:",
+            "  Cloud Run egress for us-central1 ETL jobs typically appears as",
+            "  35.x.x.x ranges. `45.142.x.x` is NOT a Google-owned range; geo",
+            "  lookup places it in Vilnius, LT (residential / VPS).",
+            "",
+            "Schedule context:",
+            "  The 18:38 UTC and 18:41 UTC timestamps are outside the",
+            "  documented 02:00 UTC nightly window.",
+            "",
+          ].join("\n"),
+        ),
+      },
+      {
+        ordinal: 4,
+        displayName: "data-access-logging-status.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "Data Access logging configuration for project acme-data-prod",
+            "-------------------------------------------------------------",
+            "",
+            "  bigquery.googleapis.com      DATA_READ   : enabled (project default)",
+            "  bigquery.googleapis.com      DATA_WRITE  : enabled (project default)",
+            "  storage.googleapis.com       DATA_READ   : NOT enabled",
+            "  storage.googleapis.com       DATA_WRITE  : NOT enabled",
+            "  secretmanager.googleapis.com DATA_READ   : NOT enabled",
+            "  secretmanager.googleapis.com DATA_WRITE  : NOT enabled",
+            "",
+            "(Admin Activity is always on for every service and cannot be",
+            " disabled. The above governs DATA_READ / DATA_WRITE only.)",
+            "",
+          ].join("\n"),
+        ),
+      },
+    ],
+    questions: [
+      {
+        ordinal: 1,
+        type: "multi_choice",
+        weight: 2,
+        promptMd:
+          "Which statements about this trail are **proven** by the artifacts on hand?",
+        options: [
+          {
+            id: "key-3f9-used",
+            label:
+              "The service-account key with ID `3f9ac21b8e` was used to authenticate every action shown in the logs.",
+          },
+          {
+            id: "ip-not-google",
+            label:
+              "The caller IP `45.142.x.x` is outside Google's owned ranges and outside the documented Cloud Run egress pattern for this workload.",
+          },
+          {
+            id: "bigquery-read",
+            label:
+              "A BigQuery query reading `customers` (including PII columns) was executed and ~4.8 GB processed.",
+          },
+          {
+            id: "iam-self-elevate",
+            label:
+              "The service account granted itself `roles/owner` on the project.",
+          },
+          {
+            id: "gcs-read-proven",
+            label:
+              "Cloud Storage objects in the staging bucket were also read by the attacker.",
+          },
+          {
+            id: "secrets-read-proven",
+            label:
+              "Secret Manager secrets were also read by the attacker.",
+          },
+        ],
+        allowMultiple: true,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["key-3f9-used", "ip-not-google", "bigquery-read", "iam-self-elevate"],
+          allowMultiple: true,
+        },
+        debriefMd: [
+          "**Proven:**",
+          "",
+          "- *Key 3f9 used.* Every event names `serviceAccountKeyName: ...keys/3f9ac21b8e` in `authenticationInfo`. That field is set by Google's auth layer based on which signed JWT the caller presented; the attacker can't forge it.",
+          "- *IP off-pattern.* The service-account context names Google's expected egress ranges (`35.x.x.x`) and documents the runtime as Cloud Run in us-central1. `45.142.x.x` is plainly outside that. This is a Vilnius VPS-range observation — strong on-its-face, but it's a *flag* (a workload could in theory have been misconfigured), and the corroboration that closes it is the IAM self-elevation in the same key's session.",
+          "- *BigQuery read.* The Data Access log captured the InsertJob with the full query text and processed-bytes count. Data Access for BigQuery DATA_READ is enabled, so this is recorded authoritatively.",
+          "- *IAM self-elevation.* SetIamPolicy granting `roles/owner` to the service account itself, by the service account itself, is in Admin Activity (always on). It happened.",
+          "",
+          "**Not proven:**",
+          "",
+          "- *GCS read.* The service-account context says GCS is part of the workload, but Data Access for `storage.googleapis.com` is **not enabled** for this project. The attacker may or may not have pulled the staging bucket; the trail cannot prove either way. This is the classic GCP gap.",
+          "- *Secrets read.* Same problem: Secret Manager Data Access not enabled. Plus, no Admin-Activity event for the secret resources, so we can't even see whether they were accessed at all.",
+        ].join("\n"),
+      },
+      {
+        ordinal: 2,
+        type: "multi_choice",
+        weight: 1,
+        promptMd:
+          "Within the next 30 minutes, which actions should the on-call cloud-forensics analyst take? (Pick all that should run in parallel.)",
+        options: [
+          {
+            id: "disable-key",
+            label: "Disable key `3f9ac21b8e` immediately.",
+          },
+          {
+            id: "revoke-binding",
+            label:
+              "Revoke the new `roles/owner` IAM binding on the project.",
+          },
+          {
+            id: "enable-data-access",
+            label:
+              "Enable Data Access logging for GCS and Secret Manager *now*, to start capturing any further reads.",
+          },
+          {
+            id: "rotate-other-key",
+            label:
+              "Rotate the older key (`a08e7c4d12`) used by the Cloud Run mount, in case it was the leaked one.",
+          },
+          {
+            id: "delete-service-account",
+            label:
+              "Delete the service account outright (cleanest containment).",
+          },
+        ],
+        allowMultiple: true,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["disable-key", "revoke-binding", "enable-data-access"],
+          allowMultiple: true,
+        },
+        debriefMd: [
+          "**Right moves:**",
+          "",
+          "- *Disable key 3f9.* It's the credential the trail names. Disable (not delete) preserves the key record for the IR write-up. Five-second action; should be first.",
+          "- *Revoke the new binding.* The self-granted `roles/owner` binding has to come off before any further attacker action; it lets the attacker re-issue keys, create new service accounts, change logging configuration, etc.",
+          "- *Enable Data Access for GCS + Secret Manager.* Won't tell you what already happened, but stops the trail from going blind on a still-active attacker. Cheap and reversible.",
+          "",
+          "**Wrong:**",
+          "",
+          "- *Rotate the other key.* The trail names `3f9ac21b8e`, not `a08e7c4d12`. Rotating the in-use Cloud Run key blindly will break the legitimate workload at 02:00 and doesn't address the proven compromise. Investigate first; if the older key is also implicated, rotate then — but not pre-emptively in the same 30 minutes as the contain.",
+          "- *Delete the service account.* Tempting but destroys the IAM history attached to the principal and breaks the legitimate ETL job. Disabling the key contains the credential; the account itself can be cleaned up after the IR write-up.",
+        ].join("\n"),
+      },
+      {
+        ordinal: 3,
+        type: "confidence",
+        weight: 1,
+        promptMd:
+          "Confidence (1–5) that the Cloud Storage staging bucket *was* also read by the attacker.",
+        expected: { type: "confidence", expectedRange: [2, 3] },
+        debriefMd:
+          "**2 or 3.** It's *plausible* — a credential with the documented IAM scope could read the bucket and would be operationally interesting to an attacker — but Data Access logging is off for `storage.googleapis.com`, so there is no trail evidence either way. \"Likely, but not proven from these artifacts\" is the honest read; raising confidence to 4+ would over-claim. Closing the question requires VPC Flow Logs from the bucket's egress side, billing data showing read-volume spike, or a forensic image of any object that the attacker stashed elsewhere. The discipline: name the gap in the cover-sheet so the reader knows the absence of evidence is structural, not exonerating.",
+      },
+    ],
+  },
+
+  // ─── 5. CloudTrail tampering (cloud anti-forensics) ─────────
+  {
+    slug: "cloud-forensics-cloudtrail-tampering-001",
+    title: "CloudTrail Tampering: When the Trail Itself Is the Crime Scene",
+    summary:
+      "An attacker with elevated IAM disabled a CloudTrail trail, briefly redirected its destination, and re-enabled it. Read the meta-trail and reconstruct what was happening during the gap.",
+    skillAreas: ["cloud_forensics", "anti_forensics", "df_artifacts", "inference_discipline"],
+    difficulty: 4,
+    estimatedMinutes: 22,
+    tags: [
+      "cloud_forensics",
+      "anti_forensics",
+      "aws",
+      "cloudtrail",
+      "tampering",
+      "log_destruction",
+    ],
+    lane: "cloud_forensics",
+    module: "Cloud anti-forensics",
+    sequence: 1,
+    brief: `
+# Brief
+
+CloudTrail itself is an AWS service, and **every call to
+CloudTrail's own management API** is logged — by CloudTrail.
+\`StopLogging\`, \`UpdateTrail\`, \`DeleteTrail\`,
+\`PutEventSelectors\` all appear as management events with the
+\`cloudtrail.amazonaws.com\` event source.
+
+That gives a strong invariant: even if an attacker stops a
+trail to silence themselves, the *act of stopping* is the
+last event recorded before the gap. The trail's own
+configuration history (and CloudTrail's "Insights" plus the
+EventBridge integration) is the meta-evidence.
+
+An experienced attacker won't just disable the trail. They'll
+either:
+
+1. **Disable, act, re-enable**, hoping that the gap reads as a
+   monitoring glitch.
+2. **UpdateTrail to a new S3 bucket the attacker controls**,
+   act, **UpdateTrail back to the original**.
+3. **DeleteTrail outright**, lean on the assumption that
+   audit will take days to notice.
+
+Pattern 2 is the most informative because the events between
+the two UpdateTrail calls were never lost — they just landed
+in the attacker's bucket. That bucket and its log files are
+forensic gold, IF the attacker forgot to delete them and IF
+the IR team obtains them lawfully.
+
+Read the meta-trail. Reconstruct.
+`.trim(),
+    artifacts: [
+      {
+        ordinal: 1,
+        displayName: "cloudtrail-management-events.json",
+        kind: "json",
+        mimeType: "application/json; charset=utf-8",
+        bytes: utf8(
+          JSON.stringify(
+            [
+              {
+                eventTime: "2025-10-03T09:12:44Z",
+                eventName: "UpdateTrail",
+                eventSource: "cloudtrail.amazonaws.com",
+                awsRegion: "us-east-1",
+                sourceIPAddress: "198.51.100.99",
+                userAgent: "aws-cli/2.15.30 Python/3.11.6",
+                userIdentity: {
+                  type: "AssumedRole",
+                  arn: "arn:aws:sts::555512348888:assumed-role/BreakGlassAdmin/incident-fix",
+                  sessionContext: {
+                    sessionIssuer: {
+                      arn: "arn:aws:iam::555512348888:role/BreakGlassAdmin",
+                    },
+                  },
+                },
+                requestParameters: {
+                  name: "org-wide-trail",
+                  s3BucketName: "rogue-bucket-xfer-2025",
+                  s3KeyPrefix: "",
+                  includeGlobalServiceEvents: true,
+                  isMultiRegionTrail: true,
+                },
+                responseElements: { name: "org-wide-trail" },
+              },
+              {
+                eventTime: "2025-10-03T09:31:18Z",
+                eventName: "UpdateTrail",
+                eventSource: "cloudtrail.amazonaws.com",
+                awsRegion: "us-east-1",
+                sourceIPAddress: "198.51.100.99",
+                userAgent: "aws-cli/2.15.30 Python/3.11.6",
+                userIdentity: {
+                  type: "AssumedRole",
+                  arn: "arn:aws:sts::555512348888:assumed-role/BreakGlassAdmin/incident-fix",
+                  sessionContext: {
+                    sessionIssuer: {
+                      arn: "arn:aws:iam::555512348888:role/BreakGlassAdmin",
+                    },
+                  },
+                },
+                requestParameters: {
+                  name: "org-wide-trail",
+                  s3BucketName: "acme-audit-trail-canonical",
+                  s3KeyPrefix: "",
+                  includeGlobalServiceEvents: true,
+                  isMultiRegionTrail: true,
+                },
+                responseElements: { name: "org-wide-trail" },
+              },
+            ],
+            null,
+            2,
+          ),
+        ),
+      },
+      {
+        ordinal: 2,
+        displayName: "s3-canonical-bucket-objects.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "Objects landed in s3://acme-audit-trail-canonical/ for 2025-10-03",
+            "------------------------------------------------------------------",
+            "",
+            "  AWSLogs/555512348888/CloudTrail/us-east-1/2025/10/03/...0855Z.json.gz",
+            "  AWSLogs/555512348888/CloudTrail/us-east-1/2025/10/03/...0900Z.json.gz",
+            "  AWSLogs/555512348888/CloudTrail/us-east-1/2025/10/03/...0910Z.json.gz",
+            "  (gap)",
+            "  AWSLogs/555512348888/CloudTrail/us-east-1/2025/10/03/...0935Z.json.gz",
+            "  AWSLogs/555512348888/CloudTrail/us-east-1/2025/10/03/...0940Z.json.gz",
+            "  AWSLogs/555512348888/CloudTrail/us-east-1/2025/10/03/...0945Z.json.gz",
+            "",
+            "(Trail delivery files for the 09:13–09:31 UTC window are not in",
+            " this bucket. The two earlier UpdateTrail calls reconfigured the",
+            " destination to s3://rogue-bucket-xfer-2025 for that window.)",
+            "",
+          ].join("\n"),
+        ),
+      },
+      {
+        ordinal: 3,
+        displayName: "iam-context.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "Account context — 555512348888 (Acme production AWS account)",
+            "------------------------------------------------------------",
+            "",
+            "Role : BreakGlassAdmin",
+            "  Trust : federated from IdP (Okta), human assumption only",
+            "  Permissions : AdministratorAccess",
+            "  MFA-on-assume : REQUIRED via SCP",
+            "  Documented use : Tier-1 incident only, with on-call director sign-off",
+            "  Session-name convention : on-call ticket ID (e.g. INC-9421)",
+            "",
+            "Session in trail :",
+            "  sessionName = `incident-fix`  (NOT a ticket ID)",
+            "  Source IP   = 198.51.100.99   (registered to none of Acme's offices,",
+            "                                  none of Acme's VPN egresses)",
+            "  Duration    = 09:08–09:46 UTC",
+            "",
+            "Cross-check against on-call paging:",
+            "  No tier-1 incident open on 2025-10-03.",
+            "  No paging record for an on-call director sign-off.",
+            "",
+            "S3 bucket `rogue-bucket-xfer-2025`:",
+            "  Not an Acme-owned bucket.",
+            "  Owner account ID = different AWS account, external.",
+            "",
+          ].join("\n"),
+        ),
+      },
+    ],
+    questions: [
+      {
+        ordinal: 1,
+        type: "multi_choice",
+        weight: 2,
+        promptMd:
+          "Reading only what's on the management-event log and the bucket inventory, what is **proven**?",
+        options: [
+          {
+            id: "destination-swapped",
+            label:
+              "The trail's S3 destination was changed from the canonical bucket to `rogue-bucket-xfer-2025` at 09:12 and back to the canonical bucket at 09:31.",
+          },
+          {
+            id: "events-redirected",
+            label:
+              "Events for the 09:13–09:31 UTC window were delivered to the attacker-controlled bucket, not the canonical one.",
+          },
+          {
+            id: "events-deleted",
+            label:
+              "Events for the 09:13–09:31 UTC window were deleted by the attacker.",
+          },
+          {
+            id: "breakglass-misused",
+            label:
+              "The BreakGlassAdmin role was assumed under a session name that does not follow the documented ticket-ID convention.",
+          },
+          {
+            id: "rogue-was-leaked",
+            label:
+              "The contents of the attacker bucket were ultimately recovered and reviewed by IR.",
+          },
+        ],
+        allowMultiple: true,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["destination-swapped", "events-redirected", "breakglass-misused"],
+          allowMultiple: true,
+        },
+        debriefMd: [
+          "**Proven:**",
+          "",
+          "- *Destination swapped, swapped back.* The two UpdateTrail events name the destination buckets explicitly in `requestParameters.s3BucketName`. That's the management API's own record of its own reconfiguration.",
+          "- *Events redirected.* The canonical bucket inventory shows a clean delivery gap for exactly the 09:13–09:31 window the trail was pointed elsewhere. CloudTrail delivers to whatever destination is configured at write time; the gap is consistent with redirection, not with logging being off.",
+          "- *BreakGlass misuse.* The session name `incident-fix` doesn't match the documented `INC-<number>` convention, the source IP is off-pattern, and there's no on-call paging record. Three independent on-the-spot inconsistencies; the artifact bundle explicitly names the convention for the reviewer.",
+          "",
+          "**Not proven:**",
+          "",
+          "- *Events deleted.* The events weren't deleted from CloudTrail's perspective — they were delivered. They live (or lived) in `rogue-bucket-xfer-2025`. Whether the attacker subsequently emptied that bucket is a separate question and not answered by these artifacts.",
+          "- *Bucket recovered.* Nothing here says IR got hold of the rogue bucket. The classic happy-ending lure — \"attackers always forget to clean up\" — sometimes holds but is not a fact about *this* incident from these inputs.",
+        ].join("\n"),
+      },
+      {
+        ordinal: 2,
+        type: "multi_choice",
+        weight: 1,
+        promptMd:
+          "Which *defensive* controls would have made the 18-minute redirection significantly less useful to the attacker?",
+        options: [
+          {
+            id: "log-file-validation",
+            label:
+              "CloudTrail log-file integrity validation enabled (signed digest files).",
+          },
+          {
+            id: "org-trail-protected",
+            label:
+              "Organization-level trail configured at the AWS Organizations root, with an SCP blocking member-account principals from running `UpdateTrail` or `StopLogging` on it.",
+          },
+          {
+            id: "eventbridge-alarm",
+            label:
+              "EventBridge rule alerting on any `cloudtrail.amazonaws.com` API call (UpdateTrail / StopLogging / DeleteTrail / PutEventSelectors) firing into the SOC pager.",
+          },
+          {
+            id: "guardduty-on",
+            label:
+              "GuardDuty enabled (it has a `Stealth:IAMUser/CloudTrailLoggingDisabled` finding).",
+          },
+          {
+            id: "shorter-retention",
+            label:
+              "Shorter S3 retention on the canonical audit bucket, so old logs roll off faster and there's less data to redirect.",
+          },
+        ],
+        allowMultiple: true,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["org-trail-protected", "eventbridge-alarm", "guardduty-on"],
+          allowMultiple: true,
+        },
+        debriefMd: [
+          "**Right:**",
+          "",
+          "- *Org-trail at the Org root, SCP-protected.* The single highest-leverage control. An organization trail managed at the root with member-account principals **denied** `cloudtrail:UpdateTrail` and `cloudtrail:StopLogging` by SCP cannot be reconfigured from inside the account where the attacker lives, even with full admin. Pattern 2 (redirect + redirect-back) is structurally blocked.",
+          "- *EventBridge alarm.* Cheap, immediate, very effective. The pager fires at 09:12 the moment the first UpdateTrail happens, before any redirected window can play out.",
+          "- *GuardDuty.* The `Stealth:IAMUser/CloudTrailLoggingDisabled` finding catches the StopLogging variant directly. Doesn't catch the UpdateTrail-to-rogue-bucket variant cleanly (a redirected trail is technically still \"logging\"), but is part of the layered set.",
+          "",
+          "**Wrong:**",
+          "",
+          "- *Log-file integrity validation.* It detects **tampering with delivered log files** — useful against a *different* attack (the attacker reaches into the canonical bucket and rewrites JSON). It does nothing about diversion-while-in-transit. Useful to have, doesn't solve this case.",
+          "- *Shorter retention.* The opposite of what defensive posture wants. Shorter retention loses evidence faster; it doesn't reduce the value of an 18-minute redirection window.",
+        ].join("\n"),
+      },
+      {
+        ordinal: 3,
+        type: "confidence",
+        weight: 1,
+        promptMd:
+          "Confidence (1–5) that the 09:13–09:31 UTC window contains the attacker's high-impact actions (vs. the redirection being a feint to draw attention elsewhere).",
+        expected: { type: "confidence", expectedRange: [3, 4] },
+        debriefMd:
+          "**3 or 4.** The shape — go-elsewhere, do-thing, come-back — is classic. The redirection window is so narrow (18 minutes) and so tightly bracketed that something specific is much more likely than the redirection being theatre. But \"feint to draw the SOC's attention to this account while a parallel action runs in another account\" is a real APT pattern, and discipline says the next move is to scan the rest of the Org's account inventory for *concurrent* off-pattern activity (other BreakGlass assumptions, other UpdateTrail calls) in the 08:00–11:00 window. If those are clean, confidence rises to 4–5 that the 18-minute window is the actual crime scene; until then, leave room.",
       },
     ],
   },

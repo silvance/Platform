@@ -1485,6 +1485,648 @@ to verify?"*
     ],
   },
 
+  // ─── 4. Android extraction tier triage ─────────────────────
+  {
+    slug: "mobile-android-extraction-tier-001",
+    title: "Android Extraction Tiers: A Pixel, a Samsung, and What Each Tool Actually Got",
+    summary:
+      "Two Androids arrive the same morning — a Pixel 7 (Android 14, BFU) and a Galaxy S22 (Android 13, AFU, passcode known). The lab ran what each device permitted. Triage what each extraction can answer.",
+    skillAreas: ["df_artifacts", "report_writing", "inference_discipline"],
+    difficulty: 3,
+    estimatedMinutes: 25,
+    tags: ["mobile", "android", "extraction_type", "pixel", "samsung", "knox"],
+    lane: "mobile_forensics",
+    module: "Android extraction",
+    sequence: 1,
+    brief: `
+# Brief
+
+Two Android devices were seized in the same operation and walked
+to the lab on the same morning under search-authority
+\`SA-2026-0419\`:
+
+- **Device A** — Google Pixel 7, Android 14, came in **powered off**
+  (BFU at intake, Faraday-bagged from scene).
+- **Device B** — Samsung Galaxy S22, Android 13, came in **unlocked
+  and AFU**, with a passcode the cooperating subject provided.
+
+The lab ran what each device's state permitted and produced two
+extraction summaries. The supporting CI office's request:
+
+> *"Pull WhatsApp messages (active + deleted), Signal if any,
+> Google Maps timeline for the past 60 days, and any Samsung Knox
+> secure-folder contents on the S22. Need it for the Friday brief."*
+
+Android's extraction landscape is **structurally different** from
+iOS and is also more vendor-fragmented:
+
+> **Android extraction tier reference.**
+>
+> - **Logical (ADB backup)** — what the device hands over via
+>   the Android Debug Bridge \`backup\` protocol *if* USB
+>   debugging is enabled and the user confirms on-screen.
+>   Mostly active user data from apps that opted into backup.
+>   **Many modern apps explicitly opt out** (WhatsApp, Signal,
+>   most banking) — they appear as installed but their data
+>   sandbox isn't in the backup.
+> - **File System (APK + private data via privileged ADB)** —
+>   if root or an OEM service privilege is available, the
+>   sandbox \`/data/data/<package>/\` directories are reachable.
+>   Includes SQLite databases for messaging apps. Deleted-row
+>   recovery from WAL / journal becomes possible.
+> - **Full Physical (chip-off / EDL / Qualcomm Live)** — block-
+>   level read of the userdata partition. On modern Android
+>   (file-based encryption, FBE) this is **encrypted on disk**;
+>   without the credential or a vendor-side decryption pathway,
+>   the dump is unreadable. Decryption requires the user PIN
+>   plus, on most devices, a Trusted Execution Environment
+>   (TEE / Knox / Titan) cooperative path.
+> - **Cellebrite UFED Premium / Magnet GRAYKEY Android** — modern
+>   tooling that, for *specific* device + Android-version combos,
+>   exploits vulnerabilities to either unlock or reach file-system
+>   under the user's credential without the user being present.
+>   Coverage is per-device-model, per-build-fingerprint, and
+>   changes monthly.
+
+Knox Secure Folder is a second, encrypted user-profile-like
+container on Samsung devices. Its contents are encrypted with a
+key tied to a *separate* PIN / biometric set by the user, not the
+device PIN. Even an AFU + device-PIN-known acquisition does **not**
+unlock the Secure Folder unless that second secret is provided.
+Treat it as a second device sharing a chassis.
+
+Read the two extraction summaries and triage what each tool got.
+`.trim(),
+    artifacts: [
+      {
+        ordinal: 1,
+        displayName: "pixel7-extraction-summary.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "Device A — Google Pixel 7 (panther)",
+            "-----------------------------------",
+            "",
+            "  Case            : SA-2026-0419 / Device A",
+            "  Serial          : 1A271FDF...redacted",
+            "  Android         : 14 (UQ1A.240105.004)",
+            "  Bootloader      : LOCKED (factory)",
+            "  Verified Boot   : GREEN (no tampering)",
+            "  State at intake : POWERED OFF (BFU)",
+            "  USB debugging   : Unknown — device locked, cannot inspect",
+            "",
+            "  Tool tried        : Cellebrite UFED 7.78 Android module",
+            "  Result            : Device fingerprint recognized; tier-supported",
+            "                      exploit NOT available for this build (Pixel 7,",
+            "                      Android 14 UQ1A.240105.004). Coverage matrix",
+            "                      check: row marked \"in research\".",
+            "",
+            "  Tool tried        : Magnet GRAYKEY Android, agent v2.14",
+            "  Result            : BFU acquisition tier available. Acquired what",
+            "                      the agent calls \"Pre-Boot artifacts\":",
+            "                        - device identity (IMEI, serial, Build)",
+            "                        - bootloader / verified-boot state",
+            "                        - Bluetooth pairing list (pre-auth visible)",
+            "                        - Wi-Fi SSID list (no PSK)",
+            "                        - logcat (sparse, since boot)",
+            "                      NOT acquired: any /data/data/* sandbox,",
+            "                      no user PIN, no FBE-decrypted content.",
+            "                      Brute-force tier: queued, est. >180 days for",
+            "                      4-digit PIN under Titan rate-limit (do not",
+            "                      hold breath).",
+            "",
+            "  Image SHA-256   : 1c8e...44a2  (verified on completion)",
+            "  Examiner        : SFC L. Ortiz, EnCE / GCFE",
+            "",
+            "  Working conclusion (lab) : BFU; effectively no app-sandbox data",
+            "  available. WhatsApp / Signal / Maps Timeline NOT in scope from",
+            "  this image. Recommend: pivot to legal-process for Google account",
+            "  (Maps Timeline server-side, WhatsApp Business backup if any),",
+            "  and revisit if a cooperating-subject PIN is obtained.",
+            "",
+          ].join("\n"),
+        ),
+      },
+      {
+        ordinal: 2,
+        displayName: "galaxy-s22-extraction-summary.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "Device B — Samsung Galaxy S22 (SM-S901U)",
+            "----------------------------------------",
+            "",
+            "  Case            : SA-2026-0419 / Device B",
+            "  IMEI            : 35...redacted",
+            "  Android         : 13 (TP1A.220624.014)  (One UI 5.1)",
+            "  Knox warranty   : INTACT (counter = 0x0)",
+            "  Bootloader      : LOCKED",
+            "  State at intake : UNLOCKED, AFU",
+            "  Device PIN      : Provided by cooperating subject (interview log",
+            "                    SA-2026-0419-INT-001)",
+            "  USB debugging   : Enabled at intake (per cooperating-subject",
+            "                    consent + warrant authority)",
+            "",
+            "  Tool used         : Cellebrite UFED Premium 7.78, Samsung S22",
+            "                      AFU + PIN flow",
+            "  Result            : File-System acquisition completed.",
+            "                      /data/data/* sandboxes ACQUIRED for all",
+            "                      installed packages.",
+            "                      Per-app row counts (active rows):",
+            "                        - com.whatsapp / msgstore.db   : 12,884",
+            "                        - com.whatsapp WAL / -journal  : present",
+            "                        - org.thoughtcrime.securesms   : DB present,",
+            "                                                          rows encrypted",
+            "                                                          (Signal SQLCipher)",
+            "                        - com.google.android.apps.maps : Timeline",
+            "                                                          local cache",
+            "                                                          present, 12 MB",
+            "                        - com.sec.android.app.knox     : Secure Folder",
+            "                                                          container",
+            "                                                          present,",
+            "                                                          BUT 2ND PIN",
+            "                                                          NOT PROVIDED",
+            "",
+            "  Tool used         : Cellebrite UFED PA, Signal plugin v4.11",
+            "                      with Signal-DB-decrypt module",
+            "  Result            : Signal SQLCipher unlocked via keystore key",
+            "                      derived from the device-protected keymaster",
+            "                      slot under the provided PIN.",
+            "                      Active conversations: 4 threads, 619 messages.",
+            "                      Deleted rows (WAL recovery): 38 candidates,",
+            "                      flagged for examiner review.",
+            "",
+            "  Knox Secure Folder content: NOT acquired this run. The Secure",
+            "  Folder uses a separate credential set; cooperating subject was",
+            "  not asked / could not provide. Re-interview noted.",
+            "",
+            "  Image SHA-256   : 7c4b...e810  (verified)",
+            "  Examiner        : SFC L. Ortiz, EnCE / GCFE",
+            "",
+          ].join("\n"),
+        ),
+      },
+      {
+        ordinal: 3,
+        displayName: "case-request.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "Case request — SA-2026-0419",
+            "---------------------------",
+            "",
+            "Requesting office : 902nd MI Group, Det X",
+            "Case agent        : SA J. Reyes",
+            "",
+            "Asks (verbatim) :",
+            "  1. WhatsApp messages, active + deleted (both devices).",
+            "  2. Signal messages, any thread, any state (both devices).",
+            "  3. Google Maps Timeline, last 60 days (both devices).",
+            "  4. Any Samsung Knox Secure Folder contents on the S22.",
+            "",
+            "Brief deadline    : Friday 1700.",
+            "",
+          ].join("\n"),
+        ),
+      },
+    ],
+    questions: [
+      {
+        ordinal: 1,
+        type: "multi_choice",
+        weight: 2,
+        promptMd:
+          "Treating only what the two summaries document as fact, which of the case agent's asks **can be answered from the images already in hand** (i.e., no further acquisition required)?",
+        options: [
+          {
+            id: "whatsapp-s22",
+            label: "WhatsApp active messages on the S22.",
+          },
+          {
+            id: "whatsapp-pixel",
+            label: "WhatsApp messages on the Pixel 7.",
+          },
+          {
+            id: "signal-s22",
+            label: "Signal messages on the S22 (active + flagged deleted candidates).",
+          },
+          {
+            id: "signal-pixel",
+            label: "Signal messages on the Pixel 7.",
+          },
+          {
+            id: "maps-s22",
+            label:
+              "A subset of Google Maps Timeline (the device's local cache) for the S22.",
+          },
+          {
+            id: "maps-pixel",
+            label: "Google Maps Timeline for the Pixel 7.",
+          },
+          {
+            id: "knox-s22",
+            label: "Knox Secure Folder contents on the S22.",
+          },
+        ],
+        allowMultiple: true,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["whatsapp-s22", "signal-s22", "maps-s22"],
+          allowMultiple: true,
+        },
+        debriefMd: [
+          "**In hand:**",
+          "",
+          "- *WhatsApp on the S22.* File-system acquisition with `msgstore.db` + WAL + journal under the user PIN. Active and (via WAL / orphan recovery) deleted-candidate rows are in scope. Mark the deleted-row counts as candidates pending examiner review of the journal — don't ship raw row counts as findings.",
+          "- *Signal on the S22.* The summary explicitly names the SQLCipher unlock via keystore + device PIN; 619 active messages and 38 deleted candidates. This is a tool-supported path on Android 13 / One UI 5.1; it is not a path that exists on iOS.",
+          "- *Maps Timeline on the S22 (subset).* The local cache (12 MB) is captured. **Subset** is the discipline: the canonical Timeline lives on the user's Google account server-side, so the local cache typically lags and is not authoritative. The on-device data answers the ask *partially* and the report has to name the partiality.",
+          "",
+          "**Not in hand:**",
+          "",
+          "- *WhatsApp / Signal / Maps on the Pixel.* Pixel 7 is BFU; the GRAYKEY agent captured pre-boot artifacts only. None of the app sandboxes are in scope. Pivot is via cooperating-subject PIN (re-interview) or legal process to Google + Meta for server-side records.",
+          "- *Knox Secure Folder on the S22.* The Secure Folder is a second user-profile encrypted under a second credential set the cooperating subject was not asked for. Until that credential is provided, the container is unreachable — even though every other part of the S22 is fully extracted.",
+        ].join("\n"),
+      },
+      {
+        ordinal: 2,
+        type: "multi_choice",
+        weight: 1,
+        promptMd:
+          "Which of the following next steps does the lab + case agent owe the brief by Friday, given what's actually in hand?",
+        options: [
+          {
+            id: "reinterview-knox",
+            label:
+              "Re-interview the cooperating subject for the Knox Secure Folder credential (and document the conversation in the case file).",
+          },
+          {
+            id: "legal-process-google",
+            label:
+              "Open legal-process channels to Google for the Pixel's account-side Maps Timeline (60-day window) and Google Drive / Backup contents.",
+          },
+          {
+            id: "legal-process-meta",
+            label:
+              "Open legal-process channels to Meta for WhatsApp metadata on the Pixel's phone number.",
+          },
+          {
+            id: "physical-pixel",
+            label:
+              "Have the lab attempt a chip-off / physical extraction of the Pixel 7 to bypass BFU.",
+          },
+          {
+            id: "rerun-pixel",
+            label:
+              "Re-run UFED on the Pixel 7 in 24 hours in case the coverage matrix updates.",
+          },
+          {
+            id: "ship-s22-now",
+            label:
+              "Ship the S22 findings to the brief on Friday with the Pixel-side gap explicitly named.",
+          },
+        ],
+        allowMultiple: true,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["reinterview-knox", "legal-process-google", "legal-process-meta", "ship-s22-now"],
+          allowMultiple: true,
+        },
+        debriefMd: [
+          "**Right:**",
+          "",
+          "- *Re-interview for Knox.* Cheapest, fastest path; documented in the interview log either way.",
+          "- *Legal process to Google.* The Maps Timeline server-side data answers the 60-day ask *better* than any local-cache extraction would, and reaches the Pixel that the BFU image doesn't.",
+          "- *Legal process to Meta (WhatsApp).* WhatsApp end-to-end-encrypted message bodies aren't on Meta's servers, but metadata, account registration data, and (where the user opted in) WhatsApp Cloud Backup may be. Worth pursuing in parallel.",
+          "- *Ship the S22 findings; name the Pixel gap.* The S22 work is solid and time-sensitive. Naming what *wasn't* recovered on the Pixel, and why (BFU, no exploit coverage for this build), is part of the finding. Withholding the S22 results until the Pixel is also closed loses the operational value of what's already in hand.",
+          "",
+          "**Wrong:**",
+          "",
+          "- *Chip-off the Pixel 7.* On a modern FBE Android with Verified Boot GREEN and a locked bootloader, a chip-off produces an encrypted block dump that cannot be decrypted without the user PIN + TEE cooperation. It also destroys the device. High-cost, low-yield, and irreversible.",
+          "- *Re-run UFED in 24 hours.* The coverage matrix isn't a daily-changing thing; it's a periodic vendor research output. \"Try again tomorrow\" reads as wishful and is not a real plan; the right discipline is to track the matrix update and revisit when an exploit lands, not to spin tool runs.",
+        ].join("\n"),
+      },
+      {
+        ordinal: 3,
+        type: "confidence",
+        weight: 1,
+        promptMd:
+          "Confidence (1–5) that the Maps Timeline cache extracted from the S22 is a **complete** answer to the 60-day Maps Timeline ask for the S22 user.",
+        expected: { type: "confidence", expectedRange: [1, 2] },
+        debriefMd:
+          "**1 or 2.** The local cache is an opportunistic mirror, not the canonical Timeline. Server-side Timeline includes entries the device never had (other-device contributions to the same Google account, retroactive corrections by Google's location-history backfill, etc.) and excludes some entries the device synthesized but never confirmed. \"Complete\" requires the Google account-side Timeline. The on-device cache answers a *partial* version of the ask and the report has to say so — and the legal-process pull to Google is what closes the gap.\n\n**Owners.** The lab's chief examiner owns the extraction completeness statement; the case agent + supporting JA own the legal-process timeline. The unit ISSM is not in the loop unless DODIN-Army data was on the devices.",
+      },
+    ],
+  },
+
+  // ─── 5. Cloud-backed messaging surface ─────────────────────
+  {
+    slug: "mobile-cloud-backed-messaging-001",
+    title: "Cloud-Backed Messaging: What's On the Device, What's In the Cloud, What the Warrant Reaches",
+    summary:
+      "An iPhone with Messages in iCloud and WhatsApp iCloud Backup. The image is FFS, but the on-device row count doesn't match the agent's understanding. Reconcile what each surface is actually showing.",
+    skillAreas: ["df_artifacts", "report_writing", "inference_discipline"],
+    difficulty: 3,
+    estimatedMinutes: 22,
+    tags: ["mobile", "icloud", "whatsapp", "imessage", "cloud_backed_messaging"],
+    lane: "mobile_forensics",
+    module: "Cloud-backed surface",
+    sequence: 1,
+    brief: `
+# Brief
+
+An iPhone 14 was lawfully acquired under search-authority
+\`SA-2026-0521\`. The lab returned a full-file-system (FFS) image
+overnight; the device's passcode was provided via interview.
+
+The case agent's understanding (from prior intelligence) is that
+the subject has **about 18 months of WhatsApp history** with a
+specific contact group and **iMessage threads with multiple
+co-conspirators** going back roughly the same period. The agent
+expects to see those at the row counts that 18 months would
+imply for an active messenger.
+
+The FFS image's per-app row counts:
+
+- **Messages (SMS + iMessage)** — 412 messages, oldest 11 days
+  before seizure.
+- **WhatsApp** — 6,221 messages, oldest 92 days before seizure.
+
+The agent's first reaction is: *"the extraction missed
+everything."*
+
+The reality is that **two cloud-backed messaging surfaces** are
+in play and each has a different on-device footprint and a
+different legal-process pathway:
+
+> **Messages in iCloud (iMessage / SMS sync).** When enabled
+> (Settings → \[user\] → iCloud → Messages), iMessage stores the
+> canonical message history *in iCloud* and the device keeps a
+> rolling window in local storage. The window depends on free
+> disk and is **not** \"all messages ever.\" Disabling Messages
+> in iCloud causes the device to download the full history back
+> locally (slow, but observable).
+>
+> **WhatsApp iCloud Backup (or Google Drive Backup on Android).**
+> WhatsApp's *primary* message store is local on the device.
+> Periodic backups are written to the user's iCloud (or Drive)
+> as encrypted blobs. Restoring from backup is a one-way device-
+> side operation. Importantly, **deleting messages in the
+> WhatsApp UI deletes them from the local DB** — and the next
+> backup, if it runs, overwrites the cloud copy. There IS no
+> \"history only in cloud\" mode in WhatsApp the way there is for
+> iMessage; the cloud is a snapshot of *the device's state at
+> the time of backup*.
+
+Reconcile the FFS counts against the agent's expectation and
+write the brief.
+`.trim(),
+    artifacts: [
+      {
+        ordinal: 1,
+        displayName: "ffs-extraction-summary.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "iPhone 14 (A2882) — FFS extraction summary",
+            "------------------------------------------",
+            "",
+            "  Case            : SA-2026-0521",
+            "  iOS             : 18.1 (build 22B83)",
+            "  State acquired  : UNLOCKED (passcode via interview)",
+            "  Tool            : Cellebrite UFED 7.79 + UFED PA",
+            "  Image SHA-256   : ab14...02ff (verified)",
+            "",
+            "  Per-app row counts (active rows):",
+            "    Messages (iMessage + SMS)        : 412   (oldest 2026-05-10)",
+            "    WhatsApp                         : 6,221 (oldest 2026-02-18)",
+            "    Photos                           : 9,008",
+            "    Browser history (Safari)         : 1,201",
+            "    Notes                            : 88",
+            "    Maps history (last 30 days)      : 12",
+            "",
+            "  iCloud-side configuration observed on device (Settings export):",
+            "    Messages in iCloud   : ENABLED (since 2024-04)",
+            "    iCloud Backup        : ENABLED, last successful 2026-05-19 14:11Z",
+            "    Photos in iCloud     : ENABLED (Optimize Storage)",
+            "    Advanced Data Protection (ADP) : NOT enabled",
+            "",
+            "  WhatsApp-side configuration:",
+            "    Settings → Chats → Chat Backup: ON to iCloud, daily.",
+            "    Last WhatsApp iCloud backup : 2026-05-20 02:00Z",
+            "    End-to-end-encrypted backup : ENABLED (Customer Key on)",
+            "",
+            "  Note from examiner:",
+            "    The iMessage rolling window of 412 rows / 11 days is",
+            "    consistent with Messages-in-iCloud configured + a device",
+            "    with high churn. Disabling Messages-in-iCloud and",
+            "    re-syncing on a working copy of the image was NOT performed",
+            "    (would require a powered, online device; this is a static",
+            "    image).",
+            "",
+          ].join("\n"),
+        ),
+      },
+      {
+        ordinal: 2,
+        displayName: "agent-expectation.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "Case agent — verbatim ask + expectation",
+            "---------------------------------------",
+            "",
+            "From: SA M. Patel",
+            "",
+            "  \"Subject has been an active WhatsApp user with the target group",
+            "   for at least 18 months and an active iMessage user with at",
+            "   least three co-conspirators over the same window. The image",
+            "   should give us the messages back to mid-2024. If it does not,",
+            "   the extraction missed something and we need to re-do it.\"",
+            "",
+            "Wants for brief:",
+            "  1. Full message corpus, both apps, 18-month window.",
+            "  2. Confirmation that the extraction is forensically sound.",
+            "",
+          ].join("\n"),
+        ),
+      },
+      {
+        ordinal: 3,
+        displayName: "icloud-vs-on-device-reference.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "iCloud / cloud-backed surface — quick reference",
+            "------------------------------------------------",
+            "",
+            "Messages in iCloud (iMessage + SMS):",
+            "  - When enabled, the canonical history is iCloud-side.",
+            "  - The device retains a rolling window dependent on free",
+            "    disk; new messages always present, older messages",
+            "    purged as needed.",
+            "  - A few hundred recent messages on a busy account is",
+            "    NORMAL, not a sign of tampering or extraction error.",
+            "  - Lawful pathway to the cloud copy: search warrant to",
+            "    Apple under 18 U.S.C. § 2703 for the iCloud account",
+            "    contents, OR enabling the iCloud-restore flow against",
+            "    the live (re-acquired) device, which copies all",
+            "    iMessage history back local.",
+            "  - If Advanced Data Protection (ADP) is enabled, Apple",
+            "    does NOT hold the message-content keys and a § 2703",
+            "    return for Messages will not yield decryptable content.",
+            "    This image: ADP NOT enabled. Apple can return content.",
+            "",
+            "WhatsApp local + iCloud backup:",
+            "  - Primary store is on-device (SQLite + crypt files).",
+            "  - The device-side store is the AUTHORITATIVE source for",
+            "    messages the user still has access to in the app.",
+            "  - iCloud backup is a periodic encrypted snapshot of that",
+            "    device-side store. WhatsApp's end-to-end-encrypted",
+            "    backup option, when enabled, encrypts the backup with a",
+            "    user-controlled key Apple cannot decrypt.",
+            "  - On THIS device: end-to-end-encrypted backup is enabled.",
+            "    A § 2703 return to Apple yields the encrypted blob but",
+            "    not its contents.",
+            "",
+            "Implications for this case:",
+            "  - 412 iMessage / 11 days  is normal for a high-volume,",
+            "    Messages-in-iCloud-enabled iPhone with limited free disk.",
+            "    Older iMessages are at Apple; obtainable by § 2703.",
+            "  - 6,221 WhatsApp / 92 days  is at the bottom of what the",
+            "    local store typically holds for a heavy user; the iCloud",
+            "    backup is END-TO-END encrypted, so § 2703 does not reach",
+            "    the older history. The pre-92-day WhatsApp window is",
+            "    structurally unrecoverable without the user's encryption",
+            "    key for the backup, the WhatsApp Cloud Backup credential,",
+            "    or interview / consent.",
+            "",
+          ].join("\n"),
+        ),
+      },
+    ],
+    questions: [
+      {
+        ordinal: 1,
+        type: "multi_choice",
+        weight: 2,
+        promptMd:
+          "Which statements about the FFS image are **facts** (i.e., supported by the artifacts and reference)?",
+        options: [
+          {
+            id: "ffs-clean",
+            label: "The FFS image hashes verified; the extraction is structurally sound.",
+          },
+          {
+            id: "imessage-window-normal",
+            label:
+              "412 iMessage rows over 11 days on a Messages-in-iCloud-enabled iPhone is consistent with the rolling-window design, not with an extraction error.",
+          },
+          {
+            id: "imessage-recoverable",
+            label:
+              "The older iMessage history is recoverable via a § 2703 search warrant to Apple, because Advanced Data Protection is NOT enabled.",
+          },
+          {
+            id: "whatsapp-icloud-recoverable",
+            label:
+              "The older WhatsApp history is recoverable via a § 2703 search warrant to Apple, because the iCloud backup contains the full WhatsApp history.",
+          },
+          {
+            id: "tool-failed-claim",
+            label:
+              "The case agent's claim that 'the extraction missed something' is supported by the artifacts.",
+          },
+        ],
+        allowMultiple: true,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["ffs-clean", "imessage-window-normal", "imessage-recoverable"],
+          allowMultiple: true,
+        },
+        debriefMd: [
+          "**Fact:**",
+          "",
+          "- *FFS clean.* Hash verified on completion; the tool ran the FFS tier as it claims.",
+          "- *iMessage window normal.* The reference makes this explicit and the on-device Settings export confirms Messages-in-iCloud has been on since April 2024. A few hundred messages of recent window is the expected shape, not a tool error.",
+          "- *iMessage recoverable via § 2703.* The device explicitly shows ADP is NOT enabled. Apple holds the content keys and can return decryptable Messages content on a lawful § 2703 search warrant.",
+          "",
+          "**Not fact:**",
+          "",
+          "- *WhatsApp recoverable via § 2703.* The on-device Settings export confirms WhatsApp's end-to-end-encrypted backup is ENABLED. Apple holds the encrypted blob but not the key. A § 2703 return yields opaque ciphertext. Recovery requires either WhatsApp's separately-pursued legal process (limited; metadata only), the user's backup encryption key (interview / cooperating consent), or the older device the backup was made from.",
+          "- *Extraction missed something.* The FFS tier captured everything the device-side stores contain. The shortfall is structural to Messages-in-iCloud + WhatsApp's encrypted backup, NOT to the extraction. Re-running the tool will produce the same numbers.",
+        ].join("\n"),
+      },
+      {
+        ordinal: 2,
+        type: "multi_choice",
+        weight: 1,
+        promptMd:
+          "Which next steps best answer the agent's 18-month ask without misrepresenting the image?",
+        options: [
+          {
+            id: "warrant-apple-imessage",
+            label:
+              "Open a § 2703 search-warrant return to Apple for the iCloud account's iMessage / Messages content (full retained window).",
+          },
+          {
+            id: "interview-whatsapp-key",
+            label:
+              "Interview the cooperating party for the WhatsApp end-to-end backup encryption key, and (if obtained) decrypt the iCloud backup blob lawfully.",
+          },
+          {
+            id: "lp-meta",
+            label:
+              "Open legal process to Meta (WhatsApp) for account metadata and any non-encrypted records on the WhatsApp account.",
+          },
+          {
+            id: "redo-ffs",
+            label:
+              "Redo the FFS extraction with a different tool to see if it yields more messages.",
+          },
+          {
+            id: "redo-cloud-restore",
+            label:
+              "Boot a working clone of the image on a network-isolated test phone and disable Messages-in-iCloud, forcing a re-download.",
+          },
+        ],
+        allowMultiple: true,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["warrant-apple-imessage", "interview-whatsapp-key", "lp-meta"],
+          allowMultiple: true,
+        },
+        debriefMd: [
+          "**Right:**",
+          "",
+          "- *§ 2703 to Apple for iMessage.* The cleanest path to the older iMessage history; ADP-off means content is returnable.",
+          "- *Interview for the WhatsApp backup key.* This is the only realistic path into the older WhatsApp window. Apple cannot decrypt the backup; Meta cannot decrypt the backup; the key lives with the user. Document the consent posture.",
+          "- *Legal process to Meta.* Metadata (registration data, connection records, group membership) is still meaningful even when message bodies are unrecoverable.",
+          "",
+          "**Wrong:**",
+          "",
+          "- *Redo the FFS.* A second tool runs the same tier against the same device-side store. The shortfall is in what the device-side store *contains*, not in what the tool extracted. Re-running burns time and changes nothing.",
+          "- *Boot a clone and disable Messages-in-iCloud.* Operationally appealing but forensically problematic: putting a working device-state online over real Apple infrastructure changes the iCloud account state (server-side timestamps, downloaded-on-new-device flags) and risks alerting the subject if the account is being watched. The § 2703 path is cleaner; live-restore is a last resort and only with case-agent + JA sign-off.",
+        ].join("\n"),
+      },
+      {
+        ordinal: 3,
+        type: "confidence",
+        weight: 1,
+        promptMd:
+          "Confidence (1–5) that the FFS image, ON ITS OWN, answers the agent's 18-month ask for both apps.",
+        expected: { type: "confidence", expectedRange: [1, 2] },
+        debriefMd:
+          "**1 or 2.** The image is clean and complete *for what the device stores*, but the device doesn't store 18 months of either app — iMessage because of Messages-in-iCloud's rolling window, WhatsApp because the agent's window predates the 92-day local store. The honest brief says: *device-side findings are complete and verified; the older 14-month window for iMessage is reachable via § 2703 to Apple; the older 14-month window for WhatsApp is reachable only via interview / consent for the end-to-end backup key, with Meta-side metadata as a partial fallback.* That framing answers the ask without claiming the image \"missed something.\"\n\n**Owners.** The lab's chief examiner owns the extraction-soundness statement and the cloud-backed-surface explainer. The case agent + supporting JA own the § 2703 timeline and the cooperating-party interview. The unit ISSM enters only if DODIN-Army data was touched.",
+      },
+    ],
+  },
+
   // ─── Mobile Forensics capstone ──────────────────────────────
   {
     slug: "mobile-multi-tool-capstone-001",
