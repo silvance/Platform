@@ -114,16 +114,23 @@ async function upsertUser(
 
   const existing = await prisma.user.findUnique({
     where: { email },
-    select: { id: true },
+    select: { id: true, approvedAt: true },
   });
 
   // Case 3: keep — account exists and operator didn't pin a
   // password. Refresh displayName + role + un-disable, but leave
-  // passwordHash alone.
+  // passwordHash alone. Also self-heal approvedAt if it's null
+  // (rows created on pre-M17 builds have no approvedAt and were
+  // stuck behind the M17 approval gate forever).
   if (existing && envPassword === null) {
     const user = await prisma.user.update({
       where: { id: existing.id },
-      data: { displayName, role, disabled: false },
+      data: {
+        displayName,
+        role,
+        disabled: false,
+        ...(existing.approvedAt === null ? { approvedAt: new Date() } : {}),
+      },
     });
     return { id: user.id, action: "kept", passwordToDisplay: null };
   }
@@ -135,10 +142,19 @@ async function upsertUser(
   const user = await prisma.user.upsert({
     where: { email },
     // M17: re-seeding an existing account preserves whatever
-    // approvedAt it already has (don't clobber a deliberate admin
-    // approval). New rows land auto-approved — seeded accounts
-    // are trusted by the deployer who ran the seed.
-    update: { passwordHash, displayName, role, disabled: false },
+    // approvedAt it already has — UNLESS it's currently null, in
+    // which case we set it. Rows created on a pre-M17 build (before
+    // approvedAt existed as a column default) ended up null and the
+    // M17 login gate then refused them indefinitely; the deployer
+    // running the seed implicitly approves the seeded account.
+    // New rows land auto-approved.
+    update: {
+      passwordHash,
+      displayName,
+      role,
+      disabled: false,
+      ...(existing?.approvedAt == null ? { approvedAt: new Date() } : {}),
+    },
     create: {
       email,
       passwordHash,
