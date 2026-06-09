@@ -490,6 +490,71 @@ The two recurring traps:
   campaign-attribution writing looks like at the high end
 `,
 
+  anti_forensics: `
+# Anti-Forensics
+
+What attackers do to make the rest of your job harder. This lane
+covers the canonical techniques — timestomping, log clearing,
+LOLBIN abuse, USN-journal wipes — and trains the reflex of
+reading each technique by the **trace it leaves**, not the trace
+it removes.
+
+## What you'll see
+
+- **Timestomping** — MFT timestamps rewritten to hide when a file
+  really arrived. Detected by comparing \`$STANDARD_INFORMATION\`
+  (userland-rewritable) against \`$FILE_NAME\` (kernel-only).
+- **Event Log clearing** — \`wevtutil cl <channel>\` destroys
+  history but generates Event ID 1102 (Security) or 104 (System)
+  recording the clear itself, with the operator's SID, the
+  process, and the timestamp.
+- **LOLBINs** — Living-off-the-Land Binaries. Signed Microsoft
+  tools (\`bitsadmin\`, \`certutil\`, \`mshta\`, \`rundll32\`,
+  \`regsvr32\`, \`wmic\`) used for download / execute /
+  persistence operations they weren't designed for. Read the
+  command line, not the binary name.
+- **USN journal + \`$LogFile\` wipes** — filesystem-level
+  destruction of the change log that would otherwise let you
+  reconstruct timeline.
+- **Alternate Data Streams** (ADS) — NTFS feature that lets a
+  file have multiple "streams" of content; commonly used to
+  hide payloads invisible to standard Explorer views.
+
+## What's hard
+
+Almost every technique in this lane leaves a **negative signal**
+— an absence where something should be. The discipline is
+recognising the absence as evidence rather than dismissing it as
+"the log just didn't capture this." The recurring traps:
+
+- **Signed = legitimate** is the canonical anti-forensic misread.
+  A signed binary doing the job it was designed for is benign.
+  The same binary used outside its scope is the case. Read the
+  command line.
+- **\`$SI\` vs \`$FN\` disagreement = timestomping** isn't always
+  true. Normal NTFS behaviour produces a disagreement when a file
+  is created and later edited in place. The trustworthy signal is
+  \`$SI Created < $FN Created\` — that's impossible without
+  manipulation.
+- **"The log was cleared so we have nothing"** ignores forwarded
+  logs (WEC, SIEM) and Volume Shadow Copies of the channel's
+  \`.evtx\` file. The on-host clear isn't the end of the
+  timeline; it's the start of a different recovery question.
+
+## Where to read more
+
+- **MITRE ATT&CK T1070** (Indicator Removal on Host) and
+  subtechniques — the taxonomy your writeups will reference
+- **LOLBAS Project** (lolbas-project.github.io) — curated
+  registry of signed Windows binaries usable for off-label
+  operations, with the exact command lines
+- **Eric Zimmerman's MFTECmd** — the field-standard MFT
+  extractor; format docs come with the tool
+- **Microsoft's Windows Event Log architecture** docs — for the
+  service / channel / \`.evtx\` mental model that makes the
+  recovery surfaces (WEC / VSS) visible
+`,
+
   mobile_forensics: `
 # Mobile Forensics
 

@@ -13,6 +13,7 @@ export const SkillArea = z.enum([
   "linux_artifacts",
   "macos_artifacts",
   "malware_analysis",
+  "anti_forensics",
   "network_logs",
   "account_compromise",
   "rf_awareness",
@@ -32,6 +33,7 @@ export const SKILL_AREA_LABELS: Record<SkillArea, string> = {
   linux_artifacts: "Linux Artifacts",
   macos_artifacts: "macOS Artifacts",
   malware_analysis: "Malware Analysis",
+  anti_forensics: "Anti-Forensics",
   network_logs: "Network Logs",
   account_compromise: "Account Compromise",
   rf_awareness: "Signals Awareness",
@@ -180,6 +182,7 @@ export const Lane = z.enum([
   "network_logs",
   "memory_forensics",
   "malware_analysis",
+  "anti_forensics",
   "mobile_forensics",
   "rf_awareness",
   "evidence_handling",
@@ -199,6 +202,7 @@ export const LANE_LABELS: Record<Lane, string> = {
   network_logs: "Network & Logs",
   memory_forensics: "Memory Forensics",
   malware_analysis: "Malware Analysis",
+  anti_forensics: "Anti-Forensics",
   mobile_forensics: "Mobile Forensics",
   rf_awareness: "Signals Awareness",
   evidence_handling: "Evidence Handling",
@@ -228,6 +232,8 @@ export const LANE_DESCRIPTIONS: Record<Lane, string> = {
     "Volatility 3 reads of a memory image. Triage the process tree, network connections, and suspicious memory regions; separate \"this looks off\" from \"this is malware.\"",
   malware_analysis:
     "Static + dynamic triage of a sample without over-claiming. Read PE imports, YARA hits, sandbox detonation reports, packer fingerprints, and ssdeep / imphash pivots; tell what each technique proves vs implies, and where sandbox results mislead.",
+  anti_forensics:
+    "Recognise what attackers do to make the rest of your job harder — timestomping in the MFT, Event Log clearing, LOLBINs replacing custom tooling, USN-journal wipes. Read each technique by the trace it leaves, not the trace it removes.",
   mobile_forensics:
     "Mobile-device extraction triage — Cellebrite UFED, GrayKey, Magnet AXIOM. Read what the tool actually got; decide what an extraction can and cannot prove.",
   rf_awareness:

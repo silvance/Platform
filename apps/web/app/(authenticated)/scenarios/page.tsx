@@ -155,6 +155,7 @@ const LANE_SECTIONS: readonly LaneSectionConfig[] = [
       "email_bec",
       "network_logs",
       "malware_analysis",
+      "anti_forensics",
       "insider_risk",
       "rf_awareness",
     ],

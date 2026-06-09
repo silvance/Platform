@@ -229,7 +229,7 @@ describe("ScenariosService (unit)", () => {
       // insider_risk, network_logs, memory_forensics,
       // malware_analysis, mobile_forensics, rf_awareness,
       // evidence_handling, report_writing).
-      expect(lanes).toHaveLength(15);
+      expect(lanes).toHaveLength(16);
       const foundations = lanes.find((l) => l.lane === "foundations");
       const win = lanes.find((l) => l.lane === "windows_artifacts");
       const empty = lanes.find((l) => l.lane === "rf_awareness");
