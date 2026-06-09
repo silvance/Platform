@@ -117,12 +117,12 @@ Two principles to keep in mind:
           {
             id: "intake-skipped-inventory",
             label:
-              "Lab intake deferred per-item inventory to examination time — this is a fatal break in custody because a deferred inventory means the receiving examiner cannot certify on the 4137 that the contents matched what was released, and any later examination cannot be tied back to a documented intake state.",
+              "Lab intake deferred per-item inventory to examination time — without a documented intake state, downstream examination cannot be tied back to the contents that were released.",
           },
           {
             id: "seal-broken-fatal",
             label:
-              "The outer seal was cut at re-inspection — this fact alone breaks the custody chain because once a seal is broken the contents are no longer demonstrably the same as what was sealed in, regardless of any subsequent reseal or attestation, and downstream examination cannot be tied to the original collection state.",
+              "The outer seal was cut at re-inspection — once a seal is broken, the contents are no longer demonstrably the same as what was sealed in.",
           },
         ],
         allowMultiple: true,
@@ -164,12 +164,12 @@ Two principles to keep in mind:
           {
             id: "destroy-restart",
             label:
-              "Destroy the original evidence bag, brief the unit on the procedural failures, and restart the chain of custody from the collection point with a fresh seal, fresh tags, and a new 4137 — preserving the broken chain only encourages a defense expert to use it as the centerpiece of their cross-examination of every other piece of evidence in the case.",
+              "Destroy the original evidence bag and restart the chain of custody from the collection point with a fresh seal, fresh tags, and a new 4137 — a clean chain matters more than the original items.",
           },
           {
             id: "retro-sign-original",
             label:
-              "Have M. CALDWELL retroactively initial each item inside the bag with the original collection date so the per-item identification matches the rest of the records — the deficiency is cosmetic at this point and the back-dating brings the paperwork into line with what should have been recorded at the original collection event.",
+              "Have M. CALDWELL retroactively initial each item inside the bag with the original collection date, so the per-item identification matches the rest of the records.",
           },
         ],
         allowMultiple: true,

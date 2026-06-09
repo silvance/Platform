@@ -545,10 +545,10 @@ answer.
           "From the artifacts, which statements are **proven**?",
         options: [
           { id: "downloaded", label: "The file `util-x.exe` was downloaded by Chrome to the user's Downloads folder." },
-          { id: "motw-set", label: "The file carries Mark-of-the-Web (Internet zone)." },
-          { id: "user-executed", label: "The user executed `util-x.exe` from the Downloads folder; the file's presence at a known-launch path combined with the elapsed time since download is sufficient to attribute an execution event." },
-          { id: "user-did-NOT-execute", label: "The user did NOT execute `util-x.exe` — the lack of a Prefetch entry combined with no Sysmon ProcessCreate row for the binary together establish that the file was downloaded but never launched on this host." },
-          { id: "no-prefetch-entry", label: "There is no Prefetch entry for `util-x.exe` on this host." },
+          { id: "motw-set", label: "The file carries the `Zone.Identifier` Mark-of-the-Web alternate data stream, marking it as Internet-zone origin." },
+          { id: "user-executed", label: "The user executed `util-x.exe` from the Downloads folder — recent download + presence on disk is enough for the writeup." },
+          { id: "user-did-NOT-execute", label: "The user did NOT execute `util-x.exe` — no Prefetch entry and no Sysmon ProcessCreate row for the binary." },
+          { id: "no-prefetch-entry", label: "There is no Prefetch entry for `util-x.exe` in `C:\\Windows\\Prefetch\\` on this host." },
         ],
         allowMultiple: true,
         expected: {
@@ -1412,7 +1412,7 @@ subkey carrying:
           {
             id: "block-all-usb",
             label:
-              "Disable USB ports on this kiosk immediately by policy push, and add the same lock-out to every other shared kiosk in the building so the same opportunity-pattern can't repeat elsewhere during the investigation window; the lock-out can be lifted once the investigation closes.",
+              "Disable USB ports on this kiosk and other shared kiosks by policy push during the investigation.",
           },
         ],
         allowMultiple: true,
@@ -1865,12 +1865,12 @@ goes on the ISSM's desk this afternoon.
           {
             id: "never-touched",
             label:
-              "The device has never been mounted on any unit workstation. The unit's USBSTOR-history feed is exhaustive across all tracked endpoints; a 0-row return on a serial means that serial does not appear in any endpoint's mount-history record from any point in time.",
+              "The device has never been mounted on any unit workstation — the USBSTOR-history feed is exhaustive across all tracked endpoints, so a 0-row return rules out any prior mount.",
           },
           {
             id: "from-outside",
             label:
-              "The device was brought in from outside the unit by an unknown party — a non-asset-register serial recovered in the smoking area with no matching unit history is, by elimination, third-party material that originated outside the building.",
+              "The device was brought in from outside the unit by an unknown party — a non-asset serial recovered with no matching unit history is, by elimination, third-party material.",
           },
         ],
         allowMultiple: false,

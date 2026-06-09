@@ -242,7 +242,7 @@ and execution-of-tool sit in different reporting buckets.
           {
             id: "never-ran",
             label:
-              "BAM proves `bitsadmin.exe` has never executed on this host. BAM walks the registry's per-user UserSettings keys and lists every binary that has been run; if a row isn't there, the binary hasn't been launched as a foreground program by any tracked user during the host's recorded lifetime.",
+              "BAM proves `bitsadmin.exe` has never executed on this host — BAM lists every binary any tracked user has launched, so absence in BAM means it hasn't run.",
           },
           {
             id: "no-foreground-bam",
@@ -252,12 +252,12 @@ and execution-of-tool sit in different reporting buckets.
           {
             id: "ran-as-background",
             label:
-              "BAM proves `bitsadmin.exe` ran only as a background service. Since BAM specifically captures foreground execution and ignores background services and scheduled tasks, an explicit absence is the canonical fingerprint of background-only execution and that's how the writeup should characterise it.",
+              "BAM proves `bitsadmin.exe` ran only as a background service — BAM captures foreground execution, so explicit absence is the canonical fingerprint of background-only invocation.",
           },
           {
             id: "bam-broken",
             label:
-              "The absence implies the BAM service is broken on this host. A healthy BAM should have a row for any common system binary like `bitsadmin.exe`; the empty result here points to a service-state issue (the bam_service_state in the host-context artifact notwithstanding) and the rest of the BAM evidence on this host should be treated as unreliable.",
+              "The absence implies the BAM service is broken on this host — a healthy BAM should have a row for any common system binary, so treat the rest of this host's BAM evidence as unreliable.",
           },
         ],
         allowMultiple: false,
@@ -918,12 +918,12 @@ pixels cannot establish on their own.
           {
             id: "user-sent-email",
             label:
-              "The user pressed Send and the email was delivered.",
+              "The user pressed Send and the email was delivered — an on-screen compose window with the recipient field filled is the canonical signature of a message about to be transmitted.",
           },
           {
             id: "attachment-actually-sent",
             label:
-              "`Q4-forecast-draft.docx` was successfully attached and uploaded to the webmail provider.",
+              "`Q4-forecast-draft.docx` was successfully attached and uploaded — the attachment row in the compose UI shows the upload completed in the same snapshot.",
           },
           {
             id: "word-doc-open-before",
@@ -933,7 +933,7 @@ pixels cannot establish on their own.
           {
             id: "user-read-the-text",
             label:
-              "The user read and understood the displayed message.",
+              "The user read and understood the displayed message — Recall captures the foreground window, and a message visible to the user constitutes evidence of comprehension.",
           },
         ],
         allowMultiple: true,
@@ -1461,7 +1461,7 @@ virtual switch and appears on the wire as the host's IP.
           {
             id: "vmcompute-fake",
             label:
-              "Attribution to `vmcompute.exe` is a forensic artifact of how the EDR serialises Hyper-V telemetry rather than an actual process-to-socket binding; the kernel does not maintain per-process ownership for Hyper-V utility-VM traffic, so the named process is essentially a placeholder and the flow could be owned by any number of things behind the Hyper-V scheduler.",
+              "Attribution to `vmcompute.exe` is the EDR's name for the Hyper-V host-compute service, not the actual VM process — the real socket owner is whichever Linux process inside the utility VM holds it, and that's invisible from the host.",
           },
           {
             id: "no-other-hyperv-on-this-host",
@@ -2019,12 +2019,12 @@ yet.
           {
             id: "interview-d-becker-immediate",
             label:
-              "Interview d.becker today without coordinating with counsel. A direct conversation while the evidence is fresh would clarify the rclone purpose and the USB-mount story faster than any other investigative step, and counsel can be looped in afterward with a clean record of what was said.",
+              "Interview d.becker today without coordinating with counsel — a direct conversation while the evidence is fresh clarifies the rclone purpose and USB-mount story faster than any other investigative step.",
           },
           {
             id: "wipe-the-machine",
             label:
-              "Wipe and re-image the workstation to remove rclone before anyone else on the host can use it again. Containment-first is the standard incident-response posture and the re-image baselines the host so any further investigation works against a known-clean starting point.",
+              "Wipe and re-image the workstation to remove rclone before anyone else can use it — containment-first is the standard IR posture, and re-imaging baselines the host for further investigation.",
           },
         ],
         allowMultiple: true,

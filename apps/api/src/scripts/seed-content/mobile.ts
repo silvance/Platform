@@ -1652,12 +1652,12 @@ sheet.
           {
             id: "messages-count-exact",
             label:
-              "The device contains exactly 4,118 active Messages rows. UFED's count is the authoritative number; AXIOM's higher count is an artifact of its more aggressive de-dup heuristic that splits some thread events into separate rows, and the lower of the two tools' numbers is the actual on-device row count.",
+              "The device contains exactly 4,118 active Messages rows — UFED's count is authoritative; AXIOM's higher count is an artifact of its more aggressive de-dup splitting thread events into separate rows.",
           },
           {
             id: "signal-zero",
             label:
-              "The user has never used Signal on this device. AXIOM's module read the encrypted-at-rest DB during the analysis pass and reported zero Signal rows, and the only Signal counts on the device are the 18 OS-cache rows UFED surfaced — which are application installer breadcrumbs rather than user-generated messages.",
+              "The user has never used Signal on this device — AXIOM's module reported zero Signal rows, and UFED's 18 are OS-level cache breadcrumbs rather than user messages.",
           },
         ],
         allowMultiple: false,
@@ -1684,12 +1684,12 @@ sheet.
           {
             id: "user-deleted-after",
             label:
-              "The user deleted the 88 Messages from the device between the time UFED parsed the extract and the time AXIOM parsed it; UFED captured the rows in free-page state before they were overwritten, and by the time AXIOM ran the deletion had progressed far enough that nothing remained for the carving stage to find.",
+              "The user deleted the 88 Messages between the UFED parse and the AXIOM parse — UFED captured the rows in free-page state before they were overwritten, and AXIOM ran after the deletion progressed.",
           },
           {
             id: "axiom-buggy",
             label:
-              "AXIOM is buggy on this version and is miscounting deleted rows for iOS Messages — the Apple-iOS module's deleted-message recovery routine has a known issue at this AXIOM revision that under-reports counts. Recommend logging an AXIOM support ticket and treating UFED's 88 as the authoritative deleted-row count.",
+              "AXIOM is buggy on this version and is miscounting deleted iOS Messages — the Apple-iOS module's deleted-message recovery has a known issue at this revision that under-reports counts.",
           },
         ],
         allowMultiple: false,
