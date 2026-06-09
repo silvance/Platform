@@ -1,12 +1,17 @@
 import { Injectable } from "@nestjs/common";
 import {
+  LANE_LABELS,
+  MeDailyResponse,
   MeStatsResponse,
   SkillArea,
   SkillAreaProgress,
   CalibrationStats,
   StreakStats,
+  type Lane,
+  type MeDailySuggestion,
 } from "@ci-train/contracts";
 import { PrismaService } from "../database/prisma.service";
+import { createHash } from "node:crypto";
 
 // Canonical list of skill areas. The contract enum is authoritative;
 // we iterate it here so the response always has one row per area
@@ -240,6 +245,141 @@ export class MeStatsService {
     const desc = [...distinct].sort((a, b) => (a < b ? 1 : -1));
     return computeStreak(desc, todayUtc());
   }
+
+  // GET /v1/me/daily
+  //
+  // "Today's challenge" recommendation. Picks one published
+  // scenario the user has NOT yet completed, weighted toward
+  // their weakest skill areas (lowest percentComplete in
+  // computeSkillAreaProgress). Deterministic per (userId, UTC
+  // date): a refresh during the day returns the same pick;
+  // tomorrow's pick rotates.
+  async computeDaily(userId: string): Promise<MeDailyResponse> {
+    const date = todayUtc();
+
+    // Reuse the same skill-area scores we surface on /me/stats so
+    // the "why this one" copy lines up with the dashboard.
+    const skillAreaProgress = await this.computeSkillAreaProgress(userId);
+    const weaknessByArea = new Map<SkillArea, number>();
+    for (const row of skillAreaProgress) {
+      // Weakness score: 100 - percentComplete. Skills the user
+      // hasn't touched (0%) score 100; mastered skills score 0.
+      weaknessByArea.set(row.skillArea, 100 - row.percentComplete);
+    }
+
+    // Candidate pool: published scenarios the user hasn't completed.
+    // "Completed" means ScenarioProgress.completedAt is set.
+    const candidates = await this.prisma.scenario.findMany({
+      where: {
+        status: "published",
+        progress: {
+          none: { userId, completedAt: { not: null } },
+        },
+      },
+      select: {
+        slug: true,
+        title: true,
+        lane: true,
+        skillAreas: true,
+      },
+    });
+
+    if (candidates.length === 0) {
+      return MeDailyResponse.parse({ suggestion: null, forDate: date });
+    }
+
+    // Score each candidate by the max weakness across its skill
+    // areas (so a scenario in the user's weakest tagged area
+    // surfaces, even if its OTHER tags overlap with stronger
+    // areas). Tie-broken deterministically.
+    type Scored = {
+      slug: string;
+      title: string;
+      lane: Lane;
+      skillAreas: SkillArea[];
+      score: number;
+      weakestArea: SkillArea | null;
+    };
+    const scored: Scored[] = candidates.map((c) => {
+      const areas = c.skillAreas as SkillArea[];
+      let bestScore = 0;
+      let bestArea: SkillArea | null = null;
+      for (const a of areas) {
+        const w = weaknessByArea.get(a) ?? 100;
+        if (w > bestScore) {
+          bestScore = w;
+          bestArea = a;
+        }
+      }
+      return {
+        slug: c.slug,
+        title: c.title,
+        lane: c.lane as Lane,
+        skillAreas: areas,
+        score: bestScore,
+        weakestArea: bestArea,
+      };
+    });
+
+    // Sort by score desc, then slug asc for stability.
+    scored.sort((a, b) =>
+      a.score !== b.score ? b.score - a.score : a.slug.localeCompare(b.slug),
+    );
+
+    // Pick from the top-K so the daily refresh actually varies.
+    // K = min(5, candidate count). Use a (userId + date) hash to
+    // index into that window so the choice is stable for the day.
+    const K = Math.min(5, scored.length);
+    const window = scored.slice(0, K);
+    const idx = deterministicIndex(`${userId}|${date}`, K);
+    const pick = window[idx]!;
+
+    const reason = pick.weakestArea
+      ? `From your weakest skill area: ${labelFor(pick.weakestArea)}.`
+      : "A fresh scenario for today.";
+
+    const suggestion: MeDailySuggestion = {
+      scenarioSlug: pick.slug,
+      scenarioTitle: pick.title,
+      laneSlug: pick.lane,
+      laneLabel: LANE_LABELS[pick.lane],
+      reason,
+    };
+    return MeDailyResponse.parse({ suggestion, forDate: date });
+  }
+}
+
+// Human-readable skill-area label for the "why this one?" copy.
+// We can't import SKILL_AREA_LABELS from contracts and re-export
+// here without re-exporting the dependency tree; inline the seven
+// we ship instead. Keep the casing aligned with apps/web.
+function labelFor(area: SkillArea): string {
+  const map: Record<SkillArea, string> = {
+    email_headers: "Email Headers",
+    bec: "BEC",
+    df_artifacts: "DF Artifacts",
+    removable_media: "Removable Media",
+    windows_artifacts: "Windows Artifacts",
+    linux_artifacts: "Linux Artifacts",
+    macos_artifacts: "macOS Artifacts",
+    malware_analysis: "Malware Analysis",
+    network_logs: "Network Logs",
+    account_compromise: "Account Compromise",
+    rf_awareness: "Signals Awareness",
+    report_writing: "Report Writing",
+    inference_discipline: "Reasoning Discipline",
+  };
+  return map[area];
+}
+
+// Deterministic index: hash the seed, take the first 8 hex chars,
+// modulo by N. Used so the daily pick is stable within a day but
+// rotates across days.
+function deterministicIndex(seed: string, n: number): number {
+  if (n <= 1) return 0;
+  const h = createHash("sha256").update(seed).digest("hex").slice(0, 8);
+  const i = parseInt(h, 16);
+  return i % n;
 }
 
 // Local helpers for response/answer-key JSON shape. The confidence
