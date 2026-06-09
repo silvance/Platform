@@ -14,6 +14,7 @@ export const SkillArea = z.enum([
   "macos_artifacts",
   "malware_analysis",
   "anti_forensics",
+  "cloud_forensics",
   "network_logs",
   "account_compromise",
   "rf_awareness",
@@ -34,6 +35,7 @@ export const SKILL_AREA_LABELS: Record<SkillArea, string> = {
   macos_artifacts: "macOS Artifacts",
   malware_analysis: "Malware Analysis",
   anti_forensics: "Anti-Forensics",
+  cloud_forensics: "Cloud Forensics",
   network_logs: "Network Logs",
   account_compromise: "Account Compromise",
   rf_awareness: "Signals Awareness",
@@ -184,6 +186,7 @@ export const Lane = z.enum([
   "malware_analysis",
   "anti_forensics",
   "mobile_forensics",
+  "cloud_forensics",
   "rf_awareness",
   "evidence_handling",
   "report_writing",
@@ -204,6 +207,7 @@ export const LANE_LABELS: Record<Lane, string> = {
   malware_analysis: "Malware Analysis",
   anti_forensics: "Anti-Forensics",
   mobile_forensics: "Mobile Forensics",
+  cloud_forensics: "Cloud Forensics",
   rf_awareness: "Signals Awareness",
   evidence_handling: "Evidence Handling",
   report_writing: "Report Writing",
@@ -236,6 +240,8 @@ export const LANE_DESCRIPTIONS: Record<Lane, string> = {
     "Recognise what attackers do to make the rest of your job harder — timestomping in the MFT, Event Log clearing, LOLBINs replacing custom tooling, USN-journal wipes. Read each technique by the trace it leaves, not the trace it removes.",
   mobile_forensics:
     "Mobile-device extraction triage — Cellebrite UFED, GrayKey, Magnet AXIOM. Read what the tool actually got; decide what an extraction can and cannot prove.",
+  cloud_forensics:
+    "Triage CloudTrail / Azure Activity Log / GCP Audit events for IAM abuse, compromised credentials, and impossible-travel sign-ins. Read each event by what its `userIdentity` actually proves, not what its `eventName` implies. Recognise log-delay, region-scope, and Data-Access-off gotchas.",
   rf_awareness:
     "Awareness-level RF + acoustic observation reporting and TSCM Familiarity. You won't render TSCM findings yourself; you'll learn to recognise what an observation does and doesn't support and when to escalate to qualified personnel.",
   evidence_handling:
