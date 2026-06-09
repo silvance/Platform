@@ -414,9 +414,9 @@ decide what the match does and doesn't tell you.
               "Yes. SHA-256 is a strong cryptographic hash, so anything it confirms is safe.",
           },
           {
-            id: "depends-on-extension",
+            id: "depends-on-signing",
             label:
-              "Only if the file has a `.exe` extension — other extensions are always safe.",
+              "Only if the file is also signed by a trusted publisher — an unsigned binary isn't safe even when the hash matches.",
           },
         ],
         allowMultiple: false,
@@ -740,22 +740,22 @@ evidence carefully and pick the rewrite that's honest.
           {
             id: "assertive-same",
             label:
-              "\"The suspect copied the financial spreadsheet onto a USB device to remove it from the office.\"",
+              "\"The suspect copied the financial spreadsheet onto a USB device to remove it from the office\" — the open-event timestamp + the USB-connect window are sufficient to attribute intentional exfiltration.",
           },
           {
             id: "calibrated",
             label:
-              "\"Between 14:08 and 14:11 a USB device was connected to the workstation. During that window the file `finance.xlsx` was opened by the user. No file-write events to the USB volume were recorded. The available evidence shows the USB was present while the file was open; it does NOT, by itself, show that the file was written to the USB.\"",
+              "\"Between 14:08 and 14:11 a USB device was connected during the window `finance.xlsx` was opened. No file-write events to the USB volume were recorded; the evidence shows opportunity, not a copy.\"",
           },
           {
             id: "denial",
             label:
-              "\"No copy of the financial spreadsheet was made onto the USB device.\"",
+              "\"No copy of the financial spreadsheet was made onto the USB device\" — the absence of write events in the monitoring agent's record is conclusive that nothing was transferred during the window.",
           },
           {
             id: "evasive",
             label:
-              "\"Something happened with a USB device and a spreadsheet around 14:08–14:11.\"",
+              "\"Something happened with a USB device and a spreadsheet around 14:08–14:11\" — until additional artifacts come in, the writeup should not characterise the event further.",
           },
         ],
         allowMultiple: false,
