@@ -353,6 +353,30 @@ prisma migrate deploy fails with "database does not exist"
   Create it once with psql (Phase 2 step d), then re-run Install
   with the same -Source and -Target.
 
+"P1001: Can't reach database server at localhost:5432" during install
+  The migration step can't talk to Postgres. The installer checks
+  for a *running* postgresql service; if you hit P1001 anyway,
+  one of:
+
+    - The postgres service is stopped or disabled. Start it:
+          Get-Service -Name "postgresql*" |
+              Start-Service
+      then re-run airgap.ps1.
+
+    - A leftover C:\Program Files\PostgreSQL\<ver> directory from
+      a removed install (older airgap.ps1 versions trusted the
+      directory alone and skipped the installer). Either:
+          - Run the bundled installer manually and point it at a
+            fresh directory:
+                C:\ci-cyber-lab-bundle\installers\postgresql.exe
+          - Or uninstall the leftover via Add/Remove Programs,
+            delete the directory, and re-run airgap.ps1.
+
+    - The DATABASE_URL in apps\api\.env points at a host or
+      password that no longer matches the running server. Edit
+      the file by hand to match the postgres-user password you
+      set during install, then re-run airgap.ps1.
+
 "EADDRINUSE :::3000" / web app refuses to start on the default port
   Something else on the box is already listening on 3000 (a NAS
   admin UI, a stale next.js process from a prior install attempt,
