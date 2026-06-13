@@ -493,16 +493,34 @@ Common causes:
         # Auto-detect an existing Postgres install before launching
         # the interactive installer. Saves operator time on repeated
         # install runs against the same box (e.g. troubleshooting).
+        #
+        # The detection requires the Postgres service to be in
+        # `Running` state, not just for the install directory to
+        # exist. An aborted uninstall, a manual rmdir, or a service
+        # disabled by group policy all leave the directory in place
+        # while the server is not listening on 5432 — under the old
+        # check we'd skip the installer, then fail downstream at
+        # `prisma migrate deploy` with `P1001: Can't reach database`
+        # and leave the operator to figure it out. Detecting
+        # Running directly is the right gate.
         $pgService = Get-Service -Name "postgresql*" -ErrorAction SilentlyContinue
+        $pgRunning = $pgService | Where-Object { $_.Status -eq 'Running' } | Select-Object -First 1
         $pgInstallDir = Get-ChildItem -Path "C:\Program Files\PostgreSQL" -ErrorAction SilentlyContinue | Select-Object -First 1
-        if ($pgService -or $pgInstallDir) {
-            $detected = if ($pgInstallDir) { $pgInstallDir.FullName } else { $pgService[0].Name }
-            Write-OK "PostgreSQL already installed ($detected) -- skipping installer."
+        if ($pgRunning) {
+            Write-OK "PostgreSQL already installed and running ($($pgRunning.Name)) -- skipping installer."
         } else {
             $pgExe = Join-Path $Source "installers\postgresql.exe"
             if (-not (Test-Path -LiteralPath $pgExe)) { Fail "postgresql.exe missing in bundle." }
-            Write-Note "Running interactive installer -- remember the postgres-user password,"
-            Write-Note "you'll paste it into DATABASE_URL in a moment."
+            if ($pgInstallDir) {
+                Write-Note "Found $($pgInstallDir.FullName) but the postgresql service is not running."
+                Write-Note "Running the bundled installer to repair / reinstall."
+                if ($pgService) {
+                    Write-Note "Existing service status(es): $(($pgService | ForEach-Object { "$($_.Name)=$($_.Status)" }) -join ', ')"
+                }
+            } else {
+                Write-Note "Running interactive installer -- remember the postgres-user password,"
+                Write-Note "you'll paste it into DATABASE_URL in a moment."
+            }
             $p = Start-Process -FilePath $pgExe -Wait -PassThru
             if ($p.ExitCode -ne 0) { Fail "Postgres installer returned $($p.ExitCode)." }
             Write-OK "PostgreSQL installed."
