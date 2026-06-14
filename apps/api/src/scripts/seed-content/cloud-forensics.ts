@@ -733,9 +733,13 @@ GCP's "principal" model also differs from AWS / Azure: a
 \`serviceAccount:foo@project.iam.gserviceaccount.com\` is a
 first-class identity, and any holder of a **service-account
 JSON key** can authenticate as that service account from any
-network. Service-account keys don't expire; they don't rotate;
-they're persistent credentials of exactly the kind that should
-not exist at all but always do.
+network. Service-account keys are persistent credentials by
+default: they don't expire and they don't rotate themselves
+(an org-policy administrator can force key expiry via
+\`iam.serviceAccountKeyExpiry\`, or disable key creation
+entirely via \`iam.disableServiceAccountKeyCreation\`, but the
+default is no enforcement) — exactly the kind of credential
+that should not exist at all but, on most projects, still does.
 
 A leaked service-account key looks, in the trail, like the
 service account itself doing the thing — which it is. Reading
@@ -1118,6 +1122,10 @@ Read the meta-trail. Reconstruct.
                     sessionIssuer: {
                       arn: "arn:aws:iam::555512348888:role/BreakGlassAdmin",
                     },
+                    attributes: {
+                      mfaAuthenticated: "false",
+                      creationDate: "2025-10-03T09:08:11Z",
+                    },
                   },
                 },
                 requestParameters: {
@@ -1142,6 +1150,10 @@ Read the meta-trail. Reconstruct.
                   sessionContext: {
                     sessionIssuer: {
                       arn: "arn:aws:iam::555512348888:role/BreakGlassAdmin",
+                    },
+                    attributes: {
+                      mfaAuthenticated: "false",
+                      creationDate: "2025-10-03T09:08:11Z",
                     },
                   },
                 },
@@ -1265,7 +1277,7 @@ Read the meta-trail. Reconstruct.
           "",
           "- *Destination swapped, swapped back.* The two UpdateTrail events name the destination buckets explicitly in `requestParameters.s3BucketName`. That's the management API's own record of its own reconfiguration.",
           "- *Events redirected.* The canonical bucket inventory shows a clean delivery gap for exactly the 09:13–09:31 window the trail was pointed elsewhere. CloudTrail delivers to whatever destination is configured at write time; the gap is consistent with redirection, not with logging being off.",
-          "- *BreakGlass misuse.* The session name `incident-fix` doesn't match the documented `INC-<number>` convention, the source IP is off-pattern, and there's no on-call paging record. Three independent on-the-spot inconsistencies; the artifact bundle explicitly names the convention for the reviewer.",
+          "- *BreakGlass misuse.* The session name `incident-fix` doesn't match the documented `INC-<number>` convention, the source IP is off-pattern, there's no on-call paging record, AND the assume-role event records `mfaAuthenticated: \"false\"` despite the role's SCP requiring MFA on assume. Four independent on-the-spot inconsistencies; the MFA flag in particular is the kind of detail a competent reviewer reads first because the SCP is supposed to make that case impossible — when it isn't, it usually means an attacker tampered with the SCP, the role's trust policy, or the principal's federation path. None of those are good.",
           "",
           "**Not proven:**",
           "",

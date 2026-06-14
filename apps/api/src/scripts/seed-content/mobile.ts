@@ -1539,8 +1539,14 @@ iOS and is also more vendor-fragmented:
 >   (file-based encryption, FBE) this is **encrypted on disk**;
 >   without the credential or a vendor-side decryption pathway,
 >   the dump is unreadable. Decryption requires the user PIN
->   plus, on most devices, a Trusted Execution Environment
->   (TEE / Knox / Titan) cooperative path.
+>   plus, on most devices, cooperation from the on-device secure
+>   element / TEE that holds the wrapping key: the ARM
+>   TrustZone-based TEE on most Qualcomm / MediaTek devices, the
+>   Samsung Knox / Trusted Boot stack on Galaxy devices, or
+>   Google's discrete Titan M (and Titan M2) secure-element chip
+>   on modern Pixels. These are distinct technologies — a TEE is
+>   a separated CPU mode, Knox sits on top of one, Titan M is a
+>   separate chip — and the attack surface against each differs.
 > - **Cellebrite UFED Premium / Magnet GRAYKEY Android** — modern
 >   tooling that, for *specific* device + Android-version combos,
 >   exploits vulnerabilities to either unlock or reach file-system
@@ -1651,9 +1657,13 @@ Read the two extraction summaries and triage what each tool got.
             "",
             "  Tool used         : Cellebrite UFED PA, Signal plugin v4.11",
             "                      with Signal-DB-decrypt module",
-            "  Result            : Signal SQLCipher unlocked via keystore key",
-            "                      derived from the device-protected keymaster",
-            "                      slot under the provided PIN.",
+            "  Result            : Signal SQLCipher passphrase extracted from",
+            "                      the Signal app's AndroidKeyStore entry (the",
+            "                      passphrase is sealed in a hardware-backed",
+            "                      keystore slot that the privileged-tier",
+            "                      acquisition can reach once the device is",
+            "                      AFU + device PIN known). The SQLCipher DB",
+            "                      is then opened with that passphrase.",
             "                      Active conversations: 4 threads, 619 messages.",
             "                      Deleted rows (WAL recovery): 38 candidates,",
             "                      flagged for examiner review.",
@@ -1741,7 +1751,7 @@ Read the two extraction summaries and triage what each tool got.
           "**In hand:**",
           "",
           "- *WhatsApp on the S22.* File-system acquisition with `msgstore.db` + WAL + journal under the user PIN. Active and (via WAL / orphan recovery) deleted-candidate rows are in scope. Mark the deleted-row counts as candidates pending examiner review of the journal — don't ship raw row counts as findings.",
-          "- *Signal on the S22.* The summary explicitly names the SQLCipher unlock via keystore + device PIN; 619 active messages and 38 deleted candidates. This is a tool-supported path on Android 13 / One UI 5.1; it is not a path that exists on iOS.",
+          "- *Signal on the S22.* The summary names the path: the SQLCipher passphrase sealed in Signal's AndroidKeyStore entry is extracted by the privileged acquisition tier (AFU + device PIN known), then the DB is opened with that passphrase. 619 active messages and 38 deleted candidates result. This is a tool-supported path on Android 13 / One UI 5.1; the iOS counterpart (Signal sandbox unlocked via Cellebrite + AFU on iPhone) is structurally similar but a different toolchain.",
           "- *Maps Timeline on the S22 (subset).* The local cache (12 MB) is captured. **Subset** is the discipline: the canonical Timeline lives on the user's Google account server-side, so the local cache typically lags and is not authoritative. The on-device data answers the ask *partially* and the report has to name the partiality.",
           "",
           "**Not in hand:**",
@@ -1799,7 +1809,7 @@ Read the two extraction summaries and triage what each tool got.
           "",
           "- *Re-interview for Knox.* Cheapest, fastest path; documented in the interview log either way.",
           "- *Legal process to Google.* The Maps Timeline server-side data answers the 60-day ask *better* than any local-cache extraction would, and reaches the Pixel that the BFU image doesn't.",
-          "- *Legal process to Meta (WhatsApp).* WhatsApp end-to-end-encrypted message bodies aren't on Meta's servers, but metadata, account registration data, and (where the user opted in) WhatsApp Cloud Backup may be. Worth pursuing in parallel.",
+          "- *Legal process to Meta (WhatsApp).* WhatsApp end-to-end-encrypted message bodies aren't on Meta's servers. Meta-side records are limited to **metadata** — account registration data, IP / connection records, group membership, profile changes — under their published law-enforcement guidelines. (The cloud backup is stored on **Apple's iCloud or Google Drive**, not on Meta's infrastructure, so it isn't Meta's to return either way.) Worth pursuing in parallel for the metadata view of the user's network even though the message corpus stays out of reach.",
           "- *Ship the S22 findings; name the Pixel gap.* The S22 work is solid and time-sensitive. Naming what *wasn't* recovered on the Pixel, and why (BFU, no exploit coverage for this build), is part of the finding. Withholding the S22 results until the Pixel is also closed loses the operational value of what's already in hand.",
           "",
           "**Wrong:**",

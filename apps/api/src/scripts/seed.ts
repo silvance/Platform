@@ -153,7 +153,7 @@ async function upsertUser(
       displayName,
       role,
       disabled: false,
-      ...(existing?.approvedAt == null ? { approvedAt: new Date() } : {}),
+      ...(existing?.approvedAt === null ? { approvedAt: new Date() } : {}),
     },
     create: {
       email,

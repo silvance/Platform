@@ -523,7 +523,47 @@ Common causes:
             }
             $p = Start-Process -FilePath $pgExe -Wait -PassThru
             if ($p.ExitCode -ne 0) { Fail "Postgres installer returned $($p.ExitCode)." }
-            Write-OK "PostgreSQL installed."
+
+            # Verify the installer actually left us with a running
+            # server. An operator who cancels the Bitrock wizard
+            # mid-way exits with code 0 but produces no service;
+            # without this check the script proudly says
+            # "PostgreSQL installed." and then fails at migrate
+            # deploy with P1001. Re-poll Get-Service + a TCP-listen
+            # check, with a short wait for service start-up.
+            $deadline = (Get-Date).AddSeconds(30)
+            $pgPostRunning = $null
+            while ((Get-Date) -lt $deadline -and -not $pgPostRunning) {
+                $pgPostRunning = Get-Service -Name "postgresql*" -ErrorAction SilentlyContinue |
+                    Where-Object { $_.Status -eq 'Running' } |
+                    Select-Object -First 1
+                if (-not $pgPostRunning) { Start-Sleep -Seconds 2 }
+            }
+            if (-not $pgPostRunning) {
+                Fail @"
+PostgreSQL installer exited 0 but no postgresql* service is in
+Running state after 30 s. This usually means the Bitrock wizard
+was cancelled before completion, or the post-install service
+start-up failed. Check the installer log at
+%TEMP%\bitrock_installer*.log, then either:
+
+  - Re-run the bundled installer manually:
+        $pgExe
+
+  - Or pass -SkipPostgres on the next airgap.ps1 run if you
+    already have a Postgres elsewhere you intend to point at.
+"@
+            }
+            $listening = $null
+            try {
+                $listening = Get-NetTCPConnection -LocalPort 5432 -State Listen -ErrorAction SilentlyContinue |
+                    Select-Object -First 1
+            } catch { }
+            if (-not $listening) {
+                Write-Note "postgresql service is Running but nothing is listening on 5432 yet."
+                Write-Note "If migrations fail with P1001, give it a few seconds and re-run."
+            }
+            Write-OK "PostgreSQL installed and service $($pgPostRunning.Name) is running."
         }
     } else {
         Write-Note "Skipping Postgres install per -SkipPostgres."
