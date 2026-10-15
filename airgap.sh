@@ -339,7 +339,7 @@ WEB_BIN="\${REPO}/node_modules/next/dist/bin/next"
 [ -f "\${API_BIN}" ] || { echo "ERR: \${API_BIN} not found." >&2; exit 1; }
 [ -f "\${WEB_BIN}" ] || { echo "ERR: next binary not found." >&2; exit 1; }
 
-(cd "\${REPO}/apps/api" && PORT="\${API_PORT}" \\
+(cd "\${REPO}/apps/api" && API_PORT="\${API_PORT}" \\
     /usr/local/bin/node "\${API_BIN}" \\
     > "\${LOGDIR}/api.log" 2>&1) &
 API_PID=\$!
@@ -347,7 +347,10 @@ echo "\${API_PID}" > "\${LOGDIR}/api.pid"
 
 sleep 2
 
-(cd "\${REPO}/apps/web" && \\
+# The web server calls the API server-side; point it at the port the
+# API was just started on. 127.0.0.1 rather than localhost because the
+# API binds IPv4 (0.0.0.0) by default.
+(cd "\${REPO}/apps/web" && API_INTERNAL_URL="http://127.0.0.1:\${API_PORT}" \\
     /usr/local/bin/node "\${WEB_BIN}" start -p "\${WEB_PORT}" \\
     > "\${LOGDIR}/web.log" 2>&1) &
 WEB_PID=\$!
@@ -382,8 +385,8 @@ Override at runtime:
 
 If you'd rather start each manually:
 
-    cd ${TARGET}/apps/api && PORT=${API_PORT} node dist/main.js
-    cd ${TARGET}/apps/web && node ${NEXT_BIN} start -p ${WEB_PORT}
+    cd ${TARGET}/apps/api && API_PORT=${API_PORT} node dist/main.js
+    cd ${TARGET}/apps/web && API_INTERNAL_URL=http://127.0.0.1:${API_PORT} node ${NEXT_BIN} start -p ${WEB_PORT}
 
 See AIRGAP-INSTALL-LINUX.txt (next to this script; also at the
 bundle root) for how to run these as systemd services, configure

@@ -177,12 +177,13 @@ verification:
 
   API (port 4000):
       cd C:\ci-cyber-lab\apps\api
-      $env:PORT = 4000
+      $env:API_PORT = 4000
       node dist\main.js
 
   Web (port 3000):
       cd C:\ci-cyber-lab\apps\web
-      node node_modules\next\dist\bin\next start -p 3000
+      $env:API_INTERNAL_URL = "http://127.0.0.1:4000"
+      node ..\..\node_modules\next\dist\bin\next start -p 3000
 
 Open http://localhost:3000 on the same box -- you should see login.
 

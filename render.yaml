@@ -1,0 +1,59 @@
+# Render Blueprint for the API on Render's free plan.
+#
+# Topology: web on Vercel (unchanged), API here, Postgres on Neon,
+# artifact bytes on Cloudflare R2. See apps/api/fly.toml for the
+# paid Fly.io variant of the same move.
+#
+# Render → New → Blueprint → pick this repo. Every `sync: false`
+# key is prompted for once at creation and then lives in the Render
+# dashboard, never in the repo.
+#
+# Render injects PORT (10000) and routes to it; main.ts falls back
+# to PORT when API_PORT is unset, so don't set API_PORT here.
+# The image entrypoint runs `prisma migrate deploy` on every start.
+
+services:
+  - type: web
+    name: ci-cyber-lab-api
+    runtime: docker
+    plan: free
+    # Keep next to Neon (AWS us-east-1) and Vercel's default iad1.
+    region: virginia
+    dockerfilePath: ./apps/api/Dockerfile
+    # Repo root: the Dockerfile copies packages/contracts alongside
+    # the api package.
+    dockerContext: .
+    # Liveness only, no DB query, so health checks don't keep the
+    # Neon compute awake.
+    healthCheckPath: /v1/healthz
+    autoDeploy: true
+    buildFilter:
+      paths:
+        - apps/api/**
+        - packages/contracts/**
+        - package.json
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+        - tsconfig.base.json
+    envVars:
+      # Neon *direct* (non-pooled) connection string with
+      # &connect_timeout=15 appended. Migrations need a direct
+      # connection, and the timeout covers Neon's cold start.
+      - key: DATABASE_URL
+        sync: false
+      - key: ARTIFACT_STORAGE_BACKEND
+        value: s3
+      - key: S3_REGION
+        value: auto
+      - key: S3_BUCKET
+        sync: false
+      # https://<account-id>.r2.cloudflarestorage.com
+      - key: S3_ENDPOINT
+        sync: false
+      - key: S3_ACCESS_KEY_ID
+        sync: false
+      - key: S3_SECRET_ACCESS_KEY
+        sync: false
+      # Same value as the Vercel project's BFF_FORWARD_SECRET.
+      - key: BFF_FORWARD_SECRET
+        sync: false
