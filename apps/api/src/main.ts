@@ -10,7 +10,9 @@ async function bootstrap(): Promise<void> {
   });
 
   const host = process.env.API_HOST ?? "0.0.0.0";
-  const port = Number(process.env.API_PORT ?? 4000);
+  // PORT is the fallback because PaaS hosts (Render, Fly) inject it and
+  // route traffic to it; API_PORT still wins when both are set.
+  const port = Number(process.env.API_PORT ?? process.env.PORT ?? 4000);
 
   // Trust-proxy is OFF by default: if the API is reachable directly, an
   // attacker-controlled `X-Forwarded-For` would otherwise let them spoof
