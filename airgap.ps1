@@ -763,15 +763,18 @@ Write-Host ""
 Write-Host "Starting API on port `$ApiPort (in its own PowerShell window)..." -ForegroundColor Cyan
 Start-Process powershell -ArgumentList @(
     "-NoExit", "-Command",
-    "Set-Location -LiteralPath '`$apiDir'; ```$env:PORT = '`$ApiPort'; node dist\main.js"
+    "Set-Location -LiteralPath '`$apiDir'; ```$env:API_PORT = '`$ApiPort'; node dist\main.js"
 )
 
 Start-Sleep -Seconds 2
 
 Write-Host "Starting web on port `$WebPort (in its own PowerShell window)..." -ForegroundColor Cyan
+# The web server calls the API server-side; point it at the port the
+# API was just started on. 127.0.0.1 rather than localhost because the
+# API binds IPv4 (0.0.0.0) by default.
 Start-Process powershell -ArgumentList @(
     "-NoExit", "-Command",
-    "Set-Location -LiteralPath '`$webDir'; node '`$nextBin' start -p `$WebPort"
+    "Set-Location -LiteralPath '`$webDir'; ```$env:API_INTERNAL_URL = 'http://127.0.0.1:`$ApiPort'; node '`$nextBin' start -p `$WebPort"
 )
 
 Write-Host ""
@@ -802,11 +805,12 @@ If you'd rather start each manually:
 
     # API (port $ApiPort)
     cd $Target\apps\api
-    `$env:PORT = $ApiPort
+    `$env:API_PORT = $ApiPort
     node dist\main.js
 
     # Web (port $WebPort)
     cd $Target\apps\web
+    `$env:API_INTERNAL_URL = "http://127.0.0.1:$ApiPort"
     node "$nextBin" start -p $WebPort
 
 See AIRGAP-INSTALL.txt (also copied into the bundle root) for
