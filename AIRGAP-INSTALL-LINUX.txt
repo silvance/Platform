@@ -148,11 +148,11 @@ For a manual quick verification:
 
   API (port 4000):
       cd /opt/ci-cyber-lab/apps/api
-      PORT=4000 node dist/main.js
+      API_PORT=4000 node dist/main.js
 
   Web (port 3000):
       cd /opt/ci-cyber-lab/apps/web
-      node node_modules/next/dist/bin/next start -p 3000
+      API_INTERNAL_URL=http://127.0.0.1:4000 node ../../node_modules/next/dist/bin/next start -p 3000
 
 Open http://localhost:3000 in a browser on the same box.
 
@@ -207,7 +207,8 @@ quick test), create two unit files under /etc/systemd/system/:
     Type=simple
     User=ci-cyber-lab
     WorkingDirectory=/opt/ci-cyber-lab/apps/web
-    ExecStart=/usr/local/bin/node node_modules/next/dist/bin/next start -p 3000
+    Environment=API_INTERNAL_URL=http://127.0.0.1:4000
+    ExecStart=/usr/local/bin/node /opt/ci-cyber-lab/node_modules/next/dist/bin/next start -p 3000
     Restart=on-failure
     RestartSec=5
 
