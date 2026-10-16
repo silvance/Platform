@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { IBM_Plex_Mono, IBM_Plex_Sans, Source_Serif_4 } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { readTheme } from "@/lib/theme";
+import { SITE_URL } from "@/lib/site";
 import "./globals.css";
 
 // IBM Plex Sans for UI text, IBM Plex Mono for evidence, data and
@@ -28,8 +29,11 @@ const sourceSerif = Source_Serif_4({
 });
 
 export const metadata: Metadata = {
+  // Resolves relative canonical / Open Graph URLs to the public origin.
+  metadataBase: new URL(SITE_URL),
   title: "CI Cyber Lab",
-  description: "CI Cyber Lab — CI Cyber / Digital Forensics training platform",
+  description:
+    "CI Cyber Lab — unclassified, non-commercial training platform for counterintelligence and digital-forensics analysts.",
 };
 
 // Tells mobile browsers to size the layout to the device width and

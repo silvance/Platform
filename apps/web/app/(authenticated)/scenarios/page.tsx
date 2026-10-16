@@ -3,20 +3,21 @@ import { requireUser, readToken } from "@/lib/session";
 import { api } from "@/lib/api";
 import type { Lane, LaneSummary } from "@ci-train/contracts";
 import { InlineCode } from "@/components/inline-code";
+import { LANE_SECTIONS } from "@/content/lane-sections";
 
 export const dynamic = "force-dynamic";
 
 // challenge-library landing page. Lanes are grouped into a small
 // training progression — recommended start → host & device →
 // triage → findings — so the page reads as a curriculum rather than
-// a flat grid of equally-weighted topics. Each card still links to
+// a flat grid of equally-weighted topics. Each row still links to
 // /scenarios/lanes/<slug>; no schema change, no unlocks, no
 // per-cohort logic.
 //
-// Grouping is configured below; lanes the API returns that aren't
-// in any group fall through to a defensive "Other" section so a new
-// Lane enum value never disappears from the page before this file
-// is updated.
+// Grouping lives in content/lane-sections.ts (shared with the public
+// landing page); lanes the API returns that aren't in any group fall
+// through to a defensive "Other" section so a new Lane enum value
+// never disappears from the page before that file is updated.
 export default async function ScenariosPage() {
   await requireUser();
   const token = await readToken();
@@ -121,70 +122,12 @@ function LaneProgress({ lane }: { lane: LaneSummary }) {
   );
 }
 
-// ─── Section configuration ───────────────────────────────────
-// One config object so the page edit is the only place to touch
-// when a new Lane enum value lands. Keep the lane order inside
-// each section as the canonical reading order.
-
 interface LaneSection {
   key: string;
   title: string;
   description: string;
   lanes: LaneSummary[];
 }
-
-interface LaneSectionConfig {
-  key: string;
-  title: string;
-  description: string;
-  laneSlugs: readonly Lane[];
-}
-
-const LANE_SECTIONS: readonly LaneSectionConfig[] = [
-  {
-    key: "recommended-start",
-    title: "Recommended Start",
-    description:
-      "Begin here. Short scenarios that warm you up on the platform and lay down the DF fundamentals every later lane builds on.",
-    laneSlugs: ["ojt_bridge", "foundations"],
-  },
-  {
-    key: "host-device-forensics",
-    title: "Host & Device Forensics",
-    description:
-      "Per-OS and per-device artifact triage — Windows, Linux, macOS, mobile extractions, memory images, and removable-media spillage cases.",
-    laneSlugs: [
-      "windows_artifacts",
-      "linux_forensics",
-      "macos_forensics",
-      "mobile_forensics",
-      "memory_forensics",
-      "removable_media_spillage",
-    ],
-  },
-  {
-    key: "cyber-triage",
-    title: "Cyber Triage",
-    description:
-      "Reading inbound telemetry without over-claiming — email + BEC, network logs, malware samples, insider-risk indicators, signals awareness.",
-    laneSlugs: [
-      "email_bec",
-      "network_logs",
-      "malware_analysis",
-      "anti_forensics",
-      "cloud_forensics",
-      "insider_risk",
-      "rf_awareness",
-    ],
-  },
-  {
-    key: "findings-evidence",
-    title: "Findings & Evidence",
-    description:
-      "Turning what the artifacts prove into custody-clean, defensible written findings.",
-    laneSlugs: ["evidence_handling", "report_writing"],
-  },
-];
 
 function groupLanes(lanes: LaneSummary[]): LaneSection[] {
   const byLane = new Map(lanes.map((l) => [l.lane, l]));
