@@ -14,6 +14,7 @@ import {
 import { InlineReviewPanel } from "./inline-review-panel";
 import { FeedbackWidget } from "./feedback-widget";
 import { ScenarioOrientationLink } from "@/components/scenario-orientation-link";
+import { orderOptionsForUser } from "@/lib/option-order";
 
 export const dynamic = "force-dynamic";
 
@@ -204,11 +205,17 @@ export default async function ScenarioWorkspacePage({ params }: Props) {
         {progress.questions.map((q) => {
           const state =
             progress.responses.find((r) => r.questionId === q.id) ?? null;
+          // Stored option order often puts the correct answer first;
+          // show each user a stable order of their own instead.
+          const displayQuestion =
+            q.type === "multi_choice" && q.options
+              ? { ...q, options: orderOptionsForUser(q.options, user.id, q.id) }
+              : q;
           return (
             <QuestionCard
               key={q.id}
               scenarioSlug={slug}
-              question={q}
+              question={displayQuestion}
               initialState={state}
             />
           );
