@@ -13,6 +13,7 @@
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
     "seed": "node dist/scripts/seed.js",
+    "content:lint": "node dist/scripts/content-lint.js",
     "reset-password": "node dist/scripts/reset-password.js",
     "migrate-artifacts-to-s3": "node dist/scripts/migrate-artifacts-to-s3.js"
   },

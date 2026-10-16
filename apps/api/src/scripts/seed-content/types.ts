@@ -11,6 +11,11 @@ export interface ArtifactSeed {
   kind: ArtifactKind;
   mimeType: string;
   bytes: Buffer;
+  // Set when the artifact's timestamps are deliberately shown without
+  // a timezone (e.g. setupapi logs really are local time and a
+  // question asks about it). Silences the content lint's
+  // timestamp-without-timezone warning. Not stored in the DB.
+  localTimeByDesign?: boolean;
 }
 
 export interface IndicatorSetSeed {
