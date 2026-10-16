@@ -95,31 +95,43 @@ export default async function ScenarioWorkspacePage({ params }: Props) {
 
       <ScenarioOrientationLink lane={scenario.lane} />
 
-      <div style={{ marginBottom: "1rem" }}>
-        {scenario.skillAreas.map((a) => (
-          <span
-            key={a}
-            className={`chip ${
-              showAwarenessBanner && isAwarenessOnly(a) ? "chip-rf" : "chip-skill"
-            }`}
-          >
-            {SKILL_AREA_LABELS[a]}
+      <p className="meta-line" style={{ margin: "0 0 1rem" }}>
+        {scenario.skillAreas.map((a, i) => (
+          <span key={a}>
+            {i > 0 ? <span className="sep">·</span> : null}
+            <span
+              className={
+                showAwarenessBanner && isAwarenessOnly(a) ? "status-warn" : undefined
+              }
+            >
+              {SKILL_AREA_LABELS[a]}
+            </span>
           </span>
         ))}
-        <span className="chip chip-difficulty">Level {scenario.difficulty}</span>
-        {scenario.tags.map((t) => (
-          <span key={t} className="chip">#{t}</span>
-        ))}
-      </div>
+        <span className="sep">·</span>
+        <span>Level {scenario.difficulty}</span>
+        {/* Tags that just restate a skill area (e.g. #df_artifacts)
+            add nothing next to the skill-area names. */}
+        {scenario.tags
+          .filter((t) => !(scenario.skillAreas as readonly string[]).includes(t))
+          .map((t) => (
+            <span key={t}>
+              <span className="sep">·</span>
+              <code style={{ color: "var(--muted)" }}>#{t}</code>
+            </span>
+          ))}
+      </p>
 
       {disclaimer ? <Markdown source={disclaimer} variant="callout" /> : null}
 
       {/* Progress strip — solved / total */}
       <div className="card" style={{ marginBottom: "1rem" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" }}>
-          <div>
-            <strong>Solved:</strong> {progress.completedQuestions} /{" "}
-            {progress.totalQuestions}{" "}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: ".75rem" }}>
+          <div style={{ fontFamily: "var(--font-mono)", fontSize: ".85rem" }}>
+            <span style={{ color: "var(--muted)" }}>SOLVED</span>{" "}
+            <strong>
+              {progress.completedQuestions}/{progress.totalQuestions}
+            </strong>{" "}
             {completedAll ? (
               <span className="chip chip-ok">challenge complete</span>
             ) : null}
@@ -129,15 +141,15 @@ export default async function ScenarioWorkspacePage({ params }: Props) {
               style={{
                 background: "var(--bg-sunken)",
                 border: "1px solid var(--border)",
-                borderRadius: 999,
+                borderRadius: "var(--radius-sm)",
                 overflow: "hidden",
-                height: "8px",
+                height: "6px",
               }}
             >
               <div
                 style={{
                   width: `${(progress.completedQuestions / Math.max(1, progress.totalQuestions)) * 100}%`,
-                  background: "var(--ok)",
+                  background: "var(--status-ok-fg)",
                   height: "100%",
                   transition: "width 200ms ease-out",
                 }}

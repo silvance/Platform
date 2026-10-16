@@ -128,7 +128,7 @@ export default function AboutPage() {
             marginTop: "2.5rem",
             padding: "1rem 1.25rem",
             border: "1px solid var(--border)",
-            borderRadius: 8,
+            borderRadius: "var(--radius-lg)",
             background: "var(--bg-sunken)",
           }}
         >

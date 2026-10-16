@@ -185,7 +185,7 @@ function AttachmentsPanel({ parsed }: { parsed: ParsedEmlPayload }) {
         ))}
       </ul>
       {parsed.attachmentsTruncated ? (
-        <p style={{ color: "#f0d68a", fontSize: ".85rem", marginTop: ".5rem" }}>
+        <p style={{ color: "var(--status-warn-fg)", fontSize: ".85rem", marginTop: ".5rem" }}>
           ⚠ Attachment list truncated — the EML contains more attachments
           than this view will surface. Download the raw .eml to enumerate
           all of them.
@@ -207,7 +207,7 @@ function RawHeadersPanel({ parsed }: { parsed: ParsedEmlPayload }) {
         {parsed.headersTruncated ? "+, truncated" : ""})
       </summary>
       {parsed.headersTruncated ? (
-        <p style={{ color: "#f0d68a", fontSize: ".85rem", marginTop: ".5rem", marginBottom: 0 }}>
+        <p style={{ color: "var(--status-warn-fg)", fontSize: ".85rem", marginTop: ".5rem", marginBottom: 0 }}>
           ⚠ Header list truncated. Chain-of-custody reasoning over Received
           hops needs the complete header set — download the raw .eml if
           you need the full chain.
@@ -226,7 +226,7 @@ function Anomaly({ children }: { children: React.ReactNode }) {
       style={{
         display: "block",
         marginTop: ".25rem",
-        color: "#f8b4b4",
+        color: "var(--status-bad-fg)",
         fontSize: ".85rem",
       }}
     >

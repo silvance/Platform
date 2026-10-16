@@ -121,7 +121,7 @@ const inputStyle: React.CSSProperties = {
   padding: ".5rem .75rem",
   background: "var(--bg-sunken)",
   border: "1px solid var(--border-strong)",
-  borderRadius: 6,
+  borderRadius: "var(--radius-md)",
   color: "var(--fg)",
   fontSize: "1rem",
 };
@@ -133,7 +133,7 @@ const buttonStyle: React.CSSProperties = {
   background: "var(--accent)",
   color: "var(--bg-sunken)",
   border: 0,
-  borderRadius: 6,
+  borderRadius: "var(--radius-md)",
   padding: ".55rem 1rem",
   fontSize: "1rem",
   fontWeight: 600,

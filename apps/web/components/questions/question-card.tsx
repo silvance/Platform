@@ -125,9 +125,9 @@ export function QuestionCard({ scenarioSlug, question, initialState }: Props) {
           className="card"
           style={{
             marginTop: ".5rem",
-            borderColor: "rgba(255, 196, 0, 0.45)",
-            background: "rgba(255, 196, 0, 0.06)",
-            color: "#f0d68a",
+            borderColor: "var(--status-warn-border)",
+            background: "var(--status-warn-bg)",
+            color: "var(--status-warn-fg)",
             padding: ".5rem .75rem",
           }}
         >

@@ -26,7 +26,7 @@ export async function JsonViewer({ artifact, scenarioSlug, token }: Props) {
       {invalid ? (
         <p
           style={{
-            color: "#f0d68a",
+            color: "var(--status-warn-fg)",
             fontSize: ".85rem",
             margin: "0 0 .5rem",
           }}

@@ -42,9 +42,9 @@ export function TextMatchForm({ question, initialText, disabled, onSubmit }: Pro
         style={{
           width: "100%",
           padding: ".5rem .75rem",
-          background: "#0b1020",
-          border: "1px solid #2a3556",
-          borderRadius: 6,
+          background: "var(--bg-sunken)",
+          border: "1px solid var(--border-strong)",
+          borderRadius: "var(--radius-md)",
           color: "var(--fg)",
           fontSize: "1rem",
           fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",

@@ -16,7 +16,7 @@ export function PdfViewer({ artifact, proxyUrl }: Props) {
         src={proxyUrl}
         title={artifact.displayName}
         sandbox=""
-        style={{ width: "100%", height: "78vh", border: "1px solid #1f2845", borderRadius: 6, background: "#0b1020" }}
+        style={{ width: "100%", height: "78vh", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", background: "var(--bg-sunken)" }}
       />
       <p style={{ color: "var(--muted)", fontSize: ".85rem", marginTop: ".5rem" }}>
         {artifact.displayName} · {artifact.mimeType} · {formatBytes(artifact.sizeBytes)}

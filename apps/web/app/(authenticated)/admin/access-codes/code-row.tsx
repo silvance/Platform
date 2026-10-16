@@ -25,7 +25,7 @@ export function CodeRow({ code }: Props) {
   return (
     <tr>
       <td style={cellStyle}>
-        <code style={{ fontFamily: "var(--mono)", fontSize: ".95rem" }}>
+        <code style={{ fontFamily: "var(--font-mono)", fontSize: ".95rem" }}>
           {code.code}
         </code>
         <div style={{ color: "var(--muted)", fontSize: ".82rem" }}>{code.label}</div>

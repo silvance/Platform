@@ -67,7 +67,7 @@ export function CreateScenarioForm({ skillAreas }: { skillAreas: readonly string
       <fieldset
         style={{
           border: "1px solid var(--border)",
-          borderRadius: 6,
+          borderRadius: "var(--radius-md)",
           padding: ".55rem .85rem",
         }}
       >

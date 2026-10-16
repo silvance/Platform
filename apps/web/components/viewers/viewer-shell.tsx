@@ -3,9 +3,9 @@ export function ViewerError({ message }: { message: string }) {
     <div
       className="card"
       style={{
-        borderColor: "rgba(248, 113, 113, 0.45)",
-        background: "rgba(248, 113, 113, 0.06)",
-        color: "#f8b4b4",
+        borderColor: "var(--status-bad-border)",
+        background: "var(--status-bad-bg)",
+        color: "var(--status-bad-fg)",
       }}
     >
       <p style={{ margin: 0 }}>{message}</p>

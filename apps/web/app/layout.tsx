@@ -1,23 +1,30 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { IBM_Plex_Mono, IBM_Plex_Sans, Source_Serif_4 } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { readTheme } from "@/lib/theme";
 import "./globals.css";
 
-// Inter is the default UI font; JetBrains Mono is the monospace
-// face used in artifact viewers + code blocks. Both fetched at
-// build time and self-hosted by Next.js (no runtime google.com
-// hit at request time).
-const inter = Inter({
+// IBM Plex Sans for UI text, IBM Plex Mono for evidence, data and
+// labels, Source Serif for page titles. All fetched at build time
+// and self-hosted by Next.js (no runtime google.com hit). The
+// --face-* variables feed the --font-* stacks in globals.css.
+const plexSans = IBM_Plex_Sans({
   subsets: ["latin"],
+  weight: ["400", "500", "600"],
   display: "swap",
-  variable: "--font-sans",
+  variable: "--face-sans",
 });
-const jetBrainsMono = JetBrains_Mono({
+const plexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  display: "swap",
+  variable: "--face-mono",
+});
+const sourceSerif = Source_Serif_4({
   subsets: ["latin"],
   display: "swap",
-  variable: "--font-mono",
+  variable: "--face-serif",
 });
 
 export const metadata: Metadata = {
@@ -46,7 +53,7 @@ export default async function RootLayout({
     <html
       lang="en"
       data-theme={theme}
-      className={`${inter.variable} ${jetBrainsMono.variable}`}
+      className={`${plexSans.variable} ${plexMono.variable} ${sourceSerif.variable}`}
     >
       <body>
         {children}

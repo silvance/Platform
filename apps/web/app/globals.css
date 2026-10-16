@@ -17,80 +17,95 @@
  *   --radius-...  — corner radius scale
  *   --shadow-... — elevation scale
  *
- * Brand: deep royal-blue (#1f5fe6 base) with a lighter
- * indigo accent for hover/focus rings.
+ * Visual language: an analyst's case file, not a SaaS dashboard.
+ * Warm graphite (dark) / paper (light) surfaces, hairline rules
+ * instead of floating cards, near-square corners, one ochre accent,
+ * serif page titles over a plain sans body, and mono for anything
+ * that is evidence, data, or a label.
+ *
+ * Status colors are defined per theme so badges keep their contrast
+ * on paper as well as on graphite.
  */
 
 :root {
   color-scheme: dark;
 
-  /* Brand palette (constant across themes — these are THE brand) */
-  --brand-50:  #eef3ff;
-  --brand-100: #d6e2ff;
-  --brand-200: #adc4ff;
-  --brand-300: #80a3ff;
-  --brand-400: #5384ff;
-  --brand-500: #1f5fe6;  /* primary */
-  --brand-600: #1748b8;
-  --brand-700: #11378f;
-  --brand-800: #0d2a6e;
-  --brand-900: #091e4f;
+  /* Accent ramp (ochre). --accent picks the shade per theme. */
+  --brand-300: #ecc07f;
+  --brand-400: #e0a24e;
+  --brand-500: #b87a24;
+  --brand-600: #8f5a0a;
+  --brand-700: #6b4306;
 
-  /* Status palette (constant across themes) */
-  --status-ok-bg: rgba(34, 197, 94, 0.10);
-  --status-ok-fg: #4ade80;
-  --status-ok-border: rgba(74, 222, 128, 0.45);
-  --status-bad-bg: rgba(239, 68, 68, 0.10);
-  --status-bad-fg: #f87171;
-  --status-bad-border: rgba(248, 113, 113, 0.55);
-  --status-warn-bg: rgba(234, 179, 8, 0.08);
-  --status-warn-fg: #f0d68a;
-  --status-warn-border: rgba(240, 214, 138, 0.45);
+  /* Status — DARK */
+  --status-ok-bg: rgba(124, 196, 138, 0.10);
+  --status-ok-fg: #8fcf9b;
+  --status-ok-border: rgba(143, 207, 155, 0.40);
+  --status-bad-bg: rgba(239, 123, 108, 0.10);
+  --status-bad-fg: #f08b7d;
+  --status-bad-border: rgba(240, 139, 125, 0.45);
+  --status-warn-bg: rgba(224, 178, 94, 0.10);
+  --status-warn-fg: #e3b867;
+  --status-warn-border: rgba(227, 184, 103, 0.40);
 
-  /* DARK theme — semantic tokens */
-  --bg:           #0a0f1f;       /* app background */
-  --bg-elevated:  #111a32;       /* card / popover surface */
-  --bg-sunken:    #060a17;       /* code blocks, inputs */
-  --bg-hover:     rgba(255,255,255,0.04);
-  --bg-active:    rgba(31, 95, 230, 0.12);
-  --border:       #1f2a4a;
-  --border-strong:#2a3a64;
-  --fg:           #e8ecf5;
-  --fg-strong:    #ffffff;
-  --muted:        #8590ad;
-  --muted-strong: #aeb6cc;
-  --accent:       var(--brand-400);  /* lighter shade reads better on dark */
-  --accent-fg:    #0a0f1f;
-  --ring:         rgba(83, 132, 255, 0.55);
+  /* DARK theme — semantic tokens (warm graphite) */
+  --bg:           #131312;       /* app background */
+  --bg-elevated:  #1a1a18;       /* panel / popover surface */
+  --bg-sunken:    #0e0e0d;       /* code blocks, inputs, evidence */
+  --bg-hover:     rgba(255, 250, 235, 0.045);
+  --bg-active:    rgba(224, 162, 78, 0.10);
+  --border:       #2b2a26;
+  --border-strong:#3d3b35;
+  --fg:           #e6e3dc;
+  --fg-strong:    #f7f5f0;
+  --muted:        #9b978c;
+  --muted-strong: #c3bfb4;
+  --accent:       var(--brand-400);
+  --accent-hover: var(--brand-300);
+  --accent-fg:    #131312;
+  --ring:         rgba(224, 162, 78, 0.55);
 
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.30);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.35);
-  --shadow-lg: 0 12px 28px rgba(0,0,0,0.45);
+  /* Elevation is reserved for things that genuinely float
+     (menus, popovers). Panels sit flat on the page. */
+  --shadow-sm: none;
+  --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.40);
+  --shadow-lg: 0 12px 28px rgba(0, 0, 0, 0.45);
 }
 
 :root[data-theme="light"] {
   color-scheme: light;
 
-  /* LIGHT theme — semantic tokens.  Brand + status palettes are
-     unchanged; only the surface + ink colors flip. */
-  --bg:           #f7f8fb;
-  --bg-elevated:  #ffffff;
-  --bg-sunken:    #f0f2f7;
-  --bg-hover:     rgba(15, 23, 42, 0.04);
-  --bg-active:    rgba(31, 95, 230, 0.08);
-  --border:       #dde2ee;
-  --border-strong:#c4cce0;
-  --fg:           #0f172a;
-  --fg-strong:    #050810;
-  --muted:        #5b657e;
-  --muted-strong: #38425b;
-  --accent:       var(--brand-500);  /* deeper shade reads better on light */
-  --accent-fg:    #ffffff;
-  --ring:         rgba(31, 95, 230, 0.35);
+  /* Status — LIGHT (darker inks so they read on paper) */
+  --status-ok-bg: rgba(47, 107, 58, 0.08);
+  --status-ok-fg: #2f6b3a;
+  --status-ok-border: rgba(47, 107, 58, 0.40);
+  --status-bad-bg: rgba(165, 50, 42, 0.07);
+  --status-bad-fg: #a5322a;
+  --status-bad-border: rgba(165, 50, 42, 0.40);
+  --status-warn-bg: rgba(138, 93, 0, 0.08);
+  --status-warn-fg: #7f5500;
+  --status-warn-border: rgba(138, 93, 0, 0.40);
 
-  --shadow-sm: 0 1px 2px rgba(15,23,42,0.06);
-  --shadow-md: 0 4px 12px rgba(15,23,42,0.08);
-  --shadow-lg: 0 12px 28px rgba(15,23,42,0.10);
+  /* LIGHT theme — semantic tokens (paper) */
+  --bg:           #f4f2ec;
+  --bg-elevated:  #faf9f5;
+  --bg-sunken:    #ebe8e0;
+  --bg-hover:     rgba(40, 33, 15, 0.045);
+  --bg-active:    rgba(143, 90, 10, 0.09);
+  --border:       #d8d3c6;
+  --border-strong:#bdb6a4;
+  --fg:           #1d1c19;
+  --fg-strong:    #0d0c0a;
+  --muted:        #67635a;
+  --muted-strong: #45423b;
+  --accent:       var(--brand-600);
+  --accent-hover: var(--brand-700);
+  --accent-fg:    #ffffff;
+  --ring:         rgba(143, 90, 10, 0.40);
+
+  --shadow-sm: none;
+  --shadow-md: 0 6px 18px rgba(40, 33, 15, 0.12);
+  --shadow-lg: 0 12px 28px rgba(40, 33, 15, 0.14);
 }
 
 /* Spacing scale — 4px grid */
@@ -106,16 +121,21 @@
   --space-12: 3rem;
   --space-16: 4rem;
 
-  --radius-sm:  4px;
-  --radius-md:  8px;
-  --radius-lg:  12px;
-  --radius-xl:  16px;
-  --radius-pill: 999px;
+  /* Near-square corners throughout; "pill" is kept as a token name
+     so existing rules pick up the squarer shape without edits. */
+  --radius-sm:  2px;
+  --radius-md:  3px;
+  --radius-lg:  4px;
+  --radius-xl:  6px;
+  --radius-pill: 2px;
 
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system,
+  /* Faces are self-hosted by next/font (see app/layout.tsx), which
+     defines the --face-* variables on <html>. */
+  --font-sans: var(--face-sans), ui-sans-serif, system-ui, -apple-system,
                "Segoe UI", Roboto, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular,
-               Menlo, monospace;
+  --font-serif: var(--face-serif), Georgia, "Times New Roman", serif;
+  --font-mono: var(--face-mono), ui-monospace, SFMono-Regular,
+               Menlo, Consolas, monospace;
 
   --transition: 120ms ease;
 }
@@ -128,7 +148,6 @@ html, body {
   background: var(--bg);
   color: var(--fg);
   font-family: var(--font-sans);
-  font-feature-settings: "ss01", "cv01", "cv11"; /* Inter stylistic alts */
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
@@ -138,7 +157,11 @@ a {
   color: var(--accent);
   text-decoration: none;
 }
-a:hover { text-decoration: underline; }
+a:hover {
+  color: var(--accent-hover);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 a:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
@@ -151,33 +174,54 @@ main {
   padding: var(--space-10) var(--space-6) var(--space-16);
 }
 
+/* Page titles are set like a report heading; section and card
+   headings stay in the sans so dense pages don't feel ornamental. */
 h1 {
-  font-size: 1.75rem;
+  font-family: var(--font-serif);
+  font-size: 2rem;
   font-weight: 600;
+  line-height: 1.15;
   letter-spacing: -0.01em;
   margin: 0 0 var(--space-2);
   color: var(--fg-strong);
 }
 h2 {
-  font-size: 1.15rem;
+  font-size: 1.1rem;
   font-weight: 600;
-  letter-spacing: -0.005em;
   margin: var(--space-8) 0 var(--space-2);
-  color: var(--fg);
+  color: var(--fg-strong);
 }
 h3 {
   font-size: 1rem;
   font-weight: 600;
-  letter-spacing: -0.005em;
   margin: var(--space-4) 0 var(--space-2);
   color: var(--fg);
 }
 
 p { margin: var(--space-3) 0; }
 
+code {
+  font-family: var(--font-mono);
+  font-size: .9em;
+  /* Long paths and registry keys in prose must wrap on phones;
+     no effect inside <pre>, which doesn't soft-wrap. */
+  overflow-wrap: anywhere;
+}
+
 ::selection {
-  background: var(--brand-500);
-  color: #ffffff;
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+
+/* Small mono label used for metadata: section numbers, artifact
+   kinds, levels, modules. Replaces the old pill chips. */
+.label-mono {
+  font-family: var(--font-mono);
+  font-size: .72rem;
+  font-weight: 500;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
 /* ─── Cards ──────────────────────────────────────────────── */
@@ -188,7 +232,6 @@ p { margin: var(--space-3) 0; }
   border-radius: var(--radius-lg);
   padding: var(--space-4) var(--space-5);
   margin: var(--space-3) 0;
-  box-shadow: var(--shadow-sm);
 }
 
 .kv {
@@ -248,8 +291,8 @@ footer { color: var(--muted); font-size: .85rem; margin-top: var(--space-12); }
   border-color: var(--accent);
 }
 .btn-primary:hover:not(:disabled) {
-  background: var(--brand-600);
-  border-color: var(--brand-600);
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
 }
 
 .btn-ghost {
@@ -363,63 +406,103 @@ footer { color: var(--muted); font-size: .85rem; margin-top: var(--space-12); }
 
 /* ─── Chips ──────────────────────────────────────────────── */
 
+/* Flat mono labels (status, kind, level). Square, unfilled by
+   default; status variants tint text + border only. */
 .chip {
   display: inline-block;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
-  padding: .2rem .65rem;
-  font-size: .75rem;
-  color: var(--muted);
-  margin: 0 .3rem .3rem 0;
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: .05rem .4rem;
+  font-family: var(--font-mono);
+  font-size: .7rem;
   font-weight: 500;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  line-height: 1.5;
+  color: var(--muted-strong);
+  margin: 0 .3rem .3rem 0;
+  vertical-align: middle;
 }
-.chip-skill { color: var(--accent); border-color: var(--accent); background: var(--bg-active); }
-.chip-difficulty { color: var(--status-warn-fg); border-color: var(--status-warn-border); }
-.chip-rf { color: var(--status-warn-fg); border-color: var(--status-warn-border); background: var(--status-warn-bg); }
+.chip-skill { color: var(--muted-strong); }
+.chip-difficulty { color: var(--muted-strong); }
+.chip-rf      { color: var(--status-warn-fg); border-color: var(--status-warn-border); background: var(--status-warn-bg); }
 .chip-ok      { color: var(--status-ok-fg);   border-color: var(--status-ok-border);   background: var(--status-ok-bg); }
 .chip-bad     { color: var(--status-bad-fg);  border-color: var(--status-bad-border);  background: var(--status-bad-bg); }
 .chip-partial { color: var(--status-warn-fg); border-color: var(--status-warn-border); background: var(--status-warn-bg); }
 
-/* ─── Scenario list ──────────────────────────────────────── */
+/* Inline status text (used in index rows instead of chips). */
+.status-ok      { color: var(--status-ok-fg); }
+.status-partial { color: var(--status-warn-fg); }
+.status-warn    { color: var(--status-warn-fg); }
 
-.scenario-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: var(--space-4);
-  margin: var(--space-5) 0;
-  list-style: none;
-  padding: 0;
+/* One-line metadata: "DF Artifacts · Windows Artifacts · Level 3". */
+.meta-line {
+  margin: var(--space-2) 0 0;
+  color: var(--muted);
+  font-size: .82rem;
+  line-height: 1.5;
 }
-.scenario-card a {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  padding: var(--space-5);
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+.meta-line .sep { margin: 0 .4rem; color: var(--border-strong); }
+
+/* ─── Challenge index (lane page) ────────────────────────── */
+/* A numbered, ruled sequence — the recommended order is the
+   point, so it reads top-to-bottom like a table of contents. */
+
+.challenge-index {
+  list-style: none;
+  margin: var(--space-6) 0 0;
+  padding: 0;
+  border-top: 1px solid var(--border-strong);
+}
+.challenge-row > a {
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1fr) 10rem;
+  gap: var(--space-1) var(--space-5);
+  align-items: start;
+  padding: var(--space-4) var(--space-3);
+  border-bottom: 1px solid var(--border);
   color: var(--fg);
   text-decoration: none;
-  transition: border-color var(--transition), box-shadow var(--transition), transform var(--transition);
-  box-shadow: var(--shadow-sm);
+  transition: background var(--transition);
 }
-.scenario-card a:hover {
-  border-color: var(--accent);
-  box-shadow: var(--shadow-md);
-  transform: translateY(-1px);
-  text-decoration: none;
-}
-.scenario-card h3 {
-  margin: 0 0 var(--space-2);
+.challenge-row > a:hover { background: var(--bg-hover); text-decoration: none; }
+.challenge-row > a:hover .challenge-title { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+.challenge-num {
+  font-family: var(--font-mono);
   font-size: 1rem;
-  color: var(--fg-strong);
-}
-.scenario-card .summary {
   color: var(--muted);
-  font-size: .88rem;
-  margin: 0 0 var(--space-3);
-  flex: 1;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.6;
+}
+.challenge-title {
+  margin: 0;
+  font-size: 1.02rem;
+  font-weight: 600;
+  color: var(--fg-strong);
+  line-height: 1.4;
+}
+.challenge-summary {
+  margin: var(--space-1) 0 0;
+  color: var(--muted-strong);
+  font-size: .9rem;
+  max-width: 68ch;
+}
+.challenge-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-1);
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: .75rem;
+  letter-spacing: .03em;
+  color: var(--muted);
+  line-height: 1.6;
+}
+@media (max-width: 640px) {
+  .challenge-row > a { grid-template-columns: 2.25rem minmax(0, 1fr); padding: var(--space-4) var(--space-1); }
+  .challenge-meta { grid-column: 2; flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: var(--space-3); text-align: left; }
 }
 
 /* ─── Artifact tabs + viewers ────────────────────────────── */
@@ -482,6 +565,12 @@ footer { color: var(--muted); font-size: .85rem; margin-top: var(--space-12); }
   font-size: .85rem;
   line-height: 1.5;
   color: var(--fg);
+}
+/* Wide exports (Amcache, SRUM, CloudTrail) scroll inside the viewer
+   instead of stretching the whole page sideways. */
+.artifact-csv {
+  overflow-x: auto;
+  max-width: 100%;
 }
 .artifact-csv table {
   border-collapse: collapse;
@@ -640,12 +729,12 @@ footer { color: var(--muted); font-size: .85rem; margin-top: var(--space-12); }
   font-size: .95rem;
   transition: background var(--transition);
 }
-.q-submit:hover:not(:disabled) { background: var(--brand-600); }
+.q-submit:hover:not(:disabled) { background: var(--accent-hover); }
 .q-submit:disabled { opacity: .6; cursor: not-allowed; }
 
 .q-completed {
   border-color: var(--status-ok-border);
-  background: linear-gradient(0deg, var(--status-ok-bg) 0%, transparent 100%);
+  border-left: 3px solid var(--status-ok-fg);
 }
 
 /* Completed questions wrap their body in a <details>; the
@@ -739,7 +828,7 @@ footer { color: var(--muted); font-size: .85rem; margin-top: var(--space-12); }
   cursor: pointer;
   transition: background var(--transition);
 }
-.admin-btn:hover:not(:disabled) { background: var(--brand-600); }
+.admin-btn:hover:not(:disabled) { background: var(--accent-hover); }
 .admin-btn:disabled { opacity: .6; cursor: not-allowed; }
 .admin-btn-danger {
   background: transparent;
@@ -805,9 +894,9 @@ footer { color: var(--muted); font-size: .85rem; margin-top: var(--space-12); }
   position: sticky;
   top: 0;
   z-index: 20;
-  background: var(--bg-elevated);
-  border-bottom: 1px solid var(--border);
-  backdrop-filter: saturate(140%) blur(10px);
+  background: var(--bg);
+  border-top: 3px solid var(--accent);
+  border-bottom: 1px solid var(--border-strong);
 }
 .app-header-inner {
   max-width: 1280px;
@@ -843,7 +932,10 @@ footer { color: var(--muted); font-size: .85rem; margin-top: var(--space-12); }
   background-image: url("/logo-mark.png");
   background-repeat: no-repeat;
   background-position: center;
-  background-size: contain;
+  background-size: 22px 22px;
+  /* The mark's navy shapes disappear on graphite; a paper tile keeps
+     it legible in both themes. */
+  background-color: #ece9e2;
 }
 .nav-links {
   display: flex;
@@ -854,22 +946,22 @@ footer { color: var(--muted); font-size: .85rem; margin-top: var(--space-12); }
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
+  border-radius: 0;
   color: var(--muted-strong);
   font-size: .9rem;
   font-weight: 500;
   text-decoration: none;
   white-space: nowrap;
-  transition: background var(--transition), color var(--transition);
+  transition: box-shadow var(--transition), color var(--transition);
 }
 .nav-link:hover {
-  background: var(--bg-hover);
-  color: var(--fg);
+  color: var(--fg-strong);
   text-decoration: none;
+  box-shadow: inset 0 -2px 0 var(--border-strong);
 }
 .nav-link[data-active="true"] {
-  background: var(--bg-active);
-  color: var(--accent);
+  color: var(--fg-strong);
+  box-shadow: inset 0 -2px 0 var(--accent);
 }
 
 /* ─── Admin dropdown (desktop) ──────────────────────────── */
@@ -983,9 +1075,9 @@ footer { color: var(--muted); font-size: .85rem; margin-top: var(--space-12); }
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-1);
-  border-radius: var(--radius-pill);
-  background: var(--bg-sunken);
+  padding: var(--space-1) var(--space-2) var(--space-1) var(--space-1);
+  border-radius: var(--radius-md);
+  background: transparent;
   border: 1px solid var(--border);
   font-size: .85rem;
   color: var(--fg);
@@ -994,27 +1086,30 @@ footer { color: var(--muted); font-size: .85rem; margin-top: var(--space-12); }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--brand-400), var(--brand-700));
-  color: #fff;
-  font-weight: 600;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+  border: 1px solid var(--border-strong);
+  color: var(--fg-strong);
+  font-family: var(--font-mono);
+  font-weight: 500;
   font-size: .75rem;
 }
 .role-badge {
   display: inline-flex;
   align-items: center;
-  padding: 0 .5rem;
+  padding: 0 .35rem;
   height: 18px;
-  border-radius: var(--radius-pill);
-  font-size: .68rem;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: .65rem;
   text-transform: uppercase;
-  letter-spacing: .04em;
-  font-weight: 600;
-  background: var(--bg-active);
+  letter-spacing: .06em;
+  font-weight: 500;
+  background: transparent;
   color: var(--accent);
-  border: 1px solid var(--accent);
+  border: 1px solid var(--border-strong);
 }
 
 /* ─── Auth pages: split layout ─────────────────────────── */
@@ -1033,56 +1128,50 @@ footer { color: var(--muted); font-size: .85rem; margin-top: var(--space-12); }
   flex-direction: column;
   justify-content: space-between;
   padding: var(--space-12) var(--space-10);
-  background: linear-gradient(135deg, var(--brand-700) 0%, var(--brand-900) 60%, #050a1a 100%);
-  color: #fff;
+  /* A plain ink cover in both themes: no gradient, no texture. */
+  background: #151513;
+  color: #ece9e2;
+  border-right: 1px solid #2b2a26;
   overflow: hidden;
 }
-.auth-brand-panel::before {
-  /* Subtle dot grid for visual texture */
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(rgba(255,255,255,0.08) 1px, transparent 1px);
-  background-size: 22px 22px;
-  pointer-events: none;
-}
-@media (max-width: 880px) {
-  .auth-brand-panel { padding: var(--space-8) var(--space-6); }
-}
-.auth-brand-panel > * { position: relative; z-index: 1; }
 .auth-brand-mark {
   display: inline-flex;
   align-items: center;
   gap: var(--space-3);
   font-weight: 600;
   font-size: 1.05rem;
-  color: #fff;
+  color: #f7f5f0;
   letter-spacing: -0.01em;
 }
+.auth-brand-mark:hover { color: #f7f5f0; text-decoration: none; }
 .auth-brand-mark .brand-mark {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
+  /* background-color, not the `background` shorthand: the shorthand
+     would wipe the logo image set on .brand-mark. */
+  background-color: #ece9e2;
   border-radius: var(--radius-md);
-  background: rgba(255,255,255,0.10);
-  border: 1px solid rgba(255,255,255,0.18);
-  padding: 4px;
+  background-size: 28px 28px;
 }
 .auth-tagline {
-  max-width: 26rem;
+  max-width: 28rem;
+  border-top: 1px solid #3d3b35;
+  padding-top: var(--space-6);
 }
 .auth-tagline h2 {
-  font-size: 1.8rem;
+  font-family: var(--font-serif);
+  font-size: 2.1rem;
   font-weight: 600;
-  letter-spacing: -0.02em;
-  color: #fff;
-  margin: 0 0 var(--space-3);
-  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: #f7f5f0;
+  margin: 0 0 var(--space-4);
+  line-height: 1.15;
 }
 .auth-tagline p {
   font-size: 1rem;
-  color: rgba(255,255,255,0.78);
+  color: #c3bfb4;
   margin: 0;
-  line-height: 1.55;
+  line-height: 1.6;
 }
 .auth-feature-list {
   list-style: none;
@@ -1091,24 +1180,23 @@ footer { color: var(--muted); font-size: .85rem; margin-top: var(--space-12); }
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  counter-reset: auth-feature;
 }
 .auth-feature-list li {
   display: flex;
-  align-items: flex-start;
+  align-items: baseline;
   gap: var(--space-3);
-  color: rgba(255,255,255,0.85);
+  color: #d8d4ca;
   font-size: .92rem;
-  line-height: 1.4;
+  line-height: 1.45;
+  counter-increment: auth-feature;
 }
 .auth-feature-list li::before {
-  content: "";
+  content: counter(auth-feature, decimal-leading-zero);
   flex: 0 0 auto;
-  width: 6px;
-  height: 6px;
-  margin-top: .55rem;
-  border-radius: 50%;
-  background: var(--brand-300);
-  box-shadow: 0 0 0 4px rgba(173, 196, 255, 0.18);
+  font-family: var(--font-mono);
+  font-size: .75rem;
+  color: #e0a24e;
 }
 .auth-footer-note {
   font-size: .8rem;
@@ -1159,6 +1247,24 @@ footer { color: var(--muted); font-size: .85rem; margin-top: var(--space-12); }
   font-size: .85rem;
 }
 
+@media (max-width: 880px) {
+  /* Stacked: the cover becomes a compact masthead so the form is
+     on the first screen. The feature list goes; the footer note
+     stays because it carries the only About / Privacy links here. */
+  .auth-brand-panel {
+    padding: var(--space-6) var(--space-5) var(--space-5);
+    border-right: 0;
+    border-bottom: 1px solid #2b2a26;
+    gap: var(--space-5);
+  }
+  .auth-tagline { padding-top: var(--space-4); }
+  .auth-tagline h2 { font-size: 1.45rem; margin-bottom: var(--space-2); }
+  .auth-tagline p { font-size: .9rem; }
+  .auth-feature-list { display: none; }
+  .auth-footer-note { font-size: .75rem; }
+  .auth-form-panel { padding: var(--space-8) var(--space-5) var(--space-10); align-items: flex-start; }
+}
+
 /* ─── Page-level helpers ────────────────────────────────── */
 
 .page-header {
@@ -1175,47 +1281,96 @@ footer { color: var(--muted); font-size: .85rem; margin-top: var(--space-12); }
 .muted-strong { color: var(--muted-strong); }
 
 /* ─── Lane sections (challenge-library landing) ────────── */
-/* The /scenarios page groups lanes into a small training
-   progression (Recommended Start → Host & Device → Triage →
-   Findings) — see page.tsx. Section headings space evenly
-   and the description sits muted underneath so the page reads
-   as a curriculum without competing for attention with the
-   lane cards themselves. */
+/* The /scenarios page is a curriculum: numbered sections, each a
+   ruled index of lanes (number · title · what it covers · count). */
 
 .lane-sections {
   display: flex;
   flex-direction: column;
-  gap: var(--space-7);
-  margin-top: var(--space-4);
+  gap: var(--space-10);
+  margin-top: var(--space-6);
 }
 .lane-section { display: block; }
 .lane-section-head {
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1fr);
+  gap: 0 var(--space-5);
   margin: 0 0 var(--space-3);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
+  padding: 0 var(--space-3);
+}
+.lane-section-num {
+  font-family: var(--font-mono);
+  font-size: .8rem;
+  color: var(--accent);
+  padding-top: .55rem;
 }
 .lane-section-title {
   margin: 0;
-  font-size: 1.1rem;
-  letter-spacing: .01em;
+  font-family: var(--font-serif);
+  font-size: 1.45rem;
+  font-weight: 600;
+  color: var(--fg-strong);
 }
 .lane-section-desc {
-  margin: 0;
+  margin: var(--space-1) 0 0;
   color: var(--muted);
   max-width: 72ch;
   font-size: .92rem;
   line-height: 1.5;
 }
 
-/* ─── Auto-fit card grids ──────────────────────────────── */
-/* Used by the admin landing (stat tiles + tool cards) and the
-   challenges lane overview. One ruleset, two grid densities. */
+.lane-index {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--border-strong);
+}
+.lane-row {
+  display: grid;
+  grid-template-columns: 3rem minmax(10rem, 14rem) minmax(0, 1fr) 8.5rem;
+  gap: var(--space-1) var(--space-5);
+  align-items: baseline;
+  padding: var(--space-4) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  color: var(--fg);
+  text-decoration: none;
+  transition: background var(--transition);
+}
+.lane-row:hover { background: var(--bg-hover); text-decoration: none; }
+.lane-row:hover .lane-row-title { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+.lane-row-num {
+  font-family: var(--font-mono);
+  font-size: .8rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.lane-row-title { font-weight: 600; font-size: 1.02rem; color: var(--fg-strong); }
+.lane-row-desc { color: var(--muted-strong); font-size: .9rem; line-height: 1.5; }
+.lane-row-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-family: var(--font-mono);
+  font-size: .75rem;
+  letter-spacing: .03em;
+  color: var(--muted);
+  text-align: right;
+  line-height: 1.6;
+}
+.lane-row-meta strong { color: var(--fg); font-weight: 500; }
+@media (max-width: 760px) {
+  .lane-section-head { grid-template-columns: 2.25rem minmax(0, 1fr); padding: 0 var(--space-1); }
+  .lane-row { grid-template-columns: 2.25rem minmax(0, 1fr); padding: var(--space-4) var(--space-1); }
+  .lane-row-desc, .lane-row-meta { grid-column: 2; }
+  .lane-row-meta { flex-direction: row; flex-wrap: wrap; gap: var(--space-3); align-items: baseline; text-align: left; }
+}
+
+/* ─── Auto-fit grids (admin landing) ───────────────────── */
 
 .card-grid-tight {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--space-6) var(--space-6);
   list-style: none;
   margin: 0;
   padding: 0;
@@ -1223,144 +1378,134 @@ footer { color: var(--muted); font-size: .85rem; margin-top: var(--space-12); }
 .card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: var(--space-4);
+  gap: 0 var(--space-8);
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
-/* ─── Stat card ────────────────────────────────────────── */
+/* ─── Stat readout ─────────────────────────────────────── */
+/* Numbers on a rule, like an instrument readout; no boxes. */
 
 .stat-card {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  padding: var(--space-4) var(--space-4);
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  padding: var(--space-3) 0 0;
+  border-top: 2px solid var(--border-strong);
   color: var(--fg);
   text-decoration: none;
-  transition: border-color var(--transition), box-shadow var(--transition), transform var(--transition);
+  transition: border-color var(--transition);
 }
-a.stat-card:hover {
-  border-color: var(--accent);
-  box-shadow: var(--shadow-md);
-  transform: translateY(-1px);
-  text-decoration: none;
-}
+a.stat-card:hover { border-top-color: var(--accent); text-decoration: none; }
 .stat-card .stat-label {
+  font-family: var(--font-mono);
   color: var(--muted);
-  font-size: .72rem;
+  font-size: .7rem;
   text-transform: uppercase;
   letter-spacing: .06em;
-  font-weight: 600;
+  font-weight: 500;
 }
 .stat-card .stat-value {
-  font-size: 1.85rem;
-  font-weight: 600;
-  line-height: 1.05;
+  font-family: var(--font-mono);
+  font-size: 1.9rem;
+  font-weight: 500;
+  line-height: 1.1;
   color: var(--fg-strong);
-  letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
 .stat-card .stat-sub {
   color: var(--muted);
   font-size: .8rem;
-  margin-top: var(--space-1);
 }
-/* Accent strip on the left edge for "needs attention" states. */
-.stat-card[data-accent="bad"]  { border-left: 3px solid var(--status-bad-fg); }
+.stat-card[data-accent="bad"]  { border-top-color: var(--status-bad-fg); }
 .stat-card[data-accent="bad"]  .stat-value { color: var(--status-bad-fg); }
-.stat-card[data-accent="warn"] { border-left: 3px solid var(--status-warn-fg); }
+.stat-card[data-accent="warn"] { border-top-color: var(--status-warn-fg); }
 .stat-card[data-accent="warn"] .stat-value { color: var(--status-warn-fg); }
 
-/* ─── Tool card (admin landing tiles) ──────────────────── */
+/* ─── Skill-area table (Stats page) ────────────────────── */
+
+.skill-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .9rem;
+}
+.skill-table th {
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: .7rem;
+  font-weight: 500;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 0 var(--space-3) var(--space-2);
+  border-bottom: 1px solid var(--border-strong);
+}
+.skill-table td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+.skill-table .num {
+  font-family: var(--font-mono);
+  font-size: .82rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-strong);
+  text-align: right;
+  white-space: nowrap;
+  width: 1%;
+}
+.skill-table .bar-cell { width: 40%; }
+.skill-bar {
+  height: 4px;
+  background: var(--bg-sunken);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.skill-bar > span { display: block; height: 100%; background: var(--accent); }
+@media (max-width: 640px) {
+  .skill-table .bar-cell { width: 25%; }
+  .skill-table td, .skill-table th { padding-left: var(--space-2); padding-right: var(--space-2); }
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ─── Tool list (admin landing) ────────────────────────── */
 
 .tool-card {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-5);
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  gap: var(--space-1);
+  height: 100%;
+  padding: var(--space-4) 0 var(--space-5);
+  border-top: 1px solid var(--border-strong);
   color: var(--fg);
   text-decoration: none;
-  transition: border-color var(--transition), box-shadow var(--transition), transform var(--transition);
 }
-.tool-card:hover {
-  border-color: var(--accent);
-  box-shadow: var(--shadow-md);
-  transform: translateY(-1px);
-  text-decoration: none;
-}
+.tool-card:hover { text-decoration: none; }
+.tool-card:hover .tool-card-title { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
 .tool-card-title {
   font-size: 1.02rem;
   font-weight: 600;
   color: var(--fg-strong);
-  letter-spacing: -0.005em;
 }
+.tool-card-title::after { content: " \2192"; color: var(--muted); }
 .tool-card-body {
-  color: var(--muted);
+  color: var(--muted-strong);
   font-size: .88rem;
   line-height: 1.5;
   margin: 0;
 }
-
-/* ─── Lane card (challenges landing) ───────────────────── */
-
-.lane-card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  height: 100%;
-  padding: var(--space-4) var(--space-5);
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  color: var(--fg);
-  text-decoration: none;
-  transition: border-color var(--transition), box-shadow var(--transition), transform var(--transition);
-}
-.lane-card:hover {
-  border-color: var(--accent);
-  box-shadow: var(--shadow-md);
-  transform: translateY(-1px);
-  text-decoration: none;
-}
-.lane-card-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-2);
-}
-.lane-card-title {
-  margin: 0;
-  font-size: 1.05rem;
-  font-weight: 600;
-  color: var(--fg-strong);
-  letter-spacing: -0.005em;
-}
-.lane-card-body {
-  margin: 0;
-  flex: 1;
-  color: var(--muted);
-  font-size: .88rem;
-  line-height: 1.5;
-}
-.lane-card-foot {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-top: var(--space-1);
-  font-size: .82rem;
-  color: var(--muted);
-}
-.lane-card-foot strong { color: var(--fg); font-weight: 600; }
 
 /* ─── Header nav divider (between learner and admin) ──── */
 
@@ -1516,15 +1661,6 @@ a.stat-card:hover {
     /* Visible in the drawer; the chip already shows the
        display name without truncation when wrapped. */
   }
-
-  /* Lane overview grid: cards take full width instead of the
-     desktop 320px-minimum auto-fill, which can leave awkward
-     gutters on a 360-400px viewport. */
-  .scenario-list {
-    grid-template-columns: 1fr;
-    gap: var(--space-3);
-  }
-  .scenario-card a { padding: var(--space-4); }
 
   /* Q-card spacing tightens; the chip header wraps cleanly. */
   .q-card { padding: var(--space-4); }

@@ -216,7 +216,7 @@ export default async function EditChallengePage({ params }: Props) {
         />
       </div>
 
-      <h2 style={{ color: "var(--bad)" }}>Danger zone</h2>
+      <h2 style={{ color: "var(--status-bad-fg)" }}>Danger zone</h2>
       <div className="card">
         <p style={{ margin: 0, color: "var(--muted)" }}>
           Deleting this challenge removes the brief, all questions, indicator

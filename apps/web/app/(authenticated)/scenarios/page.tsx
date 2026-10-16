@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireUser, readToken } from "@/lib/session";
 import { api } from "@/lib/api";
 import type { Lane, LaneSummary } from "@ci-train/contracts";
+import { InlineCode } from "@/components/inline-code";
 
 export const dynamic = "force-dynamic";
 
@@ -36,20 +37,28 @@ export default async function ScenariosPage() {
       </header>
 
       <div className="lane-sections">
-        {sections.map((section) => (
+        {sections.map((section, sectionIdx) => (
           <section key={section.key} className="lane-section">
             <div className="lane-section-head">
-              <h2 className="lane-section-title">{section.title}</h2>
-              <p className="lane-section-desc">{section.description}</p>
+              <span className="lane-section-num" aria-hidden>
+                {pad2(sectionIdx + 1)}
+              </span>
+              <div>
+                <h2 className="lane-section-title">{section.title}</h2>
+                <p className="lane-section-desc">{section.description}</p>
+              </div>
             </div>
-            <ul className="card-grid">
-              {section.lanes.map((lane) => (
+            <ul className="lane-index">
+              {section.lanes.map((lane, laneIdx) => (
                 <li key={lane.lane}>
                   <Link
                     href={`/scenarios/lanes/${encodeURIComponent(lane.lane)}`}
-                    className="lane-card"
+                    className="lane-row"
                   >
-                    <LaneCard lane={lane} />
+                    <LaneRow
+                      lane={lane}
+                      number={`${sectionIdx + 1}.${laneIdx + 1}`}
+                    />
                   </Link>
                 </li>
               ))}
@@ -61,48 +70,55 @@ export default async function ScenariosPage() {
   );
 }
 
-function LaneCard({ lane }: { lane: LaneSummary }) {
-  const empty = lane.publishedScenarioCount === 0;
+function pad2(n: number): string {
+  return String(n).padStart(2, "0");
+}
+
+function LaneRow({ lane, number }: { lane: LaneSummary; number: string }) {
+  const total = lane.publishedScenarioCount;
   return (
     <>
-      <div className="lane-card-head">
-        <h3 className="lane-card-title">{lane.label}</h3>
-        <LaneProgressBadge lane={lane} />
-      </div>
-      <p className="lane-card-body">{lane.description}</p>
-      <div className="lane-card-foot">
-        {empty ? (
+      <span className="lane-row-num" aria-hidden>
+        {number}
+      </span>
+      <span className="lane-row-title">{lane.label}</span>
+      <span className="lane-row-desc">
+        <InlineCode text={lane.description} />
+      </span>
+      <span className="lane-row-meta">
+        {total === 0 ? (
           <span>No challenges yet</span>
         ) : (
-          <>
-            <span>
-              <strong>{lane.publishedScenarioCount}</strong>{" "}
-              challenge{lane.publishedScenarioCount === 1 ? "" : "s"}
-            </span>
-            {lane.inProgressScenarioCount > 0 ? (
-              <span>· {lane.inProgressScenarioCount} in progress</span>
-            ) : null}
-          </>
+          <span>
+            <strong>{total}</strong> challenge{total === 1 ? "" : "s"}
+          </span>
         )}
-      </div>
+        <LaneProgress lane={lane} />
+      </span>
     </>
   );
 }
 
-function LaneProgressBadge({ lane }: { lane: LaneSummary }) {
+function LaneProgress({ lane }: { lane: LaneSummary }) {
   const total = lane.publishedScenarioCount;
   if (total === 0) return null;
   if (lane.completedScenarioCount >= total) {
-    return <span className="chip chip-ok">✓ Lane complete</span>;
+    return <span className="status-ok">Lane complete</span>;
   }
-  if (lane.completedScenarioCount > 0) {
-    return (
-      <span className="chip chip-partial">
-        {lane.completedScenarioCount}/{total} done
-      </span>
-    );
-  }
-  return null;
+  return (
+    <>
+      {lane.completedScenarioCount > 0 ? (
+        <span className="status-partial">
+          {lane.completedScenarioCount}/{total} done
+        </span>
+      ) : null}
+      {lane.inProgressScenarioCount > 0 ? (
+        <span className="status-partial">
+          {lane.inProgressScenarioCount} in progress
+        </span>
+      ) : null}
+    </>
+  );
 }
 
 // ─── Section configuration ───────────────────────────────────
