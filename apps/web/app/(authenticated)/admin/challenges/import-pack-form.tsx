@@ -27,7 +27,7 @@ export function ImportPackForm() {
       </label>
       {state && !state.ok ? <p className="admin-error">{state.error}</p> : null}
       {state?.ok ? (
-        <div className="card" style={{ borderColor: "rgba(74,222,128,.4)" }}>
+        <div className="card" style={{ borderColor: "var(--status-ok-border)" }}>
           <p style={{ margin: 0 }}>
             Imported{" "}
             <Link

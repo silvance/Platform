@@ -343,7 +343,7 @@ const selectStyle: React.CSSProperties = {
   padding: ".3rem .5rem",
   background: "var(--bg-sunken)",
   border: "1px solid var(--border-strong)",
-  borderRadius: 6,
+  borderRadius: "var(--radius-md)",
   color: "var(--fg)",
   fontSize: ".9rem",
 };
@@ -351,13 +351,13 @@ const inlineButtonStyle: React.CSSProperties = {
   background: "var(--bg-sunken)",
   color: "var(--fg)",
   border: "1px solid var(--border-strong)",
-  borderRadius: 6,
+  borderRadius: "var(--radius-md)",
   padding: ".3rem .65rem",
   fontSize: ".85rem",
   cursor: "pointer",
 };
 const dangerButtonStyle: React.CSSProperties = {
   ...inlineButtonStyle,
-  borderColor: "var(--danger, #c0392b)",
-  color: "var(--danger, #c0392b)",
+  borderColor: "var(--status-bad-fg)",
+  color: "var(--status-bad-fg)",
 };

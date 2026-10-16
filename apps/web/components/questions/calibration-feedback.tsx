@@ -45,10 +45,10 @@ export function CalibrationFeedback({ submittedValue, expectedRange }: Props) {
     };
   }, [submittedValue]);
 
-  const verdictColor = inRange ? "var(--accent)" : "rgba(255, 196, 0, 0.85)";
+  const verdictColor = inRange ? "var(--accent)" : "var(--status-warn-fg)";
   const verdictBg = inRange
-    ? "rgba(83, 132, 255, 0.08)"
-    : "rgba(255, 196, 0, 0.06)";
+    ? "var(--bg-active)"
+    : "var(--status-warn-bg)";
 
   return (
     <div

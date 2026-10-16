@@ -35,9 +35,8 @@ export function InlineReviewPanel({ slug, admin, questions }: Props) {
       className="card"
       style={{
         marginBottom: "1rem",
-        borderColor: "var(--brand-400)",
-        background:
-          "linear-gradient(180deg, rgba(83, 132, 255, 0.06) 0%, transparent 60%)",
+        borderColor: "var(--accent)",
+        borderLeft: "3px solid var(--accent)",
       }}
       open={admin.reviewStatus === "needs_review"}
     >
@@ -78,7 +77,10 @@ export function InlineReviewPanel({ slug, admin, questions }: Props) {
               One textarea per question. Saved independently of the
               scenario-level verdict above.
             </p>
-            <div style={{ display: "grid", gap: ".75rem" }}>
+            {/* minmax(0, 1fr): the one-line question previews are
+                nowrap, and an auto-sized track would grow to fit
+                them and push the page wider than a phone screen. */}
+            <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr)", gap: ".75rem" }}>
               {questions.map((q) => (
                 <QuestionInlineReview
                   key={q.id}

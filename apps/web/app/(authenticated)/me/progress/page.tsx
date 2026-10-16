@@ -17,7 +17,7 @@ export default async function MyProgressPage() {
         challenges still appear here if you have progress against them.
       </p>
 
-      <div className="card" style={{ display: "flex", gap: "1.5rem" }}>
+      <div className="card" style={{ display: "flex", flexWrap: "wrap", gap: "1rem 1.5rem" }}>
         <div>
           <div style={{ color: "var(--muted)", fontSize: ".8rem" }}>Touched</div>
           <div style={{ fontSize: "1.25rem", fontWeight: 600 }}>
@@ -30,7 +30,7 @@ export default async function MyProgressPage() {
             style={{
               fontSize: "1.25rem",
               fontWeight: 600,
-              color: totals.scenariosCompleted > 0 ? "var(--ok)" : "var(--fg)",
+              color: totals.scenariosCompleted > 0 ? "var(--status-ok-fg)" : "var(--fg)",
             }}
           >
             {totals.scenariosCompleted}

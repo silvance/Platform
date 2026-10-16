@@ -61,7 +61,7 @@ export function ScenarioOrientationLink({ lane }: Props) {
           href={laneUrl}
           style={{ color: "var(--accent)", textDecoration: "none" }}
         >
-          📖 {laneLabel} orientation →
+          {laneLabel} orientation →
         </Link>
       </div>
     );

@@ -42,7 +42,7 @@ export default async function MeStatsPage() {
     <main>
       <h1>Your stats</h1>
       <p style={{ color: "var(--muted)", marginTop: 0 }}>
-        {user.displayName}, here's how you're tracking across the catalog.
+        Progress for {user.displayName} across the published catalog.
       </p>
 
       {dailyResult.ok ? (
@@ -99,18 +99,10 @@ function UnavailableCard({
         margin: "0 0 1.25rem",
         padding: "1rem 1.25rem",
         background: "var(--bg-elevated)",
-        borderLeft: "3px solid rgba(255, 196, 0, 0.6)",
+        borderLeft: "3px solid var(--accent)",
       }}
     >
-      <div
-        style={{
-          fontSize: ".75rem",
-          textTransform: "uppercase",
-          letterSpacing: ".05em",
-          color: "var(--muted)",
-          marginBottom: ".25rem",
-        }}
-      >
+      <div className="label-mono" style={{ marginBottom: ".25rem" }}>
         {label} — unavailable
       </div>
       <p style={{ margin: ".25rem 0", fontSize: ".9rem" }}>
@@ -139,19 +131,9 @@ function DailyCard({ daily }: { daily: MeDailyResponse }) {
           borderLeft: "3px solid var(--accent)",
         }}
       >
-        <div
-          style={{
-            fontSize: ".75rem",
-            textTransform: "uppercase",
-            letterSpacing: ".05em",
-            color: "var(--muted)",
-          }}
-        >
-          Today's challenge
-        </div>
+        <div className="label-mono">Today's challenge</div>
         <p style={{ margin: ".4rem 0 0" }}>
           You're caught up — every published scenario has been completed.
-          Nice run.
         </p>
       </section>
     );
@@ -167,15 +149,7 @@ function DailyCard({ daily }: { daily: MeDailyResponse }) {
         borderLeft: "3px solid var(--accent)",
       }}
     >
-      <div
-        style={{
-          fontSize: ".75rem",
-          textTransform: "uppercase",
-          letterSpacing: ".05em",
-          color: "var(--muted)",
-          marginBottom: ".25rem",
-        }}
-      >
+      <div className="label-mono" style={{ marginBottom: ".25rem" }}>
         Today's challenge
       </div>
       <Link
@@ -183,8 +157,7 @@ function DailyCard({ daily }: { daily: MeDailyResponse }) {
         style={{
           fontSize: "1.1rem",
           fontWeight: 600,
-          color: "var(--fg)",
-          textDecoration: "none",
+          color: "var(--fg-strong)",
         }}
       >
         {s.scenarioTitle} →
@@ -206,14 +179,7 @@ function DailyCard({ daily }: { daily: MeDailyResponse }) {
 
 function HeaderTiles({ stats }: { stats: MeStatsResponse }) {
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-        gap: "0.75rem",
-        marginBottom: "1.5rem",
-      }}
-    >
+    <div className="card-grid-tight" style={{ margin: "1.75rem 0 1.5rem" }}>
       <Tile
         label="Scenarios completed"
         value={String(stats.totals.scenariosCompleted)}
@@ -240,16 +206,10 @@ function Tile({
   sub?: string;
 }) {
   return (
-    <div className="card" style={{ padding: "1rem" }}>
-      <div style={{ color: "var(--muted)", fontSize: ".8rem" }}>{label}</div>
-      <div style={{ fontSize: "1.75rem", fontWeight: 700, lineHeight: 1.1 }}>
-        {value}
-      </div>
-      {sub && (
-        <div style={{ color: "var(--muted)", fontSize: ".75rem", marginTop: ".25rem" }}>
-          {sub}
-        </div>
-      )}
+    <div className="stat-card">
+      <div className="stat-label">{label}</div>
+      <div className="stat-value">{value}</div>
+      {sub && <div className="stat-sub">{sub}</div>}
     </div>
   );
 }
@@ -292,86 +252,34 @@ function SkillAreaGrid({ rows }: { rows: SkillAreaProgress[] }) {
       <h2 style={{ marginTop: "1rem", marginBottom: ".75rem" }}>
         Skill areas
       </h2>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-          gap: "0.6rem",
-        }}
-      >
-        {sorted.map((row) => (
-          <SkillAreaCard key={row.skillArea} row={row} />
-        ))}
-      </div>
+      <table className="skill-table">
+        <thead>
+          <tr>
+            <th scope="col">Skill area</th>
+            <th scope="col" className="num">Correct</th>
+            <th scope="col" className="bar-cell">
+              <span className="visually-hidden">Progress</span>
+            </th>
+            <th scope="col" className="num">%</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.map((row) => (
+            <tr key={row.skillArea}>
+              <td>{SKILL_AREA_LABELS[row.skillArea]}</td>
+              <td className="num">
+                {row.questionsCorrect}/{row.questionsTotal}
+              </td>
+              <td className="bar-cell">
+                <div className="skill-bar" aria-hidden>
+                  <span style={{ width: `${row.percentComplete}%` }} />
+                </div>
+              </td>
+              <td className="num">{row.percentComplete}%</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </>
-  );
-}
-
-function SkillAreaCard({ row }: { row: SkillAreaProgress }) {
-  const label = SKILL_AREA_LABELS[row.skillArea];
-  const percent = row.percentComplete;
-  return (
-    <div
-      className="card"
-      style={{
-        padding: ".75rem .9rem",
-        display: "flex",
-        flexDirection: "column",
-        gap: ".4rem",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "baseline",
-          gap: ".5rem",
-        }}
-      >
-        <span style={{ fontWeight: 600, fontSize: ".9rem" }}>{label}</span>
-        <span
-          style={{
-            color: "var(--muted)",
-            fontSize: ".75rem",
-            fontVariantNumeric: "tabular-nums",
-          }}
-        >
-          {row.questionsCorrect} / {row.questionsTotal}
-        </span>
-      </div>
-      <ProgressBar percent={percent} />
-      <div
-        style={{
-          fontSize: ".7rem",
-          color: "var(--muted)",
-          fontVariantNumeric: "tabular-nums",
-        }}
-      >
-        {percent}%
-      </div>
-    </div>
-  );
-}
-
-function ProgressBar({ percent }: { percent: number }) {
-  return (
-    <div
-      style={{
-        height: "6px",
-        width: "100%",
-        background: "var(--bg-sunken)",
-        borderRadius: "3px",
-        overflow: "hidden",
-      }}
-    >
-      <div
-        style={{
-          height: "100%",
-          width: `${percent}%`,
-          background: "var(--accent)",
-          transition: "width .2s ease",
-        }}
-      />
-    </div>
   );
 }

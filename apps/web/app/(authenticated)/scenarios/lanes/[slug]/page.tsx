@@ -12,6 +12,7 @@ import {
 } from "@ci-train/contracts";
 import { LANE_INTROS } from "@/content/lane-intros";
 import { LaneIntro } from "@/components/lane-intro";
+import { InlineCode } from "@/components/inline-code";
 
 export const dynamic = "force-dynamic";
 
@@ -35,15 +36,14 @@ export default async function LanePage({ params }: Props) {
   const { scenarios } = await api.scenarios.list(token!, { lane });
 
   // Order: group by module so related challenges stay adjacent, but
-  // render as a single multi-column grid so the page doesn't degrade
-  // into a tall single column on lanes where each module is a
-  // singleton (which is most of them — modules are a tag, not a
-  // unit of progression).
+  // render as one numbered index rather than a heading per module —
+  // on most lanes each module is a singleton (modules are a tag, not
+  // a unit of progression).
   //
   // Within the flat order: easier module-groups come first
   // (tiebreak alphabetic), then by per-scenario sequence inside
-  // the group. The module name is surfaced as a chip on each card
-  // so the grouping info survives the flatten.
+  // the group. The module name is shown in each row's metadata so
+  // the grouping info survives the flatten.
   const groups = new Map<string, ScenarioListItem[]>();
   for (const s of scenarios) {
     const key = s.module ?? "Other";
@@ -72,7 +72,7 @@ export default async function LanePage({ params }: Props) {
         <div>
           <h1 style={{ marginBottom: ".25rem" }}>{LANE_LABELS[lane]}</h1>
           <p style={{ margin: 0, color: "var(--muted)" }}>
-            {LANE_DESCRIPTIONS[lane]}
+            <InlineCode text={LANE_DESCRIPTIONS[lane]} />
           </p>
         </div>
       </header>
@@ -86,98 +86,72 @@ export default async function LanePage({ params }: Props) {
           <p style={{ margin: 0 }}>Nothing here yet.</p>
         </div>
       ) : (
-        <ul
-          className="scenario-list"
-          style={{ listStyle: "none", padding: 0, marginTop: "1rem" }}
-        >
+        <ol className="challenge-index">
           {flatScenarios.map((s, idx) => (
-            <li key={s.id} className="scenario-card">
+            <li key={s.id} className="challenge-row">
               <Link href={`/scenarios/${s.slug}`}>
-                <ScenarioCard scenario={s} ordinal={idx + 1} />
+                <ChallengeRow scenario={s} ordinal={idx + 1} />
               </Link>
             </li>
           ))}
-        </ul>
+        </ol>
       )}
     </main>
   );
 }
 
-function ProgressBadge({ scenario }: { scenario: ScenarioListItem }) {
+function ProgressStatus({ scenario }: { scenario: ScenarioListItem }) {
   const { completedQuestions: done, totalQuestions: total } = scenario;
   if (total > 0 && done >= total) {
-    return <span className="chip chip-ok">✓ Completed</span>;
+    return <span className="status-ok">Completed</span>;
   }
   if (done > 0) {
     return (
-      <span className="chip chip-partial">
-        In progress · {done}/{total}
+      <span className="status-partial">
+        In progress {done}/{total}
       </span>
     );
   }
   return null;
 }
 
-function ScenarioCard({
+function ChallengeRow({
   scenario,
   ordinal,
 }: {
   scenario: ScenarioListItem;
   ordinal: number;
 }) {
-  const hasAwarenessOnly = scenario.skillAreas.some(isAwarenessOnly);
+  const awarenessOnly = scenario.skillAreas.some(isAwarenessOnly);
   return (
     <>
-      {scenario.module ? (
-        <div
-          style={{
-            fontSize: ".7rem",
-            textTransform: "uppercase",
-            letterSpacing: ".06em",
-            color: "var(--muted)",
-            fontWeight: 600,
-            marginBottom: ".25rem",
-          }}
-        >
-          {scenario.module}
-        </div>
-      ) : null}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "flex-start",
-          justifyContent: "space-between",
-          gap: ".5rem",
-        }}
-      >
-        <h3 style={{ margin: 0 }}>
-          <span
-            style={{
-              color: "var(--muted)",
-              fontVariantNumeric: "tabular-nums",
-              marginRight: ".4rem",
-            }}
-            aria-hidden
-          >
-            {String(ordinal).padStart(2, "0")}.
-          </span>
-          {scenario.title}
-        </h3>
-        <ProgressBadge scenario={scenario} />
-      </div>
-      <div className="summary">{scenario.summary}</div>
+      <span className="challenge-num" aria-hidden>
+        {String(ordinal).padStart(2, "0")}
+      </span>
       <div>
-        {scenario.skillAreas.map((a) => (
-          <span
-            key={a}
-            className={`chip ${hasAwarenessOnly && isAwarenessOnly(a) ? "chip-rf" : "chip-skill"}`}
-          >
-            {SKILL_AREA_LABELS[a]}
-          </span>
-        ))}
-        <span className="chip chip-difficulty">
-          Level {scenario.difficulty}
-        </span>
+        <h3 className="challenge-title">{scenario.title}</h3>
+        <p className="challenge-summary">
+          <InlineCode text={scenario.summary} />
+        </p>
+        <p className="meta-line">
+          {scenario.skillAreas.map((a, i) => (
+            <span key={a}>
+              {i > 0 ? <span className="sep">·</span> : null}
+              {SKILL_AREA_LABELS[a]}
+            </span>
+          ))}
+          {awarenessOnly ? (
+            <>
+              <span className="sep">·</span>
+              <span className="status-warn">Awareness only</span>
+            </>
+          ) : null}
+        </p>
+      </div>
+      <div className="challenge-meta">
+        <span>Level {scenario.difficulty}</span>
+        {scenario.module ? <span>{scenario.module}</span> : null}
+        <ProgressStatus scenario={scenario} />
       </div>
     </>
   );
