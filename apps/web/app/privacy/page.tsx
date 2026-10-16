@@ -4,6 +4,9 @@ import { SiteFooter } from "@/components/site-footer";
 export const dynamic = "force-dynamic";
 export const metadata = {
   title: "Privacy — CI Cyber Lab",
+  description:
+    "What CI Cyber Lab collects (account email and display name), what it is used for, and what it never does.",
+  alternates: { canonical: "/privacy" },
 };
 
 export default function PrivacyPage() {

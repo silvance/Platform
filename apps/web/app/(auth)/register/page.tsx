@@ -5,6 +5,11 @@ import { RegisterForm } from "./register-form";
 
 export const dynamic = "force-dynamic";
 
+export const metadata = {
+  title: "Request an account — CI Cyber Lab",
+  alternates: { canonical: "/register" },
+};
+
 // Self-service registration. Gated by an admin-issued access
 // code: a valid code creates an auto-approved account so the user
 // can sign in on the next request. Bad code → 400 with a generic

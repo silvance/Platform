@@ -5,6 +5,11 @@ import { LoginForm } from "./login-form";
 
 export const dynamic = "force-dynamic";
 
+export const metadata = {
+  title: "Sign in — CI Cyber Lab",
+  alternates: { canonical: "/login" },
+};
+
 export default async function LoginPage() {
   const user = await getCurrentUser();
   if (user) {

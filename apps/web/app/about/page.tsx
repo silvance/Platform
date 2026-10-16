@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 // from M21j.
 export const metadata = {
   title: "About — CI Cyber Lab",
+  alternates: { canonical: "/about" },
   description:
     "CI Cyber Lab is a training platform for counterintelligence and digital-forensics analysts. Unclassified, non-commercial, run in my personal capacity.",
   openGraph: {
@@ -104,7 +105,7 @@ export default function AboutPage() {
           no advertising; no third-party sharing.
         </p>
 
-        <h2>For IT administrators</h2>
+        <h2 id="for-it-administrators">For IT administrators</h2>
         <p>
           If you're evaluating whether to allow this site on a managed
           network: the appropriate URL category is{" "}
